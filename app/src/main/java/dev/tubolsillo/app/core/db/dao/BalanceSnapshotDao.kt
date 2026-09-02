@@ -33,4 +33,6 @@ interface BalanceSnapshotDao {
 
     @Query("UPDATE accounts SET lastBalanceMinor = :minor, lastBalanceAt = :at WHERE id = :accountId")
     suspend fun updateLastBalance(accountId: Long, minor: Long, at: Long)
+    @Query("SELECT * FROM balance_snapshots")
+    suspend fun getAllForExport(): List<BalanceSnapshotEntity>
 }

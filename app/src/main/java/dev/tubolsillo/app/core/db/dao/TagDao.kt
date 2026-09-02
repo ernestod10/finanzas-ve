@@ -55,4 +55,9 @@ interface TagDao {
 
     @Query("SELECT * FROM transactions WHERE id IN (SELECT transactionId FROM transaction_tags WHERE tagId = :tagId) ORDER BY occurredAt DESC")
     fun observeTransactionsForTag(tagId: Long): Flow<List<TransactionEntity>>
+    @Query("SELECT * FROM tags")
+    suspend fun getAllForExport(): List<TagEntity>
+
+    @Query("SELECT * FROM transaction_tags")
+    suspend fun getAllLinksForExport(): List<TransactionTagCrossRef>
 }

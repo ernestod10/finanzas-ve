@@ -1,5 +1,7 @@
 package dev.tubolsillo.app.core.db.entity
 
+import kotlinx.serialization.Serializable
+
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
@@ -13,6 +15,7 @@ import androidx.room.PrimaryKey
     tableName = "balance_snapshots",
     indices = [Index("accountId"), Index("capturedAt")],
 )
+@Serializable
 data class BalanceSnapshotEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val accountId: Long,

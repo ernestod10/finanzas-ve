@@ -20,4 +20,6 @@ interface TransferPairDao {
 
     @Query("UPDATE transfer_pairs SET isConfirmed = 1 WHERE id = :id")
     suspend fun confirm(id: Long)
+    @Query("SELECT * FROM transfer_pairs")
+    suspend fun getAllForExport(): List<TransferPairEntity>
 }

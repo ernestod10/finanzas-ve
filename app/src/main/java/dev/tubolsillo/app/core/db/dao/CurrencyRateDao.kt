@@ -18,4 +18,6 @@ interface CurrencyRateDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(rate: CurrencyRateEntity)
+    @Query("SELECT * FROM currency_rates")
+    suspend fun getAllForExport(): List<CurrencyRateEntity>
 }

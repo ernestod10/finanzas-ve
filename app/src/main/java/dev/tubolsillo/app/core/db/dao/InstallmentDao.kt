@@ -23,4 +23,6 @@ interface InstallmentDao {
 
     @Query("UPDATE installments SET status = 'PAID' WHERE accountId = :accountId")
     suspend fun markAllPaid(accountId: Long)
+    @Query("SELECT * FROM installments")
+    suspend fun getAllForExport(): List<InstallmentEntity>
 }

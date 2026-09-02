@@ -23,6 +23,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -33,6 +34,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import androidx.hilt.navigation.compose.hiltViewModel
 
 /** Ajustes: permisos de captura, cuentas, tasas, Binance, Capturas. */
 @Composable
@@ -41,8 +43,15 @@ fun SettingsScreen(
     onBinanceClick: () -> Unit,
     onEventsClick: () -> Unit,
     onCsvImportClick: () -> Unit,
+    exportViewModel: ExportViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
+    val exportStatus by exportViewModel.status.collectAsState()
+    val exportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        uri?.let { exportViewModel.exportTo(it) }
+    }
     var smsGranted by remember {
         mutableStateOf(
             ContextCompat.checkSelfPermission(context, Manifest.permission.READ_SMS) ==
@@ -157,6 +166,26 @@ fun SettingsScreen(
                 subtitle = "Estados de cuenta de tu ebanking, con reconciliación",
                 onClick = onCsvImportClick,
             )
+        }
+        item { HorizontalDivider() }
+        item {
+            SettingsRow(
+                icon = { Icon(Icons.Filled.ChevronRight, null) },
+                title = "Exportar respaldo",
+                subtitle = "Toda tu data a un JSON (incluye capturas crudas)",
+                onClick = { exportLauncher.launch("tubolsillo-backup.json") },
+            )
+        }
+        exportStatus?.let { status ->
+            item {
+                Text(
+                    text = status,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (status.startsWith("✗")) MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                )
+            }
         }
         item { HorizontalDivider() }
         item {

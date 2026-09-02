@@ -21,4 +21,6 @@ interface CaptureEventDao {
 
     @Update
     suspend fun update(event: CaptureEventEntity)
+    @Query("SELECT * FROM capture_events")
+    suspend fun getAllForExport(): List<CaptureEventEntity>
 }

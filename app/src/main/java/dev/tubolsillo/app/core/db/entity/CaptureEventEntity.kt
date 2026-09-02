@@ -1,5 +1,7 @@
 package dev.tubolsillo.app.core.db.entity
 
+import kotlinx.serialization.Serializable
+
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
@@ -13,6 +15,7 @@ import androidx.room.PrimaryKey
     tableName = "capture_events",
     indices = [Index("capturedAt")],
 )
+@Serializable
 data class CaptureEventEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val source: String,

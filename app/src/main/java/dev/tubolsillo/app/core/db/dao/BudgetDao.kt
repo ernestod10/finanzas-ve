@@ -19,4 +19,6 @@ interface BudgetDao {
 
     @Delete
     suspend fun delete(budget: BudgetEntity)
+    @Query("SELECT * FROM budgets")
+    suspend fun getAllForExport(): List<BudgetEntity>
 }
