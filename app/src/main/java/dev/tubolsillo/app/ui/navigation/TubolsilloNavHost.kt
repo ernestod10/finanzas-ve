@@ -30,6 +30,7 @@ import dev.tubolsillo.app.ui.budget.BudgetScreen
 import dev.tubolsillo.app.ui.dashboard.DashboardScreen
 import dev.tubolsillo.app.ui.events.EventsScreen
 import dev.tubolsillo.app.ui.events.ReplayScreen
+import dev.tubolsillo.app.ui.importcsv.CsvImportScreen
 import dev.tubolsillo.app.ui.settings.BinanceSettingsScreen
 import dev.tubolsillo.app.ui.settings.RatesScreen
 import dev.tubolsillo.app.ui.settings.SettingsScreen
@@ -47,6 +48,7 @@ object Routes {
     const val BINANCE = "binance"
     const val EVENTS = "events"
     const val REPLAY = "replay"
+    const val CSV_IMPORT = "csv_import"
 
     fun account(accountId: Long) = "account/$accountId"
 }
@@ -124,6 +126,7 @@ fun TubolsilloNavHost() {
                     onRatesClick = { navController.navigate(Routes.RATES) },
                     onBinanceClick = { navController.navigate(Routes.BINANCE) },
                     onEventsClick = { navController.navigate(Routes.EVENTS) },
+                    onCsvImportClick = { navController.navigate(Routes.CSV_IMPORT) },
                 )
             }
             composable(
@@ -146,6 +149,9 @@ fun TubolsilloNavHost() {
             }
             composable(Routes.REPLAY) {
                 ReplayScreen(onBack = { navController.popBackStack() })
+            }
+            composable(Routes.CSV_IMPORT) {
+                CsvImportScreen(onBack = { navController.popBackStack() })
             }
         }
     }

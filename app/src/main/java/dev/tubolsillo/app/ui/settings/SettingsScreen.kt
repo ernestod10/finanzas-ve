@@ -40,6 +40,7 @@ fun SettingsScreen(
     onRatesClick: () -> Unit,
     onBinanceClick: () -> Unit,
     onEventsClick: () -> Unit,
+    onCsvImportClick: () -> Unit,
 ) {
     val context = LocalContext.current
     var smsGranted by remember {
@@ -146,6 +147,15 @@ fun SettingsScreen(
                 title = "Capturas",
                 subtitle = "Log crudo de SMS/push y Replay para afinar parsers",
                 onClick = onEventsClick,
+            )
+        }
+        item { HorizontalDivider() }
+        item {
+            SettingsRow(
+                icon = { Icon(Icons.Filled.ReceiptLong, null) },
+                title = "Importar CSV",
+                subtitle = "Estados de cuenta de tu ebanking, con reconciliación",
+                onClick = onCsvImportClick,
             )
         }
         item { HorizontalDivider() }
