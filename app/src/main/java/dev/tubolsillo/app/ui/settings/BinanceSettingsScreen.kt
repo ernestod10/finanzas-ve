@@ -26,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -41,6 +42,7 @@ fun BinanceSettingsScreen(
     onBack: () -> Unit,
     viewModel: BinanceSettingsViewModel = hiltViewModel(),
 ) {
+    val context = LocalContext.current
     val hasKeys by viewModel.hasKeys.collectAsState()
     val status by viewModel.status.collectAsState()
     val busy by viewModel.busy.collectAsState()
@@ -84,18 +86,21 @@ fun BinanceSettingsScreen(
                 }
             } else {
                 Text(
-                    text = "Cómo crear llaves de solo lectura:",
+                    text = "Conectar en 3 pasos:",
                     style = MaterialTheme.typography.bodyLarge,
                 )
                 Text(
-                    text = "1. Entra a binance.com → API Management\n" +
-                        "2. Create API → marca SOLO 'Enable Reading'\n" +
-                        "3. Copia API Key y Secret Key aquí. Nunca se suben a ningún servidor: " +
-                        "quedan cifradas en tu teléfono.",
+                    text = "1. Toca 'Abrir Binance' → entra a API Management\n" +
+                        "2. Create API → elige 'System generated' → marca SOLO 'Enable Reading'\n" +
+                        "3. Pega abajo la API Key y la Secret Key.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 4.dp),
                 )
+                OutlinedButton(
+                    onClick = { openBinanceApiManagement(context) },
+                    modifier = Modifier.padding(top = 8.dp),
+                ) { Text("Abrir Binance (API Management) ↗") }
                 OutlinedTextField(
                     value = apiKey,
                     onValueChange = { apiKey = it },
@@ -147,4 +152,13 @@ fun BinanceSettingsScreen(
             }
         }
     }
+}
+
+private fun openBinanceApiManagement(context: android.content.Context) {
+    // Deep-link a la página de API Management de Binance (abre navegador/app).
+    val intent = android.content.Intent(
+        android.content.Intent.ACTION_VIEW,
+        android.net.Uri.parse("https://www.binance.com/en/my/settings/api-management"),
+    )
+    context.startActivity(intent)
 }
