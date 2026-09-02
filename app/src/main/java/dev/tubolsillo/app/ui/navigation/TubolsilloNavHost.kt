@@ -26,6 +26,7 @@ import androidx.navigation.navArgument
 import dev.tubolsillo.app.ui.account.AccountDetailScreen
 import dev.tubolsillo.app.ui.budget.BudgetScreen
 import dev.tubolsillo.app.ui.dashboard.DashboardScreen
+import dev.tubolsillo.app.ui.settings.BinanceSettingsScreen
 import dev.tubolsillo.app.ui.settings.RatesScreen
 import dev.tubolsillo.app.ui.settings.SettingsScreen
 import dev.tubolsillo.app.ui.transactions.TransactionsScreen
@@ -120,7 +121,7 @@ fun TubolsilloNavHost() {
                 RatesScreen(onBack = { navController.popBackStack() })
             }
             composable(Routes.BINANCE) {
-                Text("Binance llega en la Fase 2.", modifier = Modifier.padding(16.dp))
+                BinanceSettingsScreen(onBack = { navController.popBackStack() })
             }
         }
     }
