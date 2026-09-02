@@ -13,6 +13,10 @@ import dev.tubolsillo.app.domain.model.TxStatus
 import dev.tubolsillo.app.domain.repo.AccountRepository
 import dev.tubolsillo.app.domain.usecase.RateProvider
 import dev.tubolsillo.app.domain.model.RateSource
+import io.ktor.client.network.sockets.ConnectTimeoutException
+import io.ktor.client.plugins.ClientRequestException
+import io.ktor.client.plugins.HttpRequestTimeoutException
+import io.ktor.client.plugins.ServerResponseException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
@@ -197,14 +201,21 @@ class BinanceSync @Inject constructor(
         signer.signedParams(emptyMap(), apiSecret, System.currentTimeMillis() + clockOffsetMs)
 
     /** Traduce errores de Binance a mensajes accionables (geo-bloqueo, llaves malas). */
-    private fun friendlyError(e: Exception): String = when {
-        e.message?.contains("451") == true ->
-            "Binance rechazó la conexión (451). Prueba con una VPN."
-        e.message?.contains("401") == true || e.message?.contains("400") == true ->
-            "Llaves inválidas o sin permiso de lectura. Verifícalas en Binance."
-        e.message?.contains("timeout") == true || e is java.net.SocketTimeoutException ->
-            "Tiempo agotado. Revisa tu conexión a internet."
-        else -> e.message ?: "Error desconocido"
+    private fun friendlyError(e: Exception): String {
+        val status = when (e) {
+            is ClientRequestException -> e.response.status.value
+            is ServerResponseException -> e.response.status.value
+            else -> null
+        }
+        return when (status) {
+            451 -> "Binance rechazó la conexión (451). Prueba con una VPN."
+            400, 401 -> "Llaves inválidas o sin permiso de lectura. Verifícalas en Binance."
+            else -> when (e) {
+                is HttpRequestTimeoutException, is ConnectTimeoutException ->
+                    "Tiempo agotado. Revisa tu conexión a internet."
+                else -> e.message ?: "Error desconocido"
+            }
+        }
     }
 
     private companion object {

@@ -43,4 +43,11 @@ val parserModule = module {
     single { ParserRegistry(get()) }
 }
 
-fun commonKoinModules(): List<Module> = listOf(dbModule, parserModule)
+/** Red hacia Binance (Ktor KMP; el engine lo provee createHttpClient() por plataforma). */
+val networkModule = module {
+    single { kotlinx.serialization.json.Json { ignoreUnknownKeys = true } }
+    single { dev.tubolsillo.app.core.platform.createHttpClient() }
+    single { dev.tubolsillo.app.data.source.binance.BinanceApi(get()) }
+}
+
+fun commonKoinModules(): List<Module> = listOf(dbModule, parserModule, networkModule)

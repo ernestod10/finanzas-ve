@@ -3,7 +3,6 @@ package dev.tubolsillo.app
 import android.app.Application
 import androidx.work.Configuration
 import dagger.hilt.android.HiltAndroidApp
-import dev.tubolsillo.app.core.di.androidKoinModules
 import dev.tubolsillo.app.core.di.commonKoinModules
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.context.startKoin
@@ -24,7 +23,7 @@ class TubolsilloApp : Application(), Configuration.Provider {
         // en sus providers (core/di) hasta que M4 elimine Hilt por completo.
         startKoin {
             androidContext(this@TubolsilloApp)
-            modules(commonKoinModules() + androidKoinModules())
+            modules(commonKoinModules())
         }
     }
 }

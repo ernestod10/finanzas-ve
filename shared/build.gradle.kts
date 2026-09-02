@@ -30,13 +30,14 @@ kotlin {
             implementation(libs.sqlite.bundled)
             implementation(libs.datastore.preferences)
             implementation(libs.koin.core)
+            implementation(libs.ktor.client.core)
+            implementation(libs.ktor.client.content.negotiation)
+            implementation(libs.ktor.serialization.kotlinx.json)
+            implementation(libs.ktor.client.logging)
         }
         androidMain.dependencies {
             implementation(libs.kotlinx.coroutines.android)
-            implementation(libs.retrofit)
-            implementation(libs.retrofit.kotlinx.serialization)
-            implementation(libs.okhttp)
-            implementation(libs.okhttp.logging)
+            implementation(libs.ktor.client.okhttp)
             implementation(libs.security.crypto)
             implementation(libs.kotlin.csv)
             implementation(libs.androidx.core.ktx)
@@ -49,11 +50,11 @@ kotlin {
             implementation(libs.kotlin.test)
             implementation(libs.kotlinx.coroutines.test)
             implementation(libs.turbine)
+            implementation(libs.ktor.client.mock)
         }
         androidUnitTest.dependencies {
             implementation(libs.kotlin.test)
             implementation(libs.junit)
-            implementation(libs.mockwebserver)
             implementation(libs.room.testing)
         }
     }

@@ -6,6 +6,7 @@ kotlinxDatetime = "0.7.1"
 okio = "3.9.1"
 sqliteBundled = "2.5.1"
 koin = "4.1.1"
+ktor = "3.2.4"
 coreKtx = "1.16.0"
 composeBom = "2025.06.00"
 activityCompose = "1.10.1"
@@ -69,6 +70,12 @@ kotlin-csv = { group = "com.github.doyaaaaaken", name = "kotlin-csv", version.re
 sqlite-bundled = { group = "androidx.sqlite", name = "sqlite-bundled", version.ref = "sqliteBundled" }
 koin-core = { group = "io.insert-koin", name = "koin-core", version.ref = "koin" }
 koin-android = { group = "io.insert-koin", name = "koin-android", version.ref = "koin" }
+ktor-client-core = { group = "io.ktor", name = "ktor-client-core", version.ref = "ktor" }
+ktor-client-okhttp = { group = "io.ktor", name = "ktor-client-okhttp", version.ref = "ktor" }
+ktor-client-content-negotiation = { group = "io.ktor", name = "ktor-client-content-negotiation", version.ref = "ktor" }
+ktor-serialization-kotlinx-json = { group = "io.ktor", name = "ktor-serialization-kotlinx-json", version.ref = "ktor" }
+ktor-client-logging = { group = "io.ktor", name = "ktor-client-logging", version.ref = "ktor" }
+ktor-client-mock = { group = "io.ktor", name = "ktor-client-mock", version.ref = "ktor" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 turbine = { group = "app.cash.turbine", name = "turbine", version.ref = "turbine" }
 androidx-test-ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidxTestExt" }
