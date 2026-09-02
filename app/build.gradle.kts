@@ -10,11 +10,11 @@ plugins {
 }
 
 android {
-    namespace = "dev.ernesto.finanza"
+    namespace = "dev.tubolsillo.app"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "dev.ernesto.finanza"
+        applicationId = "dev.tubolsillo.app"
         minSdk = 26
         targetSdk = 35
         versionCode = 1
