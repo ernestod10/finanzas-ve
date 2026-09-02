@@ -25,6 +25,9 @@ interface AccountDao {
     @Query("SELECT * FROM accounts WHERE institution = :institution AND currency = :currency AND isActive = 1 LIMIT 1")
     suspend fun findByInstitutionAndCurrency(institution: String, currency: String): AccountEntity?
 
+    @Query("SELECT * FROM accounts WHERE institution = :institution AND isActive = 1 ORDER BY sortOrder, id")
+    suspend fun findActiveByInstitution(institution: String): List<AccountEntity>
+
     @Insert
     suspend fun insert(account: AccountEntity): Long
 

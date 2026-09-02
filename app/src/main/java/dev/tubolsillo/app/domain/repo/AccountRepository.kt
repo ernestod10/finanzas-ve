@@ -79,4 +79,37 @@ class AccountRepository @Inject constructor(
         accountDao.updateCreditLimit(accountId, limitMinor)
 
     suspend fun archive(accountId: Long) = accountDao.archive(accountId)
+
+    /**
+     * Resuelve la cuenta para una captura: activa de la institución en la
+     * moneda parseada; si el texto menciona tarjeta de crédito, prefiere una
+     * TDC. Si no existe ninguna, la crea (primera captura del banco).
+     */
+    suspend fun findForCapture(
+        institution: dev.tubolsillo.app.domain.model.Institution,
+        parsed: dev.tubolsillo.app.domain.model.ParsedTransaction,
+    ): AccountEntity {
+        val isCard = parsed.raw.contains("tarjeta", ignoreCase = true) ||
+            parsed.raw.contains("credito", ignoreCase = true) ||
+            parsed.raw.contains("crédito", ignoreCase = true)
+        val preferredKind = if (isCard) AccountKind.CREDIT_CARD else null
+
+        val active = accountDao.findActiveByInstitution(institution.key)
+        val match = active.firstOrNull { it.currency == parsed.currency && it.kind == preferredKind?.key }
+            ?: active.firstOrNull { it.currency == parsed.currency }
+            ?: active.firstOrNull { it.kind == preferredKind?.key }
+            ?: active.firstOrNull()
+        if (match != null) return match
+
+        // Sin cuenta: se crea automáticamente con la primera captura.
+        val id = create(
+            institution = institution,
+            name = institution.displayName + if (preferredKind == AccountKind.CREDIT_CARD) " TDC" else "",
+            kind = preferredKind ?: AccountKind.CHECKING,
+            currencyCode = parsed.currency,
+            initialBalanceMinor = null,
+            creditLimitMinor = null,
+        )
+        return accountDao.getById(id)!!
+    }
 }

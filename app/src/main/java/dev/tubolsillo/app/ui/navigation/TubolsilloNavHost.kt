@@ -2,6 +2,7 @@ package dev.tubolsillo.app.ui.navigation
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.ReceiptLong
@@ -24,8 +25,11 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import dev.tubolsillo.app.ui.account.AccountDetailScreen
+import dev.tubolsillo.app.ui.accounts.AccountsScreen
 import dev.tubolsillo.app.ui.budget.BudgetScreen
 import dev.tubolsillo.app.ui.dashboard.DashboardScreen
+import dev.tubolsillo.app.ui.events.EventsScreen
+import dev.tubolsillo.app.ui.events.ReplayScreen
 import dev.tubolsillo.app.ui.settings.BinanceSettingsScreen
 import dev.tubolsillo.app.ui.settings.RatesScreen
 import dev.tubolsillo.app.ui.settings.SettingsScreen
@@ -34,12 +38,15 @@ import dev.tubolsillo.app.ui.transactions.TransactionsScreen
 /** Rutas de la app. */
 object Routes {
     const val DASHBOARD = "dashboard"
+    const val ACCOUNTS = "accounts"
     const val TRANSACTIONS = "transactions"
     const val BUDGET = "budget"
     const val SETTINGS = "settings"
     const val ACCOUNT = "account/{accountId}"
     const val RATES = "rates"
     const val BINANCE = "binance"
+    const val EVENTS = "events"
+    const val REPLAY = "replay"
 
     fun account(accountId: Long) = "account/$accountId"
 }
@@ -54,9 +61,11 @@ private data class TopLevelDestination(
 fun TubolsilloNavHost() {
     val navController = rememberNavController()
 
+    // Orden pedido por el usuario: cuentas · movimientos · inicio · presupuesto · ajustes.
     val destinations = listOf(
-        TopLevelDestination(Routes.DASHBOARD, "Inicio", { Icon(Icons.Filled.Home, null) }),
+        TopLevelDestination(Routes.ACCOUNTS, "Cuentas", { Icon(Icons.Filled.AccountBalance, null) }),
         TopLevelDestination(Routes.TRANSACTIONS, "Movimientos", { Icon(Icons.Filled.ReceiptLong, null) }),
+        TopLevelDestination(Routes.DASHBOARD, "Inicio", { Icon(Icons.Filled.Home, null) }),
         TopLevelDestination(Routes.BUDGET, "Presupuesto", { Icon(Icons.Filled.AccountBalanceWallet, null) }),
         TopLevelDestination(Routes.SETTINGS, "Ajustes", { Icon(Icons.Filled.Settings, null) }),
     )
@@ -99,6 +108,11 @@ fun TubolsilloNavHost() {
                     },
                 )
             }
+            composable(Routes.ACCOUNTS) {
+                AccountsScreen(
+                    onAccountClick = { id -> navController.navigate(Routes.account(id)) },
+                )
+            }
             composable(Routes.TRANSACTIONS) {
                 TransactionsScreen()
             }
@@ -109,6 +123,7 @@ fun TubolsilloNavHost() {
                 SettingsScreen(
                     onRatesClick = { navController.navigate(Routes.RATES) },
                     onBinanceClick = { navController.navigate(Routes.BINANCE) },
+                    onEventsClick = { navController.navigate(Routes.EVENTS) },
                 )
             }
             composable(
@@ -122,6 +137,15 @@ fun TubolsilloNavHost() {
             }
             composable(Routes.BINANCE) {
                 BinanceSettingsScreen(onBack = { navController.popBackStack() })
+            }
+            composable(Routes.EVENTS) {
+                EventsScreen(
+                    onBack = { navController.popBackStack() },
+                    onReplayClick = { navController.navigate(Routes.REPLAY) },
+                )
+            }
+            composable(Routes.REPLAY) {
+                ReplayScreen(onBack = { navController.popBackStack() })
             }
         }
     }
