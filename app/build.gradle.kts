@@ -54,11 +54,8 @@ kotlin {
     }
 }
 
-ksp {
-    arg("room.schemaLocation", "$projectDir/schemas")
-}
-
 dependencies {
+    implementation(project(":shared"))
     implementation(platform(libs.compose.bom))
 
     implementation(libs.androidx.core.ktx)

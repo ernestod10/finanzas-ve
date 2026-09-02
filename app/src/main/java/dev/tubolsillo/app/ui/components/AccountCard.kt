@@ -50,9 +50,9 @@ fun AccountCard(view: AccountBalanceView, onClick: () -> Unit, modifier: Modifie
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                if (view.lastUpdateAt != null) {
+                view.lastUpdateAt?.let { lastUpdateAt ->
                     Text(
-                        text = "Actualizado " + formatTime(view.lastUpdateAt),
+                        text = "Actualizado " + formatTime(lastUpdateAt),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -66,12 +66,14 @@ fun AccountCard(view: AccountBalanceView, onClick: () -> Unit, modifier: Modifie
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                 )
-                if (view.usdEquivalent != null && view.currencyCode != "USD") {
-                    Text(
-                        text = "≈ " + MoneyFormatter.formatUsd(view.usdEquivalent),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                view.usdEquivalent?.let { usd ->
+                    if (view.currencyCode != "USD") {
+                        Text(
+                            text = "≈ " + MoneyFormatter.formatUsd(usd),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
             }
         }
@@ -116,12 +118,14 @@ fun DebtCard(view: AccountBalanceView, onClick: () -> Unit, modifier: Modifier =
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.error,
                     )
-                    if (view.usdEquivalent != null && view.currencyCode != "USD") {
-                        Text(
-                            text = "≈ " + MoneyFormatter.formatUsd(view.usdEquivalent),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                    view.usdEquivalent?.let { usd ->
+                        if (view.currencyCode != "USD") {
+                            Text(
+                                text = "≈ " + MoneyFormatter.formatUsd(usd),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
                 }
             }

@@ -22,3 +22,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "tubolsillo"
 include(":app")
+include(":shared")
