@@ -5,13 +5,13 @@ plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.room)
 }
 
 /**
  * Módulo compartido TuBolsillo (migración KMP).
- * M1: solo androidTarget con el código puro en commonMain y la capa de datos
- * (Room 2.7 JVM, Retrofit, kotlin-csv) temporalmente en androidMain.
- * M2+: Room KMP a commonMain, Koin, Ktor, CMP y targets iOS.
+ * M2: Room KMP (2.8.2 + sqlite-bundled) y Koin en commonMain; Retrofit,
+ * kotlin-csv y SecretStore siguen temporalmente en androidMain (M3/M4/M7).
  */
 kotlin {
     androidTarget {
@@ -26,20 +26,22 @@ kotlin {
             implementation(libs.kotlinx.serialization.json)
             implementation(libs.kotlinx.datetime)
             implementation(libs.okio)
+            implementation(libs.room.runtime)
+            implementation(libs.sqlite.bundled)
+            implementation(libs.datastore.preferences)
+            implementation(libs.koin.core)
         }
         androidMain.dependencies {
-            implementation(libs.room.runtime)
-            implementation(libs.room.ktx)
             implementation(libs.kotlinx.coroutines.android)
             implementation(libs.retrofit)
             implementation(libs.retrofit.kotlinx.serialization)
             implementation(libs.okhttp)
             implementation(libs.okhttp.logging)
             implementation(libs.security.crypto)
-            implementation(libs.datastore.preferences)
             implementation(libs.kotlin.csv)
             implementation(libs.androidx.core.ktx)
-            // Anotaciones de inyección de las clases movidas (Hilt se queda en :app).
+            implementation(libs.koin.android)
+            // Anotaciones de inyección (Hilt se queda en :app hasta M4).
             implementation("javax.inject:javax.inject:1")
             implementation(libs.hilt.android)
         }
@@ -57,13 +59,13 @@ kotlin {
     }
 }
 
-ksp {
-    arg("room.schemaLocation", "$projectDir/schemas")
+// Compilador de Room para KMP (el plugin androidx.room gestiona KSP por target).
+dependencies {
+    add("kspCommonMainMetadata", libs.room.compiler)
 }
 
-// Room compiler para el target android (M2 lo cambia por el plugin androidx.room KMP).
-dependencies {
-    add("kspAndroid", libs.room.compiler)
+room {
+    schemaDirectory("$projectDir/schemas")
 }
 
 android {

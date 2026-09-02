@@ -1,5 +1,7 @@
 package dev.tubolsillo.app.domain.usecase
 
+import dev.tubolsillo.app.core.time.nowMillis
+
 import dev.tubolsillo.app.core.db.TubolsilloDatabase
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
@@ -39,7 +41,7 @@ class BackupExporter @Inject constructor(
 
     suspend fun exportJson(): String {
         val dto = BackupDto(
-            exportedAt = System.currentTimeMillis(),
+            exportedAt = nowMillis(),
             accounts = db.accountDao().getAllForExport(),
             transactions = db.transactionDao().getAllForExport(),
             balanceSnapshots = db.balanceSnapshotDao().getAllForExport(),

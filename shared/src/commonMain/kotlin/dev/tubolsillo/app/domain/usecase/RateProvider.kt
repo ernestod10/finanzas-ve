@@ -1,5 +1,7 @@
 package dev.tubolsillo.app.domain.usecase
 
+import dev.tubolsillo.app.core.time.nowMillis
+
 import dev.tubolsillo.app.core.db.dao.CurrencyRateDao
 import dev.tubolsillo.app.core.db.entity.CurrencyRateEntity
 import dev.tubolsillo.app.domain.model.RateSource
@@ -36,7 +38,7 @@ class RateProvider @Inject constructor(
                 currency = code,
                 usdRate = usdRate,
                 source = source.key,
-                updatedAt = System.currentTimeMillis(),
+                updatedAt = nowMillis(),
             )
         )
     }

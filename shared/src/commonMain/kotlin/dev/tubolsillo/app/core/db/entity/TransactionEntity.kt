@@ -1,5 +1,7 @@
 package dev.tubolsillo.app.core.db.entity
 
+import dev.tubolsillo.app.core.time.nowMillis
+
 import kotlinx.serialization.Serializable
 
 import androidx.room.Entity
@@ -34,6 +36,6 @@ data class TransactionEntity(
     val rawJson: String? = null,
     val transferPairId: Long? = null,
     val isReconciled: Boolean = false,
-    val createdAt: Long = System.currentTimeMillis(),
-    val updatedAt: Long = System.currentTimeMillis(),
+    val createdAt: Long = nowMillis(),
+    val updatedAt: Long = nowMillis(),
 )

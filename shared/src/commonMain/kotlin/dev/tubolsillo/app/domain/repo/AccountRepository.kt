@@ -1,5 +1,7 @@
 package dev.tubolsillo.app.domain.repo
 
+import dev.tubolsillo.app.core.time.nowMillis
+
 import dev.tubolsillo.app.core.db.dao.AccountDao
 import dev.tubolsillo.app.core.db.dao.BalanceSnapshotDao
 import dev.tubolsillo.app.core.db.entity.AccountEntity
@@ -60,7 +62,7 @@ class AccountRepository @Inject constructor(
         currencyCode: String,
         source: SourceType,
         rawText: String? = null,
-        capturedAt: Long = System.currentTimeMillis(),
+        capturedAt: Long = nowMillis(),
     ) {
         snapshotDao.recordBalance(
             accountId,

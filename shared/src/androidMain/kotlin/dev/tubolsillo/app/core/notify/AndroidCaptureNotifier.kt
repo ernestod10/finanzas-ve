@@ -21,11 +21,11 @@ import javax.inject.Singleton
  * Canal silencioso "Capturas"; en Android 13+ requiere POST_NOTIFICATIONS.
  */
 @Singleton
-class CaptureNotifier @Inject constructor(
+class AndroidCaptureNotifier @Inject constructor(
     @ApplicationContext private val context: Context,
-) {
+) : CaptureNotifier {
 
-    fun notifyCaptured(parsed: ParsedTransaction, transactionId: Long) {
+    override fun notifyCaptured(parsed: ParsedTransaction, transactionId: Long) {
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS)
             != PackageManager.PERMISSION_GRANTED
         ) return

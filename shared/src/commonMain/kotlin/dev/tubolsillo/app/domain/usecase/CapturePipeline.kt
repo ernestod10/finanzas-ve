@@ -1,5 +1,7 @@
 package dev.tubolsillo.app.domain.usecase
 
+import dev.tubolsillo.app.core.time.nowMillis
+
 import dev.tubolsillo.app.core.db.dao.CaptureEventDao
 import dev.tubolsillo.app.core.db.dao.TagDao
 import dev.tubolsillo.app.core.db.dao.TransactionDao
@@ -46,7 +48,7 @@ class CapturePipeline @Inject constructor(
         sender: String? = null,
         hintedInstitution: Institution? = null,
     ): CaptureOutcome = withContext(Dispatchers.IO) {
-        val now = System.currentTimeMillis()
+        val now = nowMillis()
 
         // 1) El raw se persiste ANTES de procesar.
         val eventId = captureEventDao.insert(

@@ -1,11 +1,8 @@
 package dev.tubolsillo.app.core.di
 
-import android.content.Context
-import androidx.room.Room
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
-import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import dev.tubolsillo.app.core.db.TubolsilloDatabase
 import dev.tubolsillo.app.core.db.dao.AccountDao
@@ -18,26 +15,29 @@ import dev.tubolsillo.app.core.db.dao.InstallmentDao
 import dev.tubolsillo.app.core.db.dao.TagDao
 import dev.tubolsillo.app.core.db.dao.TransactionDao
 import dev.tubolsillo.app.core.db.dao.TransferPairDao
+import org.koin.java.KoinJavaComponent.getKoin
 import javax.inject.Singleton
 
+/**
+ * Puente temporal Hilt→Koin: la base de datos y los DAOs viven en el grafo
+ * Koin de shared; Hilt los expone a los ViewModels hasta M4.
+ */
 @Module
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
 
     @Provides
     @Singleton
-    fun provideDatabase(@ApplicationContext context: Context): TubolsilloDatabase =
-        Room.databaseBuilder(context, TubolsilloDatabase::class.java, "tubolsillo.db")
-            .build()
+    fun provideDatabase(): TubolsilloDatabase = getKoin().get()
 
-    @Provides fun provideAccountDao(db: TubolsilloDatabase): AccountDao = db.accountDao()
-    @Provides fun provideTransactionDao(db: TubolsilloDatabase): TransactionDao = db.transactionDao()
-    @Provides fun provideBalanceSnapshotDao(db: TubolsilloDatabase): BalanceSnapshotDao = db.balanceSnapshotDao()
-    @Provides fun provideTransferPairDao(db: TubolsilloDatabase): TransferPairDao = db.transferPairDao()
-    @Provides fun provideCurrencyRateDao(db: TubolsilloDatabase): CurrencyRateDao = db.currencyRateDao()
-    @Provides fun provideCaptureEventDao(db: TubolsilloDatabase): CaptureEventDao = db.captureEventDao()
-    @Provides fun provideInstallmentDao(db: TubolsilloDatabase): InstallmentDao = db.installmentDao()
-    @Provides fun provideBudgetDao(db: TubolsilloDatabase): BudgetDao = db.budgetDao()
-    @Provides fun provideTagDao(db: TubolsilloDatabase): TagDao = db.tagDao()
-    @Provides fun provideCategoryRuleDao(db: TubolsilloDatabase): CategoryRuleDao = db.categoryRuleDao()
+    @Provides fun provideAccountDao(): AccountDao = getKoin().get()
+    @Provides fun provideTransactionDao(): TransactionDao = getKoin().get()
+    @Provides fun provideBalanceSnapshotDao(): BalanceSnapshotDao = getKoin().get()
+    @Provides fun provideTransferPairDao(): TransferPairDao = getKoin().get()
+    @Provides fun provideCurrencyRateDao(): CurrencyRateDao = getKoin().get()
+    @Provides fun provideCaptureEventDao(): CaptureEventDao = getKoin().get()
+    @Provides fun provideInstallmentDao(): InstallmentDao = getKoin().get()
+    @Provides fun provideBudgetDao(): BudgetDao = getKoin().get()
+    @Provides fun provideTagDao(): TagDao = getKoin().get()
+    @Provides fun provideCategoryRuleDao(): CategoryRuleDao = getKoin().get()
 }

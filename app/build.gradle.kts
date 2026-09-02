@@ -92,6 +92,7 @@ dependencies {
     implementation(libs.security.crypto)
     implementation(libs.work.runtime.ktx)
     implementation(libs.kotlin.csv)
+    implementation(libs.koin.android)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

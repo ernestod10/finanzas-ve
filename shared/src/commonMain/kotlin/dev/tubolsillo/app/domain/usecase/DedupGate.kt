@@ -4,7 +4,7 @@ import dev.tubolsillo.app.core.db.dao.TransactionDao
 import dev.tubolsillo.app.core.text.MerchantNormalizer
 import dev.tubolsillo.app.core.time.MonthBuckets
 import dev.tubolsillo.app.domain.model.Institution
-import java.security.MessageDigest
+import okio.ByteString.Companion.toByteString
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -51,8 +51,6 @@ class DedupGate @Inject constructor(
         }
 
         private fun sha256Hex(input: String): String =
-            MessageDigest.getInstance("SHA-256")
-                .digest(input.toByteArray(Charsets.UTF_8))
-                .joinToString("") { byte -> "%02x".format(byte) }
+            input.encodeToByteArray().toByteString().sha256().hex()
     }
 }

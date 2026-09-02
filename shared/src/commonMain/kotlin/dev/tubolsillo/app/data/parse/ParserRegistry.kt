@@ -1,5 +1,7 @@
 package dev.tubolsillo.app.data.parse
 
+import dev.tubolsillo.app.core.time.nowMillis
+
 import dev.tubolsillo.app.domain.model.Institution
 import dev.tubolsillo.app.domain.model.ParsedTransaction
 
@@ -13,7 +15,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class ParserRegistry @Inject constructor(
-    parsers: Set<@JvmSuppressWildcards InstitutionParser>,
+    parsers: List<InstitutionParser>,
 ) {
 
     private val byInstitution: Map<Institution, InstitutionParser> =
@@ -26,7 +28,7 @@ class ParserRegistry @Inject constructor(
     fun parse(
         institution: Institution,
         text: String,
-        occurredAt: Long = System.currentTimeMillis(),
+        occurredAt: Long = nowMillis(),
     ): ParsedTransaction? = byInstitution[institution]?.parse(text, occurredAt)
 
     /** Detecta la institución por keywords del texto, o null. */

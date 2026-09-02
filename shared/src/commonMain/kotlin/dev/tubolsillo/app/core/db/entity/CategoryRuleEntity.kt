@@ -1,5 +1,7 @@
 package dev.tubolsillo.app.core.db.entity
 
+import dev.tubolsillo.app.core.time.nowMillis
+
 import kotlinx.serialization.Serializable
 
 import androidx.room.Entity
@@ -22,5 +24,5 @@ data class CategoryRuleEntity(
     val merchantPattern: String,
     val tagName: String? = null,
     val categoryKey: String? = null,
-    val createdAt: Long = System.currentTimeMillis(),
+    val createdAt: Long = nowMillis(),
 )

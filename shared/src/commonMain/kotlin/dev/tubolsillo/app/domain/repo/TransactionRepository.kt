@@ -1,5 +1,7 @@
 package dev.tubolsillo.app.domain.repo
 
+import dev.tubolsillo.app.core.time.nowMillis
+
 import dev.tubolsillo.app.core.db.dao.TagDao
 import dev.tubolsillo.app.core.db.dao.TransactionDao
 import dev.tubolsillo.app.core.db.dao.TransactionWithTags
@@ -50,7 +52,7 @@ class TransactionRepository @Inject constructor(
         currencyCode: String,
         description: String,
         category: TransactionCategory,
-        occurredAt: Long = System.currentTimeMillis(),
+        occurredAt: Long = nowMillis(),
         status: TxStatus = TxStatus.CONFIRMED,
     ): Long {
         val id = transactionDao.insert(
