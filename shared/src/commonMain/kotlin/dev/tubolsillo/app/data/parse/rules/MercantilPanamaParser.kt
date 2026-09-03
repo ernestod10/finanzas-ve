@@ -7,15 +7,12 @@ import dev.tubolsillo.app.data.parse.ParserTemplate
 import dev.tubolsillo.app.domain.model.Institution
 import dev.tubolsillo.app.domain.model.ParsedTransaction
 import dev.tubolsillo.app.domain.model.TransactionCategory
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * SMS/push de Mercantil Panamá. Montos en USD con prefijo "B/.".
  * v1 con compra/retiro genéricos; se afina con el corpus real.
  */
-@Singleton
-class MercantilPanamaParser @Inject constructor() : InstitutionParser {
+class MercantilPanamaParser() : InstitutionParser {
 
     override val institution = Institution.MERCANTIL_PA
     override val version = 1

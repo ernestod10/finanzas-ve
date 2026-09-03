@@ -10,11 +10,8 @@ import dev.tubolsillo.app.domain.model.AccountKind
 import dev.tubolsillo.app.domain.model.Institution
 import dev.tubolsillo.app.domain.model.SourceType
 import kotlinx.coroutines.flow.Flow
-import javax.inject.Inject
-import javax.inject.Singleton
 
-@Singleton
-class AccountRepository @Inject constructor(
+class AccountRepository(
     private val accountDao: AccountDao,
     private val snapshotDao: BalanceSnapshotDao,
 ) {

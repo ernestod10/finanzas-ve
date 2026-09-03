@@ -1,0 +1,54 @@
+package dev.tubolsillo.app.core.platform
+
+import android.content.Context
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
+
+@Composable
+actual fun rememberCsvImportPicker(onResult: FileResult): () -> Unit {
+    val context = LocalContext.current
+    val launcher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        if (uri == null) {
+            onResult(null, null)
+        } else {
+            onResult(readContent(context, uri), uri.lastPathSegment)
+        }
+    }
+    return { launcher.launch(arrayOf("text/*", "text/csv", "text/comma-separated-values")) }
+}
+
+@Composable
+actual fun rememberJsonExportPicker(defaultName: String): (String) -> Unit {
+    val context = LocalContext.current
+    val launcher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri: Uri? ->
+        exportPendingJson?.let { json ->
+            uri?.let {
+                runCatching {
+                    context.contentResolver.openOutputStream(it)?.use { stream ->
+                        stream.write(json.toByteArray(Charsets.UTF_8))
+                    }
+                }
+            }
+            exportPendingJson = null
+        }
+    }
+    return { json: String ->
+        exportPendingJson = json
+        launcher.launch(defaultName)
+    }
+}
+
+/** JSON pendiente entre el botón y la elección del destino en el picker. */
+private var exportPendingJson: String? = null
+
+private fun readContent(context: Context, uri: Uri): String? =
+    runCatching {
+        context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
+    }.getOrNull()

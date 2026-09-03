@@ -1,16 +1,13 @@
 package dev.tubolsillo.app.data.source.binance
 
 import okio.ByteString.Companion.toByteString
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Firmado HMAC-SHA256 de la API de Binance (KMP: okio en vez de javax.crypto):
  * la query string ordenada alfabéticamente (TreeMap garantiza el orden) +
  * timestamp + recvWindow, firma en hex, y la misma query se envía como params.
  */
-@Singleton
-class BinanceSigner @Inject constructor() {
+class BinanceSigner() {
 
     fun sign(query: String, apiSecret: String): String =
         query.encodeToByteArray().toByteString()

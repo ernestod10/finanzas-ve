@@ -5,16 +5,13 @@ import dev.tubolsillo.app.core.time.nowMillis
 import dev.tubolsillo.app.domain.model.Institution
 import dev.tubolsillo.app.domain.model.ParsedTransaction
 
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Registro de parsers por institución. La detección sin hint usa scoring de
  * keywords por institución ("BanescoInforma", "B/.", "Cashea"…): gana la
  * institución con más coincidencias.
  */
-@Singleton
-class ParserRegistry @Inject constructor(
+class ParserRegistry(
     parsers: List<InstitutionParser>,
 ) {
 

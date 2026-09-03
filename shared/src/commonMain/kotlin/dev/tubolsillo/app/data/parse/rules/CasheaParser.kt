@@ -7,8 +7,6 @@ import dev.tubolsillo.app.data.parse.ParserTemplate
 import dev.tubolsillo.app.domain.model.Institution
 import dev.tubolsillo.app.domain.model.ParsedTransaction
 import dev.tubolsillo.app.domain.model.TransactionCategory
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Push de Cashea (com.cashea.app). Las compras BNPL viven solo en la app;
@@ -16,8 +14,7 @@ import javax.inject.Singleton
  * v1 best-effort; se afina con corpus real (push de Cashea es poco confiable,
  * el email llega en una fase futura).
  */
-@Singleton
-class CasheaParser @Inject constructor() : InstitutionParser {
+class CasheaParser() : InstitutionParser {
 
     override val institution = Institution.CASHEA
     override val version = 1

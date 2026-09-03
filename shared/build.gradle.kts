@@ -3,9 +3,11 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.android.library)
+    alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.room)
+    alias(libs.plugins.compose.multiplatform)
 }
 
 /**
@@ -34,17 +36,27 @@ kotlin {
             implementation(libs.ktor.client.content.negotiation)
             implementation(libs.ktor.serialization.kotlinx.json)
             implementation(libs.ktor.client.logging)
+
+            // Compose Multiplatform + UI común (Android e iOS).
+            implementation(compose.runtime)
+            implementation(compose.foundation)
+            implementation(compose.material3)
+            implementation(compose.ui)
+            implementation(libs.material.icons.extended)
+            implementation(libs.navigation.compose.kmp)
+            implementation(libs.lifecycle.viewmodel.compose.kmp)
+            implementation(libs.lifecycle.runtime.compose.kmp)
+            implementation(libs.koin.compose)
+            implementation(libs.koin.compose.viewmodel)
+            implementation(libs.koin.compose.viewmodel.navigation)
         }
         androidMain.dependencies {
             implementation(libs.kotlinx.coroutines.android)
             implementation(libs.ktor.client.okhttp)
             implementation(libs.security.crypto)
-            implementation(libs.kotlin.csv)
             implementation(libs.androidx.core.ktx)
             implementation(libs.koin.android)
-            // Anotaciones de inyección (Hilt se queda en :app hasta M4).
-            implementation("javax.inject:javax.inject:1")
-            implementation(libs.hilt.android)
+            implementation(libs.androidx.activity.compose)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

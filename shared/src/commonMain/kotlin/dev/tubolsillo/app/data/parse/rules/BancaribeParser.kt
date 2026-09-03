@@ -7,12 +7,9 @@ import dev.tubolsillo.app.data.parse.ParserTemplate
 import dev.tubolsillo.app.domain.model.Institution
 import dev.tubolsillo.app.domain.model.ParsedTransaction
 import dev.tubolsillo.app.domain.model.TransactionCategory
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /** SMS/push de Bancaribe. v1 con patrones estándar VE; se afina con corpus real. */
-@Singleton
-class BancaribeParser @Inject constructor() : InstitutionParser {
+class BancaribeParser() : InstitutionParser {
 
     override val institution = Institution.BANCARIBE
     override val version = 1

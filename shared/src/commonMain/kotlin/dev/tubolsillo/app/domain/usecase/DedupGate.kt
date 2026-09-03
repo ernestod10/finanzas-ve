@@ -5,8 +5,6 @@ import dev.tubolsillo.app.core.text.MerchantNormalizer
 import dev.tubolsillo.app.core.time.MonthBuckets
 import dev.tubolsillo.app.domain.model.Institution
 import okio.ByteString.Companion.toByteString
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Deduplicación de capturas: la misma operación puede llegar por SMS Y por
@@ -17,8 +15,7 @@ import javax.inject.Singleton
  * El lookup vecino (±24h, misma institución+monto+comercio) para CSV llega en
  * Fase 4; la clave exacta cubre el caso SMS-vs-push.
  */
-@Singleton
-class DedupGate @Inject constructor(
+class DedupGate(
     private val transactionDao: TransactionDao,
 ) {
 

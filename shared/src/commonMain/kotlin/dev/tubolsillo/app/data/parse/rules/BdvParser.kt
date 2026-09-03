@@ -7,15 +7,12 @@ import dev.tubolsillo.app.data.parse.ParserTemplate
 import dev.tubolsillo.app.domain.model.Institution
 import dev.tubolsillo.app.domain.model.ParsedTransaction
 import dev.tubolsillo.app.domain.model.TransactionCategory
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Push de la app BDV (com.bancodevenezuela.bdvdigital) — BDV ya casi no manda
  * SMS, todo va por push. v1 con patrones estándar VE; se afina con corpus real.
  */
-@Singleton
-class BdvParser @Inject constructor() : InstitutionParser {
+class BdvParser() : InstitutionParser {
 
     override val institution = Institution.BDV
     override val version = 1

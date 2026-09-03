@@ -7,16 +7,13 @@ import dev.tubolsillo.app.data.parse.ParserTemplate
 import dev.tubolsillo.app.domain.model.Institution
 import dev.tubolsillo.app.domain.model.ParsedTransaction
 import dev.tubolsillo.app.domain.model.TransactionCategory
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * SMS de Banesco ("BanescoInforma: Compra por Bs. 25,00 en FARMACIA X. Saldo: ...").
  * v1 con los formatos típicos de compra TDC/débito y pago móvil; se afina con
  * el corpus real del usuario (pantalla Replay).
  */
-@Singleton
-class BanescoParser @Inject constructor() : InstitutionParser {
+class BanescoParser() : InstitutionParser {
 
     override val institution = Institution.BANESCO
     override val version = 1

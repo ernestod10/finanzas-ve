@@ -18,8 +18,6 @@ import dev.tubolsillo.app.domain.model.TxStatus
 import dev.tubolsillo.app.domain.repo.AccountRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Vía ÚNICA de ingesta de transacciones capturadas (SMS, push, y en el futuro
@@ -29,8 +27,7 @@ import javax.inject.Singleton
  * Room (tx + balance + reglas de etiquetado) → 7) actualizar evento → 8)
  * notificar.
  */
-@Singleton
-class CapturePipeline @Inject constructor(
+class CapturePipeline(
     private val captureEventDao: CaptureEventDao,
     private val transactionDao: TransactionDao,
     private val tagDao: TagDao,

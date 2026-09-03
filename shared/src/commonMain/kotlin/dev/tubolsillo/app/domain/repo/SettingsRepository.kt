@@ -10,15 +10,12 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import dev.tubolsillo.app.core.platform.dataStorePath
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Ajustes no sensibles de la app (DataStore KMP, archivo por plataforma vía
  * [dataStorePath]). Los secretos (llaves Binance) van en SecretStore.
  */
-@Singleton
-class SettingsRepository @Inject constructor() {
+class SettingsRepository() {
 
     private val dataStore: DataStore<Preferences> = PreferenceDataStoreFactory.createWithPath {
         dataStorePath()

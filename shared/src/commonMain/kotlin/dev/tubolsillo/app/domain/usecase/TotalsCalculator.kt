@@ -5,8 +5,6 @@ import dev.tubolsillo.app.core.money.Money
 import dev.tubolsillo.app.domain.model.AccountBalanceView
 import dev.tubolsillo.app.domain.model.AccountKind
 import dev.tubolsillo.app.domain.model.Totals
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Calcula activos, deuda y patrimonio neto en USD.
@@ -14,8 +12,7 @@ import javax.inject.Singleton
  * Deuda = saldos absolutos de CREDIT_CARD/BNPL convertidos a USD
  * (Cashea se reconcilia contra Σ cuotas pendientes cuando existan cuotas).
  */
-@Singleton
-class TotalsCalculator @Inject constructor() {
+class TotalsCalculator() {
 
     fun totals(accounts: List<AccountEntity>, rates: Map<String, Double>): Totals {
         var assets = 0.0

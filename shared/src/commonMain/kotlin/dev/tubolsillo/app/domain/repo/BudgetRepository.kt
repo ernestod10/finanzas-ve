@@ -9,11 +9,8 @@ import dev.tubolsillo.app.domain.usecase.RateProvider
 import dev.tubolsillo.app.core.time.MonthBuckets
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
-import javax.inject.Inject
-import javax.inject.Singleton
 
-@Singleton
-class BudgetRepository @Inject constructor(
+class BudgetRepository(
     private val budgetDao: BudgetDao,
     private val transactionDao: TransactionDao,
     private val rateProvider: RateProvider,

@@ -10,19 +10,15 @@ import android.content.pm.PackageManager
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
-import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.tubolsillo.app.core.money.MoneyFormatter
 import dev.tubolsillo.app.domain.model.ParsedTransaction
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Notificación local de captura: "Banesco: −Bs. 25,00 en FARMACIA X".
  * Canal silencioso "Capturas"; en Android 13+ requiere POST_NOTIFICATIONS.
  */
-@Singleton
-class AndroidCaptureNotifier @Inject constructor(
-    @ApplicationContext private val context: Context,
+class AndroidCaptureNotifier(
+    private val context: Context,
 ) : CaptureNotifier {
 
     override fun notifyCaptured(parsed: ParsedTransaction, transactionId: Long) {

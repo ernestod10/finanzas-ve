@@ -1,29 +1,46 @@
 package dev.tubolsillo.app
 
 import android.app.Application
+import android.content.Context
 import androidx.work.Configuration
-import dagger.hilt.android.HiltAndroidApp
+import androidx.work.WorkerFactory
+import androidx.work.ListenableWorker
+import androidx.work.WorkerParameters
+import dev.tubolsillo.app.core.di.androidPlatformModule
 import dev.tubolsillo.app.core.di.commonKoinModules
+import dev.tubolsillo.app.core.di.domainModule
+import dev.tubolsillo.app.core.di.viewModelModule
+import dev.tubolsillo.app.data.source.binance.BinanceWorker
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.context.startKoin
-import javax.inject.Inject
 
-@HiltAndroidApp
 class TubolsilloApp : Application(), Configuration.Provider {
 
-    @Inject
-    lateinit var configuration: Configuration
-
     override val workManagerConfiguration: Configuration
-        get() = configuration
+        get() = Configuration.Builder()
+            .setWorkerFactory(BinanceWorkerFactory())
+            .build()
 
     override fun onCreate() {
         super.onCreate()
-        // Koin alimenta la capa de datos (db/parsers/red); Hilt delega hacia Koin
-        // en sus providers (core/di) hasta que M4 elimine Hilt por completo.
+        // Un solo grafo Koin: dominio+UI en shared, plataforma Android aquí.
         startKoin {
             androidContext(this@TubolsilloApp)
-            modules(commonKoinModules())
+            modules(
+                commonKoinModules() + domainModule + viewModelModule + androidPlatformModule
+            )
         }
+    }
+}
+
+/** Crea el BinanceWorker inyectando el grafo Koin (sin Hilt ni koin-android-work). */
+class BinanceWorkerFactory : WorkerFactory() {
+    override fun createWorker(
+        appContext: Context,
+        workerClassName: String,
+        workerParameters: WorkerParameters,
+    ): ListenableWorker? = when (workerClassName) {
+        BinanceWorker::class.java.name -> BinanceWorker(appContext, workerParameters)
+        else -> null
     }
 }

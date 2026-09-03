@@ -5,8 +5,6 @@ import dev.tubolsillo.app.core.db.dao.TransferPairDao
 import dev.tubolsillo.app.core.db.entity.TransactionEntity
 import dev.tubolsillo.app.core.db.entity.TransferPairEntity
 import dev.tubolsillo.app.domain.model.TransactionCategory
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Matchea las dos patas de una transferencia interna (salida de A, entrada en
@@ -17,8 +15,7 @@ import javax.inject.Singleton
  * ni ensucian el patrimonio neto) y enlazadas por transferPairId. Se re-corre
  * con cada insert, así el orden de llegada de las patas no importa.
  */
-@Singleton
-class TransferMatcher @Inject constructor(
+class TransferMatcher(
     private val transactionDao: TransactionDao,
     private val transferPairDao: TransferPairDao,
     private val rateProvider: RateProvider,

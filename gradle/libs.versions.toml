@@ -7,6 +7,9 @@ okio = "3.9.1"
 sqliteBundled = "2.5.1"
 koin = "4.1.1"
 ktor = "3.2.4"
+composeMultiplatform = "1.8.2"
+lifecycleKmp = "2.9.3"
+navigationKmp = "2.9.2"
 coreKtx = "1.16.0"
 composeBom = "2025.06.00"
 activityCompose = "1.10.1"
@@ -76,6 +79,14 @@ ktor-client-content-negotiation = { group = "io.ktor", name = "ktor-client-conte
 ktor-serialization-kotlinx-json = { group = "io.ktor", name = "ktor-serialization-kotlinx-json", version.ref = "ktor" }
 ktor-client-logging = { group = "io.ktor", name = "ktor-client-logging", version.ref = "ktor" }
 ktor-client-mock = { group = "io.ktor", name = "ktor-client-mock", version.ref = "ktor" }
+material-icons-extended = { group = "org.jetbrains.compose.material", name = "material-icons-extended", version = "1.7.3" }
+navigation-compose-kmp = { group = "org.jetbrains.androidx.navigation", name = "navigation-compose", version.ref = "navigationKmp" }
+lifecycle-viewmodel-compose-kmp = { group = "org.jetbrains.androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "lifecycleKmp" }
+lifecycle-runtime-compose-kmp = { group = "org.jetbrains.androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "lifecycleKmp" }
+koin-compose = { group = "io.insert-koin", name = "koin-compose", version.ref = "koin" }
+koin-compose-viewmodel = { group = "io.insert-koin", name = "koin-compose-viewmodel", version.ref = "koin" }
+koin-compose-viewmodel-navigation = { group = "io.insert-koin", name = "koin-compose-viewmodel-navigation", version.ref = "koin" }
+koin-androidx-workmanager = { group = "io.insert-koin", name = "koin-androidx-workmanager", version.ref = "koin" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 turbine = { group = "app.cash.turbine", name = "turbine", version.ref = "turbine" }
 androidx-test-ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidxTestExt" }
@@ -91,3 +102,4 @@ kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", versi
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 room = { id = "androidx.room", version.ref = "room" }
+compose-multiplatform = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }

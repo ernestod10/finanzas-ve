@@ -8,8 +8,6 @@ import dev.tubolsillo.app.domain.model.BudgetMonthData
 import dev.tubolsillo.app.domain.model.TagBudgetView
 import dev.tubolsillo.app.domain.model.TransactionCategory
 import dev.tubolsillo.app.domain.model.UNTAGGED_BUCKET
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Agrupa los gastos del mes por etiqueta y los enfrenta a los presupuestos.
@@ -17,8 +15,7 @@ import javax.inject.Singleton
  * no son gasto). Los montos se convierten a USD con las tasas vigentes porque
  * las cuentas mezclan USD/VES/crypto y sumar en moneda nativa sería un error.
  */
-@Singleton
-class BudgetCalculator @Inject constructor(
+class BudgetCalculator(
     private val totalsCalculator: TotalsCalculator,
 ) {
 

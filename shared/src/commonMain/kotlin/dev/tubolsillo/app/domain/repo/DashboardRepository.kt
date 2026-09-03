@@ -10,8 +10,6 @@ import dev.tubolsillo.app.domain.usecase.TotalsCalculator
 import dev.tubolsillo.app.core.db.entity.AccountEntity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /** Estado agregado del dashboard, reactivo ante cualquier cambio en BD. */
 data class DashboardData(
@@ -21,8 +19,7 @@ data class DashboardData(
     val accounts: List<AccountEntity>,
 )
 
-@Singleton
-class DashboardRepository @Inject constructor(
+class DashboardRepository(
     private val accountDao: AccountDao,
     private val transactionDao: TransactionDao,
     private val rateProvider: RateProvider,

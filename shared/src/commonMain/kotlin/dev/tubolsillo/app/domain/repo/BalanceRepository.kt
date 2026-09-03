@@ -5,11 +5,8 @@ import dev.tubolsillo.app.core.db.dao.InstallmentDao
 import dev.tubolsillo.app.core.db.entity.BalanceSnapshotEntity
 import dev.tubolsillo.app.core.db.entity.InstallmentEntity
 import kotlinx.coroutines.flow.Flow
-import javax.inject.Inject
-import javax.inject.Singleton
 
-@Singleton
-class BalanceRepository @Inject constructor(
+class BalanceRepository(
     private val snapshotDao: BalanceSnapshotDao,
     private val installmentDao: InstallmentDao,
 ) {

@@ -6,8 +6,6 @@ import dev.tubolsillo.app.core.db.TubolsilloDatabase
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /** DTOs de respaldo (JSON plano, sin anotaciones de Room). */
 @Serializable
@@ -32,8 +30,7 @@ data class BackupDto(
  * escribe el texto). Los eventos crudos van incluidos: son el corpus de
  * parsers. Restaurar desde este archivo es trabajo futuro.
  */
-@Singleton
-class BackupExporter @Inject constructor(
+class BackupExporter(
     private val db: TubolsilloDatabase,
 ) {
 

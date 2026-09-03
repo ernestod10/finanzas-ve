@@ -7,15 +7,12 @@ import dev.tubolsillo.app.data.parse.ParserTemplate
 import dev.tubolsillo.app.domain.model.Institution
 import dev.tubolsillo.app.domain.model.ParsedTransaction
 import dev.tubolsillo.app.domain.model.TransactionCategory
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Push de la app BNC (bnc.bncnet.mobile2) — el banco VE con notificaciones
  * push documentadas. v1 con patrones estándar VE; se afina con corpus real.
  */
-@Singleton
-class BncParser @Inject constructor() : InstitutionParser {
+class BncParser() : InstitutionParser {
 
     override val institution = Institution.BNC
     override val version = 1

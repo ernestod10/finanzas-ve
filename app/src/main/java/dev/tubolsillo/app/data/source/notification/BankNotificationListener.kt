@@ -2,7 +2,7 @@ package dev.tubolsillo.app.data.source.notification
 
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
-import dagger.hilt.android.AndroidEntryPoint
+import dev.tubolsillo.app.core.di.sharedKoin
 import dev.tubolsillo.app.domain.model.Institution
 import dev.tubolsillo.app.domain.model.SourceType
 import dev.tubolsillo.app.domain.usecase.CapturePipeline
@@ -11,22 +11,16 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import java.util.LinkedHashMap
-import javax.inject.Inject
 
 /**
  * Captura notificaciones push de las apps de los bancos (BDV, BNC, Banesco…)
  * y Cashea. El usuario debe activarlo en Ajustes → Acceso a notificaciones.
- * Android 13+ revoca el acceso al actualizar la app — la pantalla de Ajustes
- * lo detecta y reenvía a la configuración.
- *
  * Filtros baratos ANTES de leer extras: package monitoreado, no ongoing,
  * y LRU de sbn.key (una misma notificación puede postearse varias veces).
  */
-@AndroidEntryPoint
 class BankNotificationListener : NotificationListenerService() {
 
-    @Inject
-    lateinit var pipeline: CapturePipeline
+    private val pipeline by lazy { sharedKoin<CapturePipeline>() }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 

@@ -12,11 +12,8 @@ import dev.tubolsillo.app.domain.model.TransactionCategory
 import dev.tubolsillo.app.domain.model.TxStatus
 import dev.tubolsillo.app.domain.usecase.RuleEngine
 import kotlinx.coroutines.flow.Flow
-import javax.inject.Inject
-import javax.inject.Singleton
 
-@Singleton
-class TransactionRepository @Inject constructor(
+class TransactionRepository(
     private val transactionDao: TransactionDao,
     private val tagDao: TagDao,
     private val ruleEngine: RuleEngine,

@@ -3,11 +3,8 @@ package dev.tubolsillo.app.domain.repo
 import dev.tubolsillo.app.core.db.dao.TagDao
 import dev.tubolsillo.app.core.db.entity.TagEntity
 import kotlinx.coroutines.flow.Flow
-import javax.inject.Inject
-import javax.inject.Singleton
 
-@Singleton
-class TagRepository @Inject constructor(
+class TagRepository(
     private val tagDao: TagDao,
 ) {
 

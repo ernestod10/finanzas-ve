@@ -7,15 +7,12 @@ import dev.tubolsillo.app.core.db.entity.CurrencyRateEntity
 import dev.tubolsillo.app.domain.model.RateSource
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Provee tasas USD con valores por defecto sensatos cuando no hay fila en BD:
  * USD y USDT a 1.0 (peg), VES a 1.0 hasta que el usuario la configure.
  */
-@Singleton
-class RateProvider @Inject constructor(
+class RateProvider(
     private val rateDao: CurrencyRateDao,
 ) {
 

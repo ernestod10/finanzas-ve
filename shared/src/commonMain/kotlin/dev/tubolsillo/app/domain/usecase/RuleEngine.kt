@@ -5,16 +5,13 @@ import dev.tubolsillo.app.core.db.entity.CategoryRuleEntity
 import dev.tubolsillo.app.core.text.MerchantNormalizer
 import dev.tubolsillo.app.domain.model.TransactionCategory
 import kotlinx.coroutines.flow.Flow
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Auto-etiquetado por comercio: el usuario etiqueta "FARMACIA X" como Salud y
  * se crea una regla; las próximas transacciones de ese comercio se etiquetan solas.
  * La coincidencia es substring del comercio normalizado (normalizedMerchant.contains(pattern)).
  */
-@Singleton
-class RuleEngine @Inject constructor(
+class RuleEngine(
     private val ruleDao: CategoryRuleDao,
 ) {
 
