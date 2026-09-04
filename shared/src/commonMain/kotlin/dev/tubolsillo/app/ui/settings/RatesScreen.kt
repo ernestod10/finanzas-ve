@@ -1,7 +1,6 @@
 package dev.tubolsillo.app.ui.settings
 
-import org.koin.compose.viewmodel.koinViewModel
-
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -10,10 +9,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -27,11 +28,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import dev.tubolsillo.app.core.money.MoneyFormatter
+import dev.tubolsillo.app.domain.model.RateSource
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * Editor de la tasa VES→USD. Convierte TODO el dashboard: si pones la tasa
- * paralela, el patrimonio neto en USD usa paralela; si pones BCV, usa BCV.
+ * Editor de la tasa VES→USD con fetch automático desde el endpoint
+ * (BCV oficial o P2P Binance, vía Lambda tubolsillo-tasas).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,6 +44,9 @@ fun RatesScreen(
     viewModel: RatesViewModel = koinViewModel(),
 ) {
     val vesPerDollar by viewModel.vesPerDollar.collectAsState()
+    val status by viewModel.status.collectAsState()
+    val busy by viewModel.busy.collectAsState()
+    val lastFetch by viewModel.lastFetch.collectAsState()
     var rateText by remember { mutableStateOf("") }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -51,7 +58,11 @@ fun RatesScreen(
                 }
             },
         )
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+        ) {
             Text(
                 text = "Bolívares por dólar",
                 style = MaterialTheme.typography.titleLarge,
@@ -65,10 +76,61 @@ fun RatesScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp),
             )
+
+            // --- Fetch automático ---
+            Text(
+                text = "TRAER AUTOMÁTICA",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                letterSpacing = 1.2.sp,
+                modifier = Modifier.padding(top = 18.dp, bottom = 6.dp),
+            )
+            if (!busy) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = { viewModel.fetchAndApply(RateSource.BCV) },
+                        modifier = Modifier.weight(1f),
+                    ) { Text("Usar BCV oficial") }
+                    OutlinedButton(
+                        onClick = { viewModel.fetchAndApply(RateSource.PARALLEL) },
+                        modifier = Modifier.weight(1f),
+                    ) { Text("Usar P2P Binance") }
+                }
+            } else {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(modifier = Modifier.padding(end = 10.dp), strokeWidth = 2.dp)
+                    Text("Consultando tasas…", style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+            lastFetch?.let { dto ->
+                Text(
+                    text = "BCV: " + fmt(dto.bcv_usd_bs) + " · P2P: " + fmt(dto.p2p_usdt_ves) +
+                        (dto.fecha_valor_bcv?.let { " · " + it } ?: ""),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+            }
+            status?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (it.startsWith("✗")) MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(top = 6.dp),
+                )
+            }
+
+            // --- Manual ---
+            Text(
+                text = "O MANUAL",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                letterSpacing = 1.2.sp,
+                modifier = Modifier.padding(top = 18.dp, bottom = 6.dp),
+            )
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 16.dp),
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 OutlinedTextField(
@@ -85,8 +147,8 @@ fun RatesScreen(
                 ) { Text("Guardar") }
             }
             Text(
-                text = "La tasa la decides tú: BCV, paralelo o la que uses de verdad. " +
-                    "Convierte cuentas en bolívares a USD en el saldo total.",
+                text = "BCV y P2P vienen del estado del bot binancep2p en S3 (actualizado por cron); " +
+                    "la tasa la usas para convertir tus cuentas en bolívares a USD.",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 12.dp),
@@ -94,3 +156,6 @@ fun RatesScreen(
         }
     }
 }
+
+private fun fmt(v: Double?): String =
+    v?.let { MoneyFormatter.formatMinor((it * 100).toLong(), "VES") } ?: "—"
