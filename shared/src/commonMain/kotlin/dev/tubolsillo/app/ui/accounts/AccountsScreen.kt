@@ -10,12 +10,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -28,6 +26,7 @@ import dev.tubolsillo.app.domain.model.AccountKind
 import dev.tubolsillo.app.domain.usecase.RateProvider
 import dev.tubolsillo.app.domain.usecase.TotalsCalculator
 import dev.tubolsillo.app.ui.components.AccountCard
+import dev.tubolsillo.app.ui.components.AppHeader
 import dev.tubolsillo.app.ui.components.DebtCard
 import dev.tubolsillo.app.ui.dashboard.AddAccountDialog
 import dev.tubolsillo.app.ui.dashboard.DashboardViewModel
@@ -43,11 +42,14 @@ fun AccountsScreen(
     var showAddAccount by remember { mutableStateOf(false) }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Cuentas") }) },
-        floatingActionButton = {
-            FloatingActionButton(onClick = { showAddAccount = true }) {
-                Icon(Icons.Filled.Add, contentDescription = "Agregar cuenta")
-            }
+        topBar = {
+            AppHeader(
+                title = "Cuentas",
+                actionIcon = Icons.Filled.Add,
+                actionLabel = "Nueva cuenta",
+                actionContentDescription = "Agregar cuenta",
+                onAction = { showAddAccount = true },
+            )
         },
     ) { padding ->
         LazyColumn(

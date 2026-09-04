@@ -25,15 +25,25 @@ class DashboardViewModel(
     private val tagRepository: TagRepository,
     private val ruleEngine: RuleEngine,
     private val rateProvider: RateProvider,
+    private val categoryRepository: dev.tubolsillo.app.domain.repo.CategoryRepository,
 ) : ViewModel() {
 
     val dashboard: StateFlow<DashboardData?> = dashboardRepository.observeDashboard()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
+    val categories: StateFlow<List<dev.tubolsillo.app.core.db.entity.CategoryEntity>> =
+        categoryRepository.observeAll()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     /** Bolívares por dólar, para la sublínea VES del patrimonio neto. */
     val vesPerDollar: StateFlow<Double> = rateProvider.observeRates()
         .map { rates -> 1.0 / (rates["VES"] ?: 1.0) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 1.0)
+
+    /** USD por EUR (cruce BCV) para la sublínea en euros; 0 si no hay tasa. */
+    val usdPerEur: StateFlow<Double> = rateProvider.observeRates()
+        .map { rates -> rates["EUR"] ?: 0.0 }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0.0)
 
     fun addAccount(
         institution: Institution,

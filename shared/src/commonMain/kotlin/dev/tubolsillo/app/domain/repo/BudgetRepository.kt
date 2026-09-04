@@ -15,6 +15,7 @@ class BudgetRepository(
     private val transactionDao: TransactionDao,
     private val rateProvider: RateProvider,
     private val budgetCalculator: BudgetCalculator,
+    private val categoryRepository: CategoryRepository,
 ) {
 
     fun observeMonth(month: String): Flow<BudgetMonthData> {
@@ -23,8 +24,12 @@ class BudgetRepository(
             budgetDao.observeForMonth(month),
             transactionDao.observeWithTagsBetween(start, end),
             rateProvider.observeRates(),
-        ) { budgets, transactions, rates ->
-            budgetCalculator.monthData(month, transactions, budgets, rates)
+            categoryRepository.observeAll(),
+        ) { budgets, transactions, rates, categories ->
+            budgetCalculator.monthData(
+                month, transactions, budgets, rates,
+                categories.associateBy { it.id },
+            )
         }
     }
 

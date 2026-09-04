@@ -27,6 +27,7 @@ fun TransactionsScreen(
 ) {
     val filtered by viewModel.filtered.collectAsState()
     val accounts by viewModel.accounts.collectAsState()
+    val categories by viewModel.categories.collectAsState()
     val selectedAccountId by viewModel.selectedAccountId.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -53,6 +54,7 @@ fun TransactionsScreen(
         }
 
         val accountName = { id: Long -> accounts.firstOrNull { it.id == id }?.name }
+        val catById = categories.associateBy { it.id }
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -77,6 +79,8 @@ fun TransactionsScreen(
                         tx = tx,
                         accountName = accountName(tx.transaction.accountId),
                         onClick = {},
+                        categoryName = tx.transaction.categoryId?.let { catById[it]?.name },
+                        categoryColorHex = tx.transaction.categoryId?.let { catById[it]?.colorHex },
                     )
                 }
             }

@@ -114,8 +114,9 @@ fun DebtCard(view: AccountBalanceView, onClick: () -> Unit, modifier: Modifier =
     val debtMinor = view.balanceMinor?.let { if (it < 0) -it else it } ?: 0L
     val limitMinor = view.creditLimitMinor
     val isBnpl = AccountKind.fromKey(view.kindKey) == AccountKind.BNPL
-    // BNPL (Cashea): el dato que ve el usuario es el DISPONIBLE = límite - deuda.
-    val availableMinor = if (isBnpl && limitMinor != null) (limitMinor - debtMinor).coerceAtLeast(0L) else null
+    // El dato que ve el usuario es el DISPONIBLE = límite - deuda (como en
+    // Cashea y en las apps de las TDC).
+    val availableMinor = if (limitMinor != null) (limitMinor - debtMinor).coerceAtLeast(0L) else null
     val accent = parseAccountColor(view.colorHex)
         ?: if (isBnpl) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
     val dark = isSystemInDarkTheme()
@@ -183,21 +184,17 @@ fun DebtCard(view: AccountBalanceView, onClick: () -> Unit, modifier: Modifier =
             }
             if (limitMinor != null && limitMinor > 0) {
                 Spacer(Modifier.height(10.dp))
-                val isBnpl = AccountKind.fromKey(view.kindKey) == AccountKind.BNPL
-                val available = availableMinor ?: (limitMinor - debtMinor).coerceAtLeast(0L)
-                // BNPL (Cashea): la barra muestra el DISPONIBLE (como su app):
-                // casi llena y verde cuando tienes poco uso.
-                val fraction = if (isBnpl) available.toFloat() / limitMinor
-                else debtMinor.toFloat() / limitMinor
+                val available = availableMinor ?: 0L
+                // La barra muestra el DISPONIBLE (como en Cashea y las apps de
+                // las TDC): casi llena y verde cuando tienes poco uso.
+                val fraction = available.toFloat() / limitMinor
                 LinearProgressIndicator(
                     progress = { fraction.coerceIn(0f, 1f) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(5.dp),
-                    color = if (isBnpl) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.error,
-                    trackColor = if (isBnpl) MaterialTheme.colorScheme.primaryContainer
-                    else MaterialTheme.colorScheme.errorContainer,
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.primaryContainer,
                 )
                 Spacer(Modifier.height(4.dp))
                 val kind = AccountKind.fromKey(view.kindKey)
@@ -218,12 +215,30 @@ fun DebtCard(view: AccountBalanceView, onClick: () -> Unit, modifier: Modifier =
                         }
                     }
                 } else {
-                    Text(
-                        text = "Usado " + MoneyFormatter.formatMinor(debtMinor, view.currencyCode) +
-                            " de " + MoneyFormatter.formatMinor(limitMinor, view.currencyCode),
-                        style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = "tnum"),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    // TDC: la deuda se marca en rojo solo si existe; sin deuda, verde.
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (debtMinor > 0) {
+                            Text(
+                                text = "Deuda " + MoneyFormatter.formatMinor(debtMinor, view.currencyCode),
+                                style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = "tnum"),
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        } else {
+                            Text(
+                                text = "Sin deuda",
+                                style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = "tnum"),
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                        limitMinor?.let { lim ->
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = "de límite " + MoneyFormatter.formatMinor(lim, view.currencyCode),
+                                style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = "tnum"),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
                 }
             }
         }

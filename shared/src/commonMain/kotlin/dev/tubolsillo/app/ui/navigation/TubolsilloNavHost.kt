@@ -1,6 +1,8 @@
 package dev.tubolsillo.app.ui.navigation
 
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalance
@@ -32,6 +34,7 @@ import androidx.navigation.navArgument
 import dev.tubolsillo.app.ui.account.AccountDetailScreen
 import dev.tubolsillo.app.ui.accounts.AccountsScreen
 import dev.tubolsillo.app.ui.budget.BudgetScreen
+import dev.tubolsillo.app.ui.categories.CategoriesScreen
 import dev.tubolsillo.app.ui.dashboard.DashboardScreen
 import dev.tubolsillo.app.ui.events.EventsScreen
 import dev.tubolsillo.app.ui.events.ReplayScreen
@@ -54,6 +57,7 @@ object Routes {
     const val EVENTS = "events"
     const val REPLAY = "replay"
     const val CSV_IMPORT = "csv_import"
+    const val CATEGORIES = "categories"
 
     fun account(accountId: Long) = "account/$accountId"
 }
@@ -83,7 +87,9 @@ fun TubolsilloNavHost() {
             val currentDestination = backStackEntry?.destination
             // Barra flotante tipo "isla".
             androidx.compose.foundation.layout.Box(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding(),
                 contentAlignment = androidx.compose.ui.Alignment.BottomCenter,
             ) {
                 Surface(
@@ -101,6 +107,7 @@ fun TubolsilloNavHost() {
                     NavigationBar(
                         containerColor = androidx.compose.ui.graphics.Color.Transparent,
                         tonalElevation = 0.dp,
+                        windowInsets = WindowInsets(0, 0, 0, 0),
                     ) {
                         destinations.forEach { destination ->
                             NavigationBarItem(
@@ -154,7 +161,12 @@ fun TubolsilloNavHost() {
                 TransactionsScreen()
             }
             composable(Routes.BUDGET) {
-                BudgetScreen()
+                BudgetScreen(
+                    onManageCategories = { navController.navigate(Routes.CATEGORIES) },
+                )
+            }
+            composable(Routes.CATEGORIES) {
+                CategoriesScreen(onBack = { navController.popBackStack() })
             }
             composable(Routes.SETTINGS) {
                 SettingsScreen(

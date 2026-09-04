@@ -8,9 +8,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -30,12 +34,26 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.tubolsillo.app.core.money.MoneyFormatter
-import dev.tubolsillo.app.domain.model.RateSource
 import org.koin.compose.viewmodel.koinViewModel
 
+/** Etiquetas de la fuente de tasa. */
+/** Símbolo de la divisa que define la fuente. */
+private fun sourceSymbol(source: String): String = when (source) {
+    "EUR_BCV" -> "€"
+    "P2P" -> "1 USDT"
+    else -> "$ 1"
+}
+
+private fun sourceLabel(source: String): String = when (source) {
+    "EUR_BCV" -> "Euro (BCV)"
+    "P2P" -> "Tasa USDT (prom. venta 100)"
+    "MANUAL" -> "Manual"
+    else -> "BCV oficial"
+}
+
 /**
- * Editor de la tasa VES→USD con fetch automático desde el endpoint
- * (BCV oficial o P2P Binance, vía Lambda tubolsillo-tasas).
+ * Editor de la tasa VES: dropdown para elegir la fuente y botón
+ * "Actualizar tasa" que consulta el endpoint y aplica la seleccionada.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,10 +62,12 @@ fun RatesScreen(
     viewModel: RatesViewModel = koinViewModel(),
 ) {
     val vesPerDollar by viewModel.vesPerDollar.collectAsState()
+    val rateSource by viewModel.rateSource.collectAsState()
     val status by viewModel.status.collectAsState()
     val busy by viewModel.busy.collectAsState()
     val lastFetch by viewModel.lastFetch.collectAsState()
     var rateText by remember { mutableStateOf("") }
+    var dropdownOpen by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
@@ -69,42 +89,83 @@ fun RatesScreen(
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
-                text = "Tasa actual: " + MoneyFormatter.formatMinor(
+                text = "Tasa en uso: " + MoneyFormatter.formatMinor(
                     (vesPerDollar * 100).toLong(), "VES",
-                ) + " por $ 1,00",
+                ) + " por " + sourceSymbol(rateSource) + "  ·  " + sourceLabel(rateSource),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp),
             )
 
-            // --- Fetch automático ---
+            // --- Dropdown de fuente + botón actualizar ---
             Text(
-                text = "TRAER AUTOMÁTICA",
+                text = "FUENTE DE LA TASA",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 letterSpacing = 1.2.sp,
-                modifier = Modifier.padding(top = 18.dp, bottom = 6.dp),
+                modifier = Modifier.padding(top = 18.dp, bottom = 8.dp),
             )
-            if (!busy) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(
-                        onClick = { viewModel.fetchAndApply(RateSource.BCV) },
-                        modifier = Modifier.weight(1f),
-                    ) { Text("Usar BCV oficial") }
-                    OutlinedButton(
-                        onClick = { viewModel.fetchAndApply(RateSource.PARALLEL) },
-                        modifier = Modifier.weight(1f),
-                    ) { Text("Usar P2P Binance") }
+            ExposedDropdownMenuBox(
+                expanded = dropdownOpen,
+                onExpandedChange = { dropdownOpen = it },
+            ) {
+                OutlinedTextField(
+                    value = sourceLabel(rateSource),
+                    onValueChange = {},
+                    readOnly = true,
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = dropdownOpen) },
+                    singleLine = true,
+                    modifier = Modifier
+                        .menuAnchor()
+                        .fillMaxWidth(),
+                )
+                ExposedDropdownMenu(
+                    expanded = dropdownOpen,
+                    onDismissRequest = { dropdownOpen = false },
+                ) {
+                    listOf("BCV", "EUR_BCV", "P2P", "MANUAL").forEach { src ->
+                        DropdownMenuItem(
+                            text = { Text(sourceLabel(src)) },
+                            onClick = {
+                                viewModel.selectSource(src)
+                                dropdownOpen = false
+                            },
+                        )
+                    }
                 }
-            } else {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    CircularProgressIndicator(modifier = Modifier.padding(end = 10.dp), strokeWidth = 2.dp)
-                    Text("Consultando tasas…", style = MaterialTheme.typography.bodyMedium)
+            }
+            Row(
+                modifier = Modifier.padding(top = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Button(
+                    onClick = { viewModel.refresh() },
+                    enabled = !busy && rateSource != "MANUAL",
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Icon(Icons.Filled.Refresh, contentDescription = null, modifier = Modifier.padding(end = 6.dp))
+                    Text("Actualizar tasa")
                 }
+                if (busy) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.padding(start = 12.dp),
+                        strokeWidth = 2.dp,
+                    )
+                }
+            }
+            if (rateSource == "MANUAL") {
+                Text(
+                    text = "Con fuente Manual el botón queda desactivado: define la tasa abajo.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 6.dp),
+                )
             }
             lastFetch?.let { dto ->
                 Text(
-                    text = "BCV: " + fmt(dto.bcv_usd_bs) + " · P2P: " + fmt(dto.p2p_usdt_ves) +
+                    text = "Última consulta — Bs/$: " + fmt(dto.bcv_usd_bs) +
+                        " · Bs/€: " + fmt(dto.bcv_eur_bs) +
+                        " · USDT: " + fmt(dto.p2p_usdt_ves) +
                         (dto.fecha_valor_bcv?.let { " · " + it } ?: ""),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -140,15 +201,14 @@ fun RatesScreen(
                     singleLine = true,
                     modifier = Modifier.weight(1f),
                 )
-                Button(
+                OutlinedButton(
                     enabled = rateText.isNotBlank(),
                     onClick = { viewModel.saveVesRate(rateText); rateText = "" },
                     modifier = Modifier.padding(start = 8.dp),
                 ) { Text("Guardar") }
             }
             Text(
-                text = "BCV y P2P vienen del estado del bot binancep2p en S3 (actualizado por cron); " +
-                    "la tasa la usas para convertir tus cuentas en bolívares a USD.",
+                text = "BCV (Bs/$ y Bs/€) y Tasa USDT (promedio de venta para 100 USDT) vienen del estado del bot binancep2p en S3.",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 12.dp),

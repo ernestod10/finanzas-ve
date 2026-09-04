@@ -2,6 +2,8 @@ package dev.tubolsillo.app.core.db
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
+import dev.tubolsillo.app.core.db.entity.CategoryEntity
+import dev.tubolsillo.app.core.db.dao.CategoryDao
 import dev.tubolsillo.app.core.db.dao.AccountDao
 import dev.tubolsillo.app.core.db.dao.BalanceSnapshotDao
 import dev.tubolsillo.app.core.db.dao.BudgetDao
@@ -38,8 +40,9 @@ import dev.tubolsillo.app.core.db.entity.TransferPairEntity
         TagEntity::class,
         TransactionTagCrossRef::class,
         CategoryRuleEntity::class,
+        CategoryEntity::class,
     ],
-    version = 2,
+    version = 4,
     exportSchema = true,
 )
 abstract class TubolsilloDatabase : RoomDatabase() {
@@ -51,8 +54,47 @@ abstract class TubolsilloDatabase : RoomDatabase() {
                 connection.prepare("ALTER TABLE accounts ADD COLUMN colorHex TEXT").use { it.step() }
             }
         }
+
+        /** v2→v3: equivalente en USD congelado por transacción. */
+        val MIGRATION_2_3 = object : androidx.room.migration.Migration(2, 3) {
+            override fun migrate(connection: androidx.sqlite.SQLiteConnection) {
+                connection.prepare("ALTER TABLE transactions ADD COLUMN usdEquivalentMinor INTEGER").use { it.step() }
+            }
+        }
+
+        /** v3→v4: categorías de gasto (presupuesto) + categoryId en transacciones. */
+        val MIGRATION_3_4 = object : androidx.room.migration.Migration(3, 4) {
+            override fun migrate(connection: androidx.sqlite.SQLiteConnection) {
+                connection.prepare(
+                    "CREATE TABLE IF NOT EXISTS categories (" +
+                        "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "name TEXT NOT NULL, colorHex TEXT, sortOrder INTEGER NOT NULL DEFAULT 0)"
+                ).use { it.step() }
+                val presets = listOf(
+                    "Comida|#2E5E43|0", "Transporte|#1E6FA3|1", "Salud|#A63D36|2",
+                    "Gimnasio|#7A3FA0|3", "Entretenimiento|#8A5A2B|4", "Hogar|#B08A3E|5",
+                    "Educación|#3E7C74|6", "Ropa|#9B3E6E|7", "Servicios|#5E5E8C|8",
+                    "Viajes|#4F6D9E|9", "Otros|#8A7A2E|10",
+                )
+                presets.forEachIndexed { i, p ->
+                    val parts = p.split("|")
+                    connection.prepare(
+                        "INSERT OR IGNORE INTO categories (id, name, colorHex, sortOrder) VALUES (?, ?, ?, ?)"
+                    ).use { st ->
+                        st.bindLong(1, (i + 1).toLong())
+                        st.bindText(2, parts[0])
+                        st.bindText(3, parts[1])
+                        st.bindLong(4, parts[2].toLong())
+                        st.step()
+                    }
+                }
+                connection.prepare("ALTER TABLE transactions ADD COLUMN categoryId INTEGER").use { it.step() }
+            }
+        }
     }
-    abstract fun accountDao(): AccountDao
+    abstract fun categoryDao(): CategoryDao
+
+        abstract fun accountDao(): AccountDao
     abstract fun transactionDao(): TransactionDao
     abstract fun balanceSnapshotDao(): BalanceSnapshotDao
     abstract fun transferPairDao(): TransferPairDao

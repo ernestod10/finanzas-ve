@@ -35,6 +35,8 @@ fun TxRow(
     accountName: String?,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    categoryName: String? = null,
+    categoryColorHex: String? = null,
 ) {
     val negative = tx.transaction.amountMinor < 0
     Row(
@@ -94,12 +96,25 @@ fun TxRow(
                 color = if (negative) MaterialTheme.colorScheme.error
                 else MaterialTheme.colorScheme.primary,
             )
-            if (tx.tags.isNotEmpty()) {
-                Spacer(Modifier.size(2.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    tx.tags.take(1).forEach { tag ->
-                        TagChip(name = tag.name)
-                    }
+            // Equivalente en USD congelado al día de la transacción.
+            val frozenUsd = tx.transaction.usdEquivalentMinor
+            if (tx.transaction.currency != "USD" && frozenUsd != null && frozenUsd != 0L) {
+                Text(
+                    text = "≈ " + MoneyFormatter.formatMinor(frozenUsd, "USD"),
+                    style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = "tnum"),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                categoryName?.let { cat ->
+                    TagChip(
+                        name = cat,
+                        leadingColorHex = categoryColorHex,
+                        modifier = Modifier.padding(end = 4.dp),
+                    )
+                }
+                tx.tags.take(1).forEach { tag ->
+                    TagChip(name = tag.name)
                 }
             }
         }

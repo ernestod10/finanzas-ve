@@ -1,6 +1,7 @@
 package dev.tubolsillo.app.core.di
 
 import dev.tubolsillo.app.domain.repo.AccountRepository
+import dev.tubolsillo.app.domain.repo.CategoryRepository
 import dev.tubolsillo.app.domain.repo.BalanceRepository
 import dev.tubolsillo.app.domain.repo.BudgetRepository
 import dev.tubolsillo.app.domain.repo.DashboardRepository
@@ -31,6 +32,7 @@ import org.koin.dsl.module
 /** Repositorios y casos de uso (singleton de dominio, inyección por constructor). */
 val domainModule = module {
     singleOf(::AccountRepository)
+    singleOf(::CategoryRepository)
     singleOf(::BalanceRepository)
     singleOf(::BudgetRepository)
     singleOf(::DashboardRepository)

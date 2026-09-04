@@ -23,11 +23,11 @@ import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.sp
 import dev.tubolsillo.app.core.money.MoneyFormatter
 import dev.tubolsillo.app.domain.model.AccountKind
 import dev.tubolsillo.app.ui.components.AccountCard
+import dev.tubolsillo.app.ui.components.AppHeader
 import dev.tubolsillo.app.ui.components.DebtCard
 import dev.tubolsillo.app.ui.components.TxRow
 
@@ -58,48 +59,20 @@ fun DashboardScreen(
 ) {
     val dashboard by viewModel.dashboard.collectAsState()
     val vesPerDollar by viewModel.vesPerDollar.collectAsState()
+    val usdPerEur by viewModel.usdPerEur.collectAsState()
+    val categories by viewModel.categories.collectAsState()
     var showManualEntry by remember { mutableStateOf(false) }
     var showAddAccount by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
-            Surface(color = MaterialTheme.colorScheme.background) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .statusBarsPadding()
-                        .height(52.dp)
-                        .padding(horizontal = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = "TuBolsillo",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.weight(1f),
-                    )
-                    IconButton(onClick = { showAddAccount = true }) {
-                        Icon(Icons.Filled.Add, contentDescription = "Agregar cuenta")
-                    }
-                }
-            }
-        },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { showManualEntry = true },
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(18.dp),
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(20.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("Movimiento", style = MaterialTheme.typography.labelLarge)
-                }
-            }
+            AppHeader(
+                title = "TuBolsillo",
+                actionIcon = Icons.Filled.Add,
+                actionLabel = "Nueva cuenta",
+                actionContentDescription = "Agregar cuenta",
+                onAction = { showAddAccount = true },
+            )
         },
     ) { padding ->
         LazyColumn(
@@ -174,14 +147,27 @@ fun DashboardScreen(
                             text = MoneyFormatter.formatUsd(data.totals.assetsUsd),
                             style = MaterialTheme.typography.displayMedium.copy(fontFeatureSettings = "tnum"),
                         )
-                        Text(
-                            text = "≈ " + MoneyFormatter.formatMinor(
-                                (data.totals.assetsUsd * vesPerDollar * 100).toLong(),
-                                "VES",
-                            ),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "≈ " + MoneyFormatter.formatMinor(
+                                    (data.totals.assetsUsd * vesPerDollar * 100).toLong(),
+                                    "VES",
+                                ),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            if (usdPerEur > 0) {
+                                Spacer(Modifier.width(10.dp))
+                                Text(
+                                    text = "≈ € " + dev.tubolsillo.app.core.money.MoneyFormatter.formatMinor(
+                                        (data.totals.assetsUsd / usdPerEur * 100).toLong(),
+                                        "EUR",
+                                    ),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
                         Spacer(Modifier.height(10.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
@@ -197,12 +183,22 @@ fun DashboardScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
+                        Spacer(Modifier.height(16.dp))
+                        OutlinedButton(
+                            onClick = { showManualEntry = true },
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(50),
+                        ) {
+                            Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("Registrar movimiento")
+                        }
                     }
                 }
 
                 val assets = data.accountViews.filter { !AccountKind.fromKey(it.kindKey).isDebt }
                 val debts = data.accountViews.filter { AccountKind.fromKey(it.kindKey).isDebt }
                 val accountName = { id: Long -> data.accounts.firstOrNull { it.id == id }?.name }
+                val catById = categories.associateBy { it.id }
 
                 assets.forEach { view ->
                     item(key = "asset-${view.accountId}") {
@@ -252,6 +248,8 @@ fun DashboardScreen(
                                 tx = tx,
                                 accountName = accountName(tx.transaction.accountId),
                                 onClick = { onSeeAllTransactions() },
+                                categoryName = tx.transaction.categoryId?.let { catById[it]?.name },
+                                categoryColorHex = tx.transaction.categoryId?.let { catById[it]?.colorHex },
                             )
                         }
                     }

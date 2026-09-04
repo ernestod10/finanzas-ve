@@ -26,6 +26,14 @@ class SettingsRepository() {
         val DEFAULT_VES_RATE = stringPreferencesKey("default_ves_rate")
         val BINANCE_SYNC_MINUTES = intPreferencesKey("binance_sync_minutes")
         val DARK_MODE = stringPreferencesKey("dark_mode") // SYSTEM | LIGHT | DARK
+        val RATE_SOURCE = stringPreferencesKey("rate_source") // BCV | P2P | MANUAL
+    }
+
+    val rateSource: Flow<String> =
+        dataStore.data.map { it[Keys.RATE_SOURCE] ?: "BCV" }
+
+    suspend fun setRateSource(source: String) {
+        dataStore.edit { it[Keys.RATE_SOURCE] = source }
     }
 
     val darkMode: Flow<String> =

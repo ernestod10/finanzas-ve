@@ -15,10 +15,15 @@ import kotlinx.coroutines.flow.stateIn
 class TransactionsViewModel(
     transactionRepository: TransactionRepository,
     accountRepository: AccountRepository,
+    private val categoryRepository: dev.tubolsillo.app.domain.repo.CategoryRepository,
 ) : ViewModel() {
 
     val allTransactions: StateFlow<List<TransactionWithTags>> =
         transactionRepository.observeAllWithTags()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val categories: StateFlow<List<dev.tubolsillo.app.core.db.entity.CategoryEntity>> =
+        categoryRepository.observeAll()
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val accounts: StateFlow<List<AccountEntity>> =

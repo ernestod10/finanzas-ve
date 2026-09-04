@@ -25,6 +25,7 @@ class AccountViewModel(
     private val balanceRepository: BalanceRepository,
     private val transactionRepository: TransactionRepository,
     private val tagRepository: TagRepository,
+    private val categoryRepository: dev.tubolsillo.app.domain.repo.CategoryRepository,
     private val ruleEngine: dev.tubolsillo.app.domain.usecase.RuleEngine,
 ) : ViewModel() {
 
@@ -85,6 +86,17 @@ class AccountViewModel(
     val allTags: StateFlow<List<dev.tubolsillo.app.core.db.entity.TagEntity>> =
         tagRepository.observeAll()
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val categories: StateFlow<List<dev.tubolsillo.app.core.db.entity.CategoryEntity>> =
+        categoryRepository.observeAll()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** Asigna la categoría de gasto a una transacción (null = sin categoría). */
+    fun setTransactionCategory(transactionId: Long, categoryId: Long?) {
+        viewModelScope.launch {
+            transactionRepository.setUserCategory(transactionId, categoryId)
+        }
+    }
 
     /** Etiqueta una transacción y opcionalmente aprende la regla del comercio. */
     fun tagTransaction(transactionId: Long, tagName: String, learn: Boolean) {

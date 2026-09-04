@@ -36,6 +36,10 @@ data class TransactionEntity(
     val rawJson: String? = null,
     val transferPairId: Long? = null,
     val isReconciled: Boolean = false,
+    /** Equivalente en USD de la transacción al momento de ocurrir (fijo). */
+    val usdEquivalentMinor: Long? = null,
+    /** Categoría de gasto del presupuesto (id de categories), opcional. */
+    val categoryId: Long? = null,
     val createdAt: Long = nowMillis(),
     val updatedAt: Long = nowMillis(),
 )

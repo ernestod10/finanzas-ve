@@ -2,6 +2,7 @@ package dev.tubolsillo.app.domain.usecase
 
 import dev.tubolsillo.app.core.db.dao.TransactionWithTags
 import dev.tubolsillo.app.core.db.entity.BudgetEntity
+import dev.tubolsillo.app.core.db.entity.CategoryEntity
 import dev.tubolsillo.app.core.money.Currency
 import dev.tubolsillo.app.core.money.Money
 import dev.tubolsillo.app.domain.model.BudgetMonthData
@@ -24,29 +25,33 @@ class BudgetCalculator(
         transactions: List<TransactionWithTags>,
         budgets: List<BudgetEntity>,
         rates: Map<String, Double>,
+        categoryById: Map<Long, CategoryEntity>,
     ): BudgetMonthData {
-        val spentByTag = mutableMapOf<String, Double>()
+        val spentByCat = mutableMapOf<String, Double>()
         for (txWithTags in transactions) {
             val tx = txWithTags.transaction
             if (tx.amountMinor >= 0) continue
             if (TransactionCategory.fromKey(tx.category) == TransactionCategory.TRANSFER) continue
-            val usd = totalsCalculator.usdEquivalent(tx.amountMinor, tx.currency, rates)
+            // Usa el equivalente en USD congelado al día de la transacción;
+            // si no existe (transacciones viejas), calcula con la tasa vigente.
+            val usd = tx.usdEquivalentMinor?.let { it / dev.tubolsillo.app.core.money.Money.pow10(2) }
+                ?: totalsCalculator.usdEquivalent(tx.amountMinor, tx.currency, rates)
             val spentUsd = -usd
-            val tag = txWithTags.tags.firstOrNull()?.name ?: UNTAGGED_BUCKET
-            spentByTag[tag] = (spentByTag[tag] ?: 0.0) + spentUsd
+            val catName = tx.categoryId?.let { categoryById[it]?.name } ?: UNTAGGED_BUCKET
+            spentByCat[catName] = (spentByCat[catName] ?: 0.0) + spentUsd
         }
 
-        val limitByTag = budgets.associate { budget ->
+        val limitByCat = budgets.associate { budget ->
             budget.tagName to budget.limitMinor / Money.pow10(Currency.of(budget.currency).decimals) *
                 (rates[budget.currency] ?: 1.0)
         }
 
-        val tagNames = (spentByTag.keys + limitByTag.keys).sorted()
-        val rows = tagNames.map { name ->
+        val catNames = (spentByCat.keys + limitByCat.keys).sorted()
+        val rows = catNames.map { name ->
             TagBudgetView(
                 tagName = name,
-                limitUsd = limitByTag[name],
-                spentUsd = spentByTag[name] ?: 0.0,
+                limitUsd = limitByCat[name],
+                spentUsd = spentByCat[name] ?: 0.0,
             )
         }
         val totalSpent = rows.sumOf { it.spentUsd }

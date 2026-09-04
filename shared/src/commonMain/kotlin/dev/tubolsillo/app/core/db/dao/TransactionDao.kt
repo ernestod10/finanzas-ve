@@ -80,6 +80,9 @@ interface TransactionDao {
 
     @Query("UPDATE transactions SET isReconciled = 1 WHERE id = :id")
     suspend fun markReconciled(id: Long)
+
+    @Query("UPDATE transactions SET categoryId = :categoryId WHERE id = :id")
+    suspend fun setCategory(id: Long, categoryId: Long?)
     @Query("SELECT * FROM transactions")
     suspend fun getAllForExport(): List<TransactionEntity>
 }

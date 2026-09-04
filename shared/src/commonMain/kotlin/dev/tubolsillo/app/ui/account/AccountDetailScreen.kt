@@ -1,12 +1,15 @@
 package dev.tubolsillo.app.ui.account
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -39,6 +42,7 @@ import dev.tubolsillo.app.core.money.MoneyFormatter
 import dev.tubolsillo.app.domain.model.AccountKind
 import dev.tubolsillo.app.domain.model.Institution
 import dev.tubolsillo.app.ui.components.ACCOUNT_PALETTE
+import dev.tubolsillo.app.ui.components.parseAccountColor
 import dev.tubolsillo.app.ui.components.TagChip
 import dev.tubolsillo.app.ui.components.parseAccountColor
 import dev.tubolsillo.app.ui.components.TxRow
@@ -56,6 +60,8 @@ fun AccountDetailScreen(
     val account by viewModel.account.collectAsState()
     val snapshots by viewModel.snapshots.collectAsState()
     val transactions by viewModel.transactions.collectAsState()
+    val allCategories by viewModel.categories.collectAsState()
+    val catById = allCategories.associateBy { it.id }
     var showBalanceEdit by remember { mutableStateOf(false) }
     var showLimitEdit by remember { mutableStateOf(false) }
     var taggingTx by remember { mutableStateOf<TransactionWithTags?>(null) }
@@ -177,6 +183,8 @@ fun AccountDetailScreen(
                         tx = tx,
                         accountName = null,
                         onClick = { taggingTx = tx },
+                        categoryName = tx.transaction.categoryId?.let { catById[it]?.name },
+                        categoryColorHex = tx.transaction.categoryId?.let { catById[it]?.colorHex },
                     )
                 }
             }
@@ -213,9 +221,14 @@ fun AccountDetailScreen(
         TagTransactionDialog(
             tx = tx,
             allTags = viewModel.allTags.collectAsState().value,
+            categories = allCategories,
             onDismiss = { taggingTx = null },
             onTag = { tagName, learn ->
                 viewModel.tagTransaction(tx.transaction.id, tagName, learn)
+                taggingTx = null
+            },
+            onCategory = { categoryId ->
+                viewModel.setTransactionCategory(tx.transaction.id, categoryId)
                 taggingTx = null
             },
         )
@@ -262,8 +275,10 @@ private fun TextEditDialog(
 fun TagTransactionDialog(
     tx: TransactionWithTags,
     allTags: List<TagEntity>,
+    categories: List<dev.tubolsillo.app.core.db.entity.CategoryEntity>,
     onDismiss: () -> Unit,
     onTag: (tagName: String, learn: Boolean) -> Unit,
+    onCategory: (Long?) -> Unit,
 ) {
     var newTag by remember { mutableStateOf("") }
     var learn by remember { mutableStateOf(true) }
@@ -274,6 +289,48 @@ fun TagTransactionDialog(
         title = { Text(tx.transaction.description) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = "Categoría (presupuesto)",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    item {
+                        FilterChip(
+                            selected = tx.transaction.categoryId == null,
+                            onClick = { onCategory(null) },
+                            label = { Text("Sin categoría") },
+                        )
+                    }
+                    items(categories.size) { i ->
+                        val cat = categories[i]
+                        FilterChip(
+                            selected = tx.transaction.categoryId == cat.id,
+                            onClick = { onCategory(cat.id) },
+                            label = { Text(cat.name, maxLines = 1) },
+                            leadingIcon = {
+                                if (cat.colorHex != null) {
+                                    Box(
+                                        modifier = Modifier.size(10.dp),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Surface(
+                                            shape = CircleShape,
+                                            color = parseAccountColor(cat.colorHex)
+                                                ?: MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(10.dp),
+                                        ) {}
+                                    }
+                                }
+                            },
+                        )
+                    }
+                }
+                Text(
+                    text = "Etiquetas (opcional)",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     allTags.forEach { tag ->
                         FilterChip(

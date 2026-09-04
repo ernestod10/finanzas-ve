@@ -10,6 +10,7 @@ import dev.tubolsillo.app.core.text.MerchantNormalizer
 import dev.tubolsillo.app.domain.model.SourceType
 import dev.tubolsillo.app.domain.model.TransactionCategory
 import dev.tubolsillo.app.domain.model.TxStatus
+import dev.tubolsillo.app.domain.usecase.RateProvider
 import dev.tubolsillo.app.domain.usecase.RuleEngine
 import kotlinx.coroutines.flow.Flow
 
@@ -17,6 +18,7 @@ class TransactionRepository(
     private val transactionDao: TransactionDao,
     private val tagDao: TagDao,
     private val ruleEngine: RuleEngine,
+    private val rateProvider: RateProvider,
 ) {
 
     fun observeAll(): Flow<List<TransactionEntity>> = transactionDao.observeAll()
@@ -52,6 +54,7 @@ class TransactionRepository(
         occurredAt: Long = nowMillis(),
         status: TxStatus = TxStatus.CONFIRMED,
     ): Long {
+        val usdEquiv = usdEquivalent(amountMinor, currencyCode)
         val id = transactionDao.insert(
             TransactionEntity(
                 accountId = accountId,
@@ -63,11 +66,22 @@ class TransactionRepository(
                 category = category.key,
                 status = status.key,
                 source = SourceType.MANUAL.key,
+                usdEquivalentMinor = usdEquiv,
             )
         )
         applyRules(id, description, category)
         return id
     }
+
+    /**
+     * Equivalente en USD congelado al momento de la transacción, con la tasa
+     * vigente. Para monedas ya en USD es el mismo monto.
+     */
+    private suspend fun usdEquivalent(amountMinor: Long, currencyCode: String): Long? =
+        if (currencyCode == "USD") amountMinor
+        else runCatching {
+            Math.round(amountMinor * rateProvider.getRate(currencyCode))
+        }.getOrDefault(null)
 
     /** Aplica las reglas de auto-etiquetado existentes a una transacción. */
     suspend fun applyRules(transactionId: Long, rawDescription: String, defaultCategory: TransactionCategory) {
@@ -83,6 +97,9 @@ class TransactionRepository(
 
     suspend fun updateCategory(id: Long, category: TransactionCategory) =
         transactionDao.updateCategory(id, category.key)
+
+    suspend fun setUserCategory(id: Long, categoryId: Long?) =
+        transactionDao.setCategory(id, categoryId)
 
     suspend fun updateAmount(id: Long, amountMinor: Long) =
         transactionDao.updateAmount(id, amountMinor)
