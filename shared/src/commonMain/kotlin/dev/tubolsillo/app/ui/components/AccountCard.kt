@@ -1,6 +1,7 @@
 package dev.tubolsillo.app.ui.components
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,6 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.tubolsillo.app.core.money.MoneyFormatter
@@ -32,15 +34,20 @@ import dev.tubolsillo.app.ui.components.parseAccountColor
 /** Tarjeta de cuenta (activo): chip de icono + saldo con números tabulares. */
 @Composable
 fun AccountCard(view: AccountBalanceView, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val accent = parseAccountColor(view.colorHex)
+    val dark = isSystemInDarkTheme()
     Surface(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
         shape = MaterialTheme.shapes.extraLarge,
-        color = MaterialTheme.colorScheme.surface,
+        color = accent?.let {
+            blendColors(MaterialTheme.colorScheme.surface, it, if (dark) 0.16f else 0.07f)
+        } ?: MaterialTheme.colorScheme.surface,
         border = BorderStroke(
             1.dp,
-            MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+            accent?.copy(alpha = if (dark) 0.55f else 0.35f)
+                ?: MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
         ),
     ) {
         Row(
@@ -109,15 +116,18 @@ fun DebtCard(view: AccountBalanceView, onClick: () -> Unit, modifier: Modifier =
     val isBnpl = AccountKind.fromKey(view.kindKey) == AccountKind.BNPL
     // BNPL (Cashea): el dato que ve el usuario es el DISPONIBLE = límite - deuda.
     val availableMinor = if (isBnpl && limitMinor != null) (limitMinor - debtMinor).coerceAtLeast(0L) else null
+    val accent = parseAccountColor(view.colorHex)
+        ?: if (isBnpl) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+    val dark = isSystemInDarkTheme()
     Surface(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
         shape = MaterialTheme.shapes.extraLarge,
-        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.45f),
+        color = blendColors(MaterialTheme.colorScheme.surface, accent, if (dark) 0.16f else 0.07f),
         border = BorderStroke(
             1.dp,
-            MaterialTheme.colorScheme.error.copy(alpha = 0.18f),
+            accent.copy(alpha = if (dark) 0.55f else 0.30f),
         ),
     ) {
         Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
@@ -173,13 +183,21 @@ fun DebtCard(view: AccountBalanceView, onClick: () -> Unit, modifier: Modifier =
             }
             if (limitMinor != null && limitMinor > 0) {
                 Spacer(Modifier.height(10.dp))
+                val isBnpl = AccountKind.fromKey(view.kindKey) == AccountKind.BNPL
+                val available = availableMinor ?: (limitMinor - debtMinor).coerceAtLeast(0L)
+                // BNPL (Cashea): la barra muestra el DISPONIBLE (como su app):
+                // casi llena y verde cuando tienes poco uso.
+                val fraction = if (isBnpl) available.toFloat() / limitMinor
+                else debtMinor.toFloat() / limitMinor
                 LinearProgressIndicator(
-                    progress = { (debtMinor.toFloat() / limitMinor).coerceIn(0f, 1f) },
+                    progress = { fraction.coerceIn(0f, 1f) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(5.dp),
-                    color = MaterialTheme.colorScheme.error,
-                    trackColor = MaterialTheme.colorScheme.errorContainer,
+                    color = if (isBnpl) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.error,
+                    trackColor = if (isBnpl) MaterialTheme.colorScheme.primaryContainer
+                    else MaterialTheme.colorScheme.errorContainer,
                 )
                 Spacer(Modifier.height(4.dp))
                 val kind = AccountKind.fromKey(view.kindKey)
@@ -188,7 +206,7 @@ fun DebtCard(view: AccountBalanceView, onClick: () -> Unit, modifier: Modifier =
                         Text(
                             text = "Deuda " + MoneyFormatter.formatMinor(debtMinor, view.currencyCode),
                             style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = "tnum"),
-                            color = MaterialTheme.colorScheme.error,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         limitMinor?.let { lim ->
                             Spacer(Modifier.width(8.dp))
@@ -240,4 +258,16 @@ private fun MonogramChip(
             }
         }
     }
+}
+
+/** Mezcla dos colores por fracción (0 = base, 1 = accent), sin depender de lerp. */
+private fun blendColors(base: Color, accent: Color, fraction: Float): Color {
+    val f = fraction.coerceIn(0f, 1f)
+    val inv = 1f - f
+    return Color(
+        red = base.red * inv + accent.red * f,
+        green = base.green * inv + accent.green * f,
+        blue = base.blue * inv + accent.blue * f,
+        alpha = 1f,
+    )
 }
