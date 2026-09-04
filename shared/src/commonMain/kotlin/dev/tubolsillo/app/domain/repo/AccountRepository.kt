@@ -32,6 +32,7 @@ class AccountRepository(
         initialBalanceMinor: Long?,
         creditLimitMinor: Long?,
         accountNumberMask: String? = null,
+        colorHex: String? = null,
     ): Long {
         val id = accountDao.insert(
             AccountEntity(
@@ -41,6 +42,7 @@ class AccountRepository(
                 currency = currencyCode,
                 creditLimitMinor = creditLimitMinor,
                 accountNumberMask = accountNumberMask,
+                colorHex = colorHex,
             )
         )
         if (initialBalanceMinor != null) {
@@ -77,6 +79,9 @@ class AccountRepository(
     suspend fun updateCreditLimit(accountId: Long, limitMinor: Long?) =
         accountDao.updateCreditLimit(accountId, limitMinor)
 
+    suspend fun updateColor(accountId: Long, colorHex: String?) =
+        accountDao.updateColor(accountId, colorHex)
+
     suspend fun archive(accountId: Long) = accountDao.archive(accountId)
 
     /**
@@ -91,7 +96,13 @@ class AccountRepository(
         val isCard = parsed.raw.contains("tarjeta", ignoreCase = true) ||
             parsed.raw.contains("credito", ignoreCase = true) ||
             parsed.raw.contains("crédito", ignoreCase = true)
-        val preferredKind = if (isCard) AccountKind.CREDIT_CARD else null
+        val preferredKind = when {
+            // Cashea es BNPL: su deuda va en la sección Deudas, no como efectivo.
+            institution == dev.tubolsillo.app.domain.model.Institution.CASHEA ->
+                AccountKind.BNPL
+            isCard -> AccountKind.CREDIT_CARD
+            else -> null
+        }
 
         val active = accountDao.findActiveByInstitution(institution.key)
         val match = active.firstOrNull { it.currency == parsed.currency && it.kind == preferredKind?.key }

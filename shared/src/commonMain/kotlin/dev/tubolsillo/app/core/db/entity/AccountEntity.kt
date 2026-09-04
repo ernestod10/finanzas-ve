@@ -24,6 +24,8 @@ data class AccountEntity(
     val currency: String,
     val kind: String,
     val creditLimitMinor: Long? = null,
+    /** Color personal del usuario en formato #RRGGBB o null = por tipo. */
+    val colorHex: String? = null,
     val isActive: Boolean = true,
     val sortOrder: Int = 0,
     val lastBalanceMinor: Long? = null,

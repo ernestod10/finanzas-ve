@@ -39,10 +39,19 @@ import dev.tubolsillo.app.core.db.entity.TransferPairEntity
         TransactionTagCrossRef::class,
         CategoryRuleEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 abstract class TubolsilloDatabase : RoomDatabase() {
+
+    companion object {
+        /** v1→v2: color personal por cuenta (API del driver KMP). */
+        val MIGRATION_1_2 = object : androidx.room.migration.Migration(1, 2) {
+            override fun migrate(connection: androidx.sqlite.SQLiteConnection) {
+                connection.prepare("ALTER TABLE accounts ADD COLUMN colorHex TEXT").use { it.step() }
+            }
+        }
+    }
     abstract fun accountDao(): AccountDao
     abstract fun transactionDao(): TransactionDao
     abstract fun balanceSnapshotDao(): BalanceSnapshotDao

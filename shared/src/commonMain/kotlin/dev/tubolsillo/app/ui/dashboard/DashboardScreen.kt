@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
@@ -22,6 +23,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -34,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import dev.tubolsillo.app.core.money.MoneyFormatter
 import dev.tubolsillo.app.domain.model.AccountKind
 import dev.tubolsillo.app.ui.components.AccountCard
@@ -99,22 +102,42 @@ fun DashboardScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 8.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
+                            .padding(vertical = 4.dp),
                     ) {
                         Text(
-                            text = MoneyFormatter.formatUsd(data.totals.netWorthUsd),
-                            style = MaterialTheme.typography.headlineLarge,
-                            fontWeight = FontWeight.Bold,
+                            text = "TOTAL EN CUENTAS",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            letterSpacing = 1.6.sp,
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = MoneyFormatter.formatUsd(data.totals.assetsUsd),
+                            style = MaterialTheme.typography.displayMedium.copy(fontFeatureSettings = "tnum"),
                         )
                         Text(
                             text = "≈ " + MoneyFormatter.formatMinor(
-                                (data.totals.netWorthUsd * vesPerDollar * 100).toLong(),
+                                (data.totals.assetsUsd * vesPerDollar * 100).toLong(),
                                 "VES",
                             ),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
+                        Spacer(Modifier.height(10.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "Deudas " + MoneyFormatter.formatUsd(data.totals.debtUsd),
+                                style = MaterialTheme.typography.bodyLarge.copy(fontFeatureSettings = "tnum"),
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                            Spacer(Modifier.width(10.dp))
+                            Text(
+                                text = "· Neto " + MoneyFormatter.formatUsd(data.totals.netWorthUsd),
+                                style = MaterialTheme.typography.bodyMedium.copy(fontFeatureSettings = "tnum"),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
                 }
 
@@ -193,8 +216,8 @@ fun DashboardScreen(
     if (showAddAccount) {
         AddAccountDialog(
             onDismiss = { showAddAccount = false },
-            onSave = { institution, name, kind, currency, initialMinor, limitMinor ->
-                viewModel.addAccount(institution, name, kind, currency, initialMinor, limitMinor)
+            onSave = { institution, name, kind, currency, initialMinor, limitMinor, colorHex ->
+                viewModel.addAccount(institution, name, kind, currency, initialMinor, limitMinor, colorHex)
                 showAddAccount = false
             },
         )
@@ -208,3 +231,6 @@ private fun Modifier.clickableNoRipple(onClick: () -> Unit): Modifier = composed
         onClick = onClick,
     )
 }
+
+
+

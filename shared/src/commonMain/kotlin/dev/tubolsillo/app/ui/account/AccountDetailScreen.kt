@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
@@ -16,6 +18,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -35,7 +38,9 @@ import dev.tubolsillo.app.core.db.entity.TagEntity
 import dev.tubolsillo.app.core.money.MoneyFormatter
 import dev.tubolsillo.app.domain.model.AccountKind
 import dev.tubolsillo.app.domain.model.Institution
+import dev.tubolsillo.app.ui.components.ACCOUNT_PALETTE
 import dev.tubolsillo.app.ui.components.TagChip
+import dev.tubolsillo.app.ui.components.parseAccountColor
 import dev.tubolsillo.app.ui.components.TxRow
 import dev.tubolsillo.app.ui.components.formatDate
 import org.koin.core.parameter.parametersOf
@@ -84,7 +89,9 @@ fun AccountDetailScreen(
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.weight(1f),
                     )
-                    TextButton(onClick = { showBalanceEdit = true }) { Text("Editar saldo") }
+                    TextButton(onClick = { showBalanceEdit = true }) {
+                        Text(if (isBnplCashea(acc)) "Editar disponible" else "Editar saldo")
+                    }
                 }
                 if (AccountKind.fromKey(acc.kind).isDebt) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -104,6 +111,30 @@ fun AccountDetailScreen(
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                Row(
+                    modifier = Modifier.padding(top = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = "Color",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(end = 8.dp),
+                    )
+                    ACCOUNT_PALETTE.forEach { hex ->
+                        val dotColor = parseAccountColor(hex)
+                            ?: MaterialTheme.colorScheme.primary
+                        val selected = acc.colorHex == hex
+                        Surface(
+                            onClick = { viewModel.updateColor(if (selected) null else hex) },
+                            shape = CircleShape,
+                            color = dotColor,
+                            modifier = Modifier
+                                .padding(end = 6.dp)
+                                .size(if (selected) 26.dp else 20.dp),
+                        ) {}
+                    }
+                }
             }
         }
 
@@ -163,8 +194,10 @@ fun AccountDetailScreen(
     }
 
     if (showBalanceEdit) {
+        val acc = account
         TextEditDialog(
-            title = "Saldo actual (" + (account?.currency ?: "") + ")",
+            title = if (acc != null && isBnplCashea(acc)) "Saldo disponible (" + acc.currency + ")"
+            else "Saldo actual (" + (account?.currency ?: "") + ")",
             onDismiss = { showBalanceEdit = false },
             onSave = { viewModel.updateBalance(it) },
         )
@@ -277,3 +310,8 @@ fun TagTransactionDialog(
         },
     )
 }
+
+private fun isBnplCashea(acc: dev.tubolsillo.app.core.db.entity.AccountEntity): Boolean =
+    dev.tubolsillo.app.domain.model.AccountKind.fromKey(acc.kind) == dev.tubolsillo.app.domain.model.AccountKind.BNPL &&
+        dev.tubolsillo.app.domain.model.Institution.fromKey(acc.institution) == dev.tubolsillo.app.domain.model.Institution.CASHEA
+

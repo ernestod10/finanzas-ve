@@ -37,6 +37,7 @@ class CapturePipeline(
     private val accountRepository: AccountRepository,
     private val ruleEngine: RuleEngine,
     private val notifier: CaptureNotifier,
+    private val rateProvider: RateProvider,
 ) {
 
     suspend fun ingest(
@@ -100,12 +101,13 @@ class CapturePipeline(
 
             // 5) Insertar transacción.
             val account = accountRepository.findForCapture(institution, parsed)
+            val converted = convertToAccountCurrency(parsed.amountMinor, parsed.currency, account.currency)
             val transactionId = transactionDao.insert(
                 TransactionEntity(
                     accountId = account.id,
                     occurredAt = parsed.occurredAt,
-                    amountMinor = parsed.amountMinor,
-                    currency = parsed.currency,
+                    amountMinor = converted,
+                    currency = account.currency,
                     description = parsed.description,
                     rawDescription = parsed.merchant,
                     category = parsed.category.key,
@@ -118,10 +120,13 @@ class CapturePipeline(
 
             // 6) Saldo mencionado en el texto + auto-etiquetado por reglas.
             parsed.balanceMinor?.let { balance ->
+                val balanceConverted = convertToAccountCurrency(
+                    balance, parsed.balanceCurrency ?: parsed.currency, account.currency
+                )
                 accountRepository.recordBalance(
                     accountId = account.id,
-                    amountMinor = balance,
-                    currencyCode = parsed.balanceCurrency ?: parsed.currency,
+                    amountMinor = balanceConverted,
+                    currencyCode = account.currency,
                     source = source,
                     rawText = rawText,
                 )
@@ -198,6 +203,19 @@ class CapturePipeline(
 
     private fun senderInstitution(sender: String?): Institution? =
         Institution.bySmsSender(sender)
+
+    /**
+     * Convierte el monto a la moneda de la cuenta cuando el texto trae otra
+     * (ej. push de Cashea en Bs. → cuenta en USD). Usa la tasa configurada
+     * del origen (VES→USD) vía RateProvider.
+     */
+    private suspend fun convertToAccountCurrency(minor: Long, fromCurrency: String, toCurrency: String): Long {
+        if (fromCurrency == toCurrency) return minor
+        return runCatching {
+            val rate = rateProvider.getRate(fromCurrency)
+            Math.round(minor * rate)
+        }.getOrDefault(minor)
+    }
 
     private fun normalizeMerchant(merchant: String): String =
         dev.tubolsillo.app.core.text.MerchantNormalizer.normalize(merchant)

@@ -20,11 +20,18 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import dev.tubolsillo.app.core.platform.rememberJsonExportPicker
 import dev.tubolsillo.app.core.platform.rememberPermissionActions
+import dev.tubolsillo.app.domain.repo.SettingsRepository
+import kotlinx.coroutines.launch
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
 /** Ajustes: permisos de captura, tasas, Binance, Capturas, CSV, respaldo. */
@@ -39,6 +46,13 @@ fun SettingsScreen(
     val permissions = rememberPermissionActions()
     val exportStatus by exportViewModel.status.collectAsState()
     val exportPicker = rememberJsonExportPicker("tubolsillo-backup.json")
+    val settings: SettingsRepository = koinInject()
+    val scope = rememberCoroutineScope()
+    val darkMode by settings.darkMode.collectAsState(initial = "SYSTEM")
+    var themeRow by remember { mutableStateOf(false) }
+    val themeAction: (String) -> Unit = { mode ->
+        scope.launch { settings.setDarkMode(mode) }
+    }
 
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         item {
@@ -48,6 +62,31 @@ fun SettingsScreen(
                 modifier = Modifier.padding(16.dp),
             )
         }
+
+        item {
+            Text(
+                text = "Apariencia",
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+            )
+        }
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
+            ) {
+                listOf("SYSTEM" to "Sistema", "LIGHT" to "Claro", "DARK" to "Oscuro").forEach { (mode, label) ->
+                    androidx.compose.material3.FilterChip(
+                        selected = darkMode == mode,
+                        onClick = { themeAction(mode) },
+                        label = { Text(label) },
+                    )
+                }
+            }
+        }
+        item { HorizontalDivider() }
 
         item {
             Text(

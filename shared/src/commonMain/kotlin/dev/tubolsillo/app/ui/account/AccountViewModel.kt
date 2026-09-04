@@ -6,6 +6,8 @@ import dev.tubolsillo.app.core.db.dao.TransactionWithTags
 import dev.tubolsillo.app.core.db.entity.AccountEntity
 import dev.tubolsillo.app.core.db.entity.BalanceSnapshotEntity
 import dev.tubolsillo.app.core.money.AmountNormalizer
+import dev.tubolsillo.app.domain.model.AccountKind
+import dev.tubolsillo.app.domain.model.Institution
 import dev.tubolsillo.app.domain.model.SourceType
 import dev.tubolsillo.app.domain.repo.AccountRepository
 import dev.tubolsillo.app.domain.repo.BalanceRepository
@@ -42,13 +44,29 @@ class AccountViewModel(
         val account = account.value ?: return
         val minor = AmountNormalizer.parseMinor(amountText, account.currency) ?: return
         viewModelScope.launch {
+            // Cashea muestra "saldo disponible": la deuda = límite - disponible.
+            val esCashea = AccountKind.fromKey(account.kind) == AccountKind.BNPL &&
+                Institution.fromKey(account.institution) == Institution.CASHEA
+            val storedMinor = if (esCashea && account.creditLimitMinor != null) {
+                -((account.creditLimitMinor!! - kotlin.math.abs(minor)).coerceAtLeast(0L))
+            } else if (esCashea) {
+                -kotlin.math.abs(minor)
+            } else {
+                minor
+            }
             accountRepository.recordBalance(
                 accountId = account.id,
-                amountMinor = minor,
+                amountMinor = storedMinor,
                 currencyCode = account.currency,
                 source = SourceType.MANUAL,
                 rawText = amountText,
             )
+        }
+    }
+
+    fun updateColor(colorHex: String?) {
+        viewModelScope.launch {
+            accountRepository.updateColor(accountId, colorHex)
         }
     }
 

@@ -4,25 +4,24 @@ package dev.tubolsillo.app.domain.model
  * Instituciones conectables. La clave se guarda en la base de datos.
  *
  * [notificationPackages]: packages de las apps cuyas notificaciones captura el
- * NotificationListener (verificados en la investigación de sep-2026).
+ * NotificationListener (verificados en la investigación de sep-2026); los no
+ * conocidos quedan vacíos y se mapean desde la pantalla de apps observadas.
  * [smsSenderPatterns]: substrings (lowercase) que identifican al remitente de
- * un SMS ("banesco", "mercantil"…), usado cuando el texto no tiene keyword.
+ * un SMS, usado cuando el texto no tiene keyword.
+ * [defaultCurrency]: moneda típica, sugerida al crear la cuenta.
  */
 enum class Institution(
     val key: String,
     val displayName: String,
     val notificationPackages: List<String> = emptyList(),
     val smsSenderPatterns: List<String> = emptyList(),
+    val defaultCurrency: String = "VES",
 ) {
+    // --- Bancos venezolanos ---
     BANESCO(
         "BANESCO", "Banesco",
         notificationPackages = listOf("com.banesco.samfbancamovilunificada"),
         smsSenderPatterns = listOf("banesco"),
-    ),
-    MERCANTIL_PA(
-        "MERCANTIL_PA", "Mercantil Panamá",
-        notificationPackages = listOf("com.pa.mercantilbanco.mercantilmovil"),
-        smsSenderPatterns = listOf("mercantil"),
     ),
     BANCARIBE(
         "BANCARIBE", "Bancaribe",
@@ -32,23 +31,60 @@ enum class Institution(
     BNC(
         "BNC", "BNC",
         notificationPackages = listOf("bnc.bncnet.mobile2"),
-        smsSenderPatterns = listOf("bnc"),
+        smsSenderPatterns = listOf("bnc", "banco nacional de credito"),
     ),
     BDV(
         "BDV", "Banco de Venezuela",
         notificationPackages = listOf("com.bancodevenezuela.bdvdigital"),
         smsSenderPatterns = listOf("bdv", "banco de venezuela", "bdvenlinea"),
     ),
+    BANCO_PLAZA("BANCO_PLAZA", "Banco Plaza"),
+    BOD("BOD", "BOD"),
+    PROVINCIAL("PROVINCIAL", "Banco Provincial"),
+    EXTERIOR("EXTERIOR", "Banco Exterior"),
+    DEL_SUR("DEL_SUR", "Banco del Sur"),
+    CARONI("CARONI", "Banco Caroní"),
+    SOFITASA("SOFITASA", "Sofitasa"),
+    BANPLUS("BANPLUS", "Banco Banplus"),
+    BANCO_100("BANCO_100", "100% Banco"),
+    BANFANB("BANFANB", "Banfanb"),
+    ACTIVO("ACTIVO", "Banco Activo"),
+    MI_BANCO("MI_BANCO", "Mi Banco"),
+    BANCRECER("BANCRECER", "Bancrecer"),
+
+    // --- Panamá ---
+    MERCANTIL_PA(
+        "MERCANTIL_PA", "Mercantil Panamá",
+        notificationPackages = listOf("com.pa.mercantilbanco.mercantilmovil"),
+        smsSenderPatterns = listOf("mercantil"),
+        defaultCurrency = "USD",
+    ),
+
+    // --- Wallets / fintech ---
+    ZINLI("ZINLI", "Zinli", defaultCurrency = "USD"),
+    UBII("UBII", "Ubii", defaultCurrency = "USD"),
+    WALLY("WALLY", "Wally", defaultCurrency = "USD"),
+
+    // --- Beneficios / tickets ---
+    TODOTICKET("TODOTICKET", "TodoTicket"),
+    CESTATICKET("CESTATICKET", "CestaTicket"),
+
+    // --- BNPL ---
     CASHEA(
         "CASHEA", "Cashea",
         notificationPackages = listOf("com.cashea.app"),
         smsSenderPatterns = listOf("cashea"),
+        defaultCurrency = "USD",
     ),
+
+    // --- Crypto ---
     BINANCE(
         "BINANCE", "Binance",
         notificationPackages = listOf("com.binance.dev"),
+        defaultCurrency = "USDT",
     ),
-    OTHER("OTHER", "Otra");
+
+    OTHER("OTHER", "Otra", defaultCurrency = "USD");
 
     companion object {
         fun fromKey(key: String?): Institution =

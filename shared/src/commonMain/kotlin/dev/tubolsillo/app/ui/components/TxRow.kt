@@ -1,7 +1,5 @@
 package dev.tubolsillo.app.ui.components
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -13,6 +11,7 @@ import androidx.compose.material.icons.filled.CurrencyBitcoin
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.MailOutline
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Sms
 import androidx.compose.material3.Icon
@@ -26,14 +25,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.tubolsillo.app.core.db.dao.TransactionWithTags
-import dev.tubolsillo.app.core.money.Money
 import dev.tubolsillo.app.core.money.MoneyFormatter
 import dev.tubolsillo.app.domain.model.SourceType
-import dev.tubolsillo.app.domain.model.TransactionCategory
 
-private val ExpenseColor = Color(0xFFB3261E)
-private val IncomeColor = Color(0xFF1B7A3D)
-
+/** Fila de transacción: descripción, tiempo y monto en números tabulares. */
 @Composable
 fun TxRow(
     tx: TransactionWithTags,
@@ -45,66 +40,69 @@ fun TxRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = tx.transaction.description,
-                    style = MaterialTheme.typography.bodyLarge,
-                    maxLines = 1,
-                )
-                if (tx.transaction.transferPairId != null) {
-                    Spacer(Modifier.width(4.dp))
-                    Icon(
-                        imageVector = Icons.Filled.Link,
-                        contentDescription = "Transferencia interna",
-                        tint = MaterialTheme.colorScheme.secondary,
-                        modifier = Modifier.size(14.dp),
+        Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = sourceIcon(SourceType.fromKey(tx.transaction.source)),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f),
+                modifier = Modifier.size(15.dp),
+            )
+            Spacer(Modifier.width(10.dp))
+            androidx.compose.foundation.layout.Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = tx.transaction.description,
+                        style = MaterialTheme.typography.bodyLarge,
+                        maxLines = 1,
+                    )
+                    if (tx.transaction.transferPairId != null) {
+                        Spacer(Modifier.width(5.dp))
+                        Icon(
+                            imageVector = Icons.Filled.Link,
+                            contentDescription = "Transferencia interna",
+                            tint = MaterialTheme.colorScheme.tertiary,
+                            modifier = Modifier.size(13.dp),
+                        )
+                    }
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    val meta = listOfNotNull(
+                        accountName,
+                        formatTime(tx.transaction.occurredAt),
+                    ).joinToString(" · ")
+                    Text(
+                        text = meta,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
                     )
                 }
             }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = accountName ?: "",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                if (accountName != null) {
-                    Spacer(Modifier.width(6.dp))
-                }
-                Text(
-                    text = formatTime(tx.transaction.occurredAt),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                if (tx.tags.isNotEmpty()) {
-                    Spacer(Modifier.width(6.dp))
-                    tx.tags.take(2).forEach { tag ->
-                        TagChip(name = tag.name, modifier = Modifier.padding(end = 3.dp))
+        }
+        Spacer(Modifier.width(12.dp))
+        androidx.compose.foundation.layout.Column(horizontalAlignment = Alignment.End) {
+            Text(
+                text = MoneyFormatter.formatMinor(
+                    minor = tx.transaction.amountMinor,
+                    code = tx.transaction.currency,
+                    withSymbol = true,
+                ),
+                style = MaterialTheme.typography.bodyLarge.copy(fontFeatureSettings = "tnum"),
+                fontWeight = FontWeight.SemiBold,
+                color = if (negative) MaterialTheme.colorScheme.error
+                else MaterialTheme.colorScheme.primary,
+            )
+            if (tx.tags.isNotEmpty()) {
+                Spacer(Modifier.size(2.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    tx.tags.take(1).forEach { tag ->
+                        TagChip(name = tag.name)
                     }
                 }
             }
         }
-        Spacer(Modifier.width(8.dp))
-        Icon(
-            imageVector = sourceIcon(SourceType.fromKey(tx.transaction.source)),
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(14.dp),
-        )
-        Spacer(Modifier.width(6.dp))
-        Text(
-            text = MoneyFormatter.formatMinor(
-                minor = tx.transaction.amountMinor,
-                code = tx.transaction.currency,
-                withSymbol = true,
-            ),
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.SemiBold,
-            color = if (negative) ExpenseColor else IncomeColor,
-        )
     }
 }
 
@@ -114,12 +112,5 @@ private fun sourceIcon(source: SourceType): ImageVector = when (source) {
     SourceType.BINANCE -> Icons.Filled.CurrencyBitcoin
     SourceType.CSV -> Icons.Filled.FileDownload
     SourceType.MANUAL -> Icons.Filled.Edit
+    SourceType.EMAIL -> Icons.Filled.MailOutline
 }
-
-/** Color del monto: gasto rojo, ingreso verde. */
-fun txAmountColor(negative: Boolean): Color = if (negative) ExpenseColor else IncomeColor
-
-/** Muestra el monto con signo explícito para el detalle. */
-fun signedAmount(amountMinor: Long, code: String): String =
-    if (amountMinor > 0) "+" + MoneyFormatter.formatMinor(amountMinor, code)
-    else MoneyFormatter.formatMinor(amountMinor, code)

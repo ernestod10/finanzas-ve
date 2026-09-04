@@ -42,6 +42,7 @@ class DashboardViewModel(
         currencyCode: String,
         initialBalanceMinor: Long?,
         creditLimitMinor: Long?,
+        colorHex: String? = null,
     ) {
         viewModelScope.launch {
             accountRepository.create(
@@ -51,6 +52,7 @@ class DashboardViewModel(
                 currencyCode = currencyCode,
                 initialBalanceMinor = initialBalanceMinor,
                 creditLimitMinor = creditLimitMinor,
+                colorHex = colorHex,
             )
         }
     }

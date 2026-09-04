@@ -10,4 +10,5 @@ actual fun getDatabaseBuilder(): RoomDatabase.Builder<TubolsilloDatabase> =
         GlobalContext.get().get<android.content.Context>(),
         TubolsilloDatabase::class.java,
         "tubolsillo.db",
-    ).setDriver(BundledSQLiteDriver())
+    ).addMigrations(TubolsilloDatabase.MIGRATION_1_2)
+        .setDriver(BundledSQLiteDriver())

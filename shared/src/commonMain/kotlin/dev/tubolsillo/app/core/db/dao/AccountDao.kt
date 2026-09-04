@@ -42,6 +42,9 @@ interface AccountDao {
 
     @Query("UPDATE accounts SET creditLimitMinor = :limit WHERE id = :id")
     suspend fun updateCreditLimit(id: Long, limit: Long?)
+
+    @Query("UPDATE accounts SET colorHex = :colorHex WHERE id = :id")
+    suspend fun updateColor(id: Long, colorHex: String?)
     @Query("SELECT * FROM accounts")
     suspend fun getAllForExport(): List<AccountEntity>
 }

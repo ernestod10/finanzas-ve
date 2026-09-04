@@ -96,8 +96,8 @@ fun AccountsScreen(
     if (showAddAccount) {
         AddAccountDialog(
             onDismiss = { showAddAccount = false },
-            onSave = { institution, name, kind, currency, initialMinor, limitMinor ->
-                viewModel.addAccount(institution, name, kind, currency, initialMinor, limitMinor)
+            onSave = { institution, name, kind, currency, initialMinor, limitMinor, colorHex ->
+                viewModel.addAccount(institution, name, kind, currency, initialMinor, limitMinor, colorHex)
                 showAddAccount = false
             },
         )

@@ -17,6 +17,7 @@ data class AccountBalanceView(
     val currencyCode: String,
     val balanceMinor: Long?,
     val creditLimitMinor: Long?,
+    val colorHex: String? = null,
     val usdEquivalent: Double?,
     val lastUpdateAt: Long?,
 )

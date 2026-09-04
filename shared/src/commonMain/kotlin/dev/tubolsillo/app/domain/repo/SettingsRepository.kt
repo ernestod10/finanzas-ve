@@ -25,6 +25,14 @@ class SettingsRepository() {
         val ONBOARDING_DONE = booleanPreferencesKey("onboarding_done")
         val DEFAULT_VES_RATE = stringPreferencesKey("default_ves_rate")
         val BINANCE_SYNC_MINUTES = intPreferencesKey("binance_sync_minutes")
+        val DARK_MODE = stringPreferencesKey("dark_mode") // SYSTEM | LIGHT | DARK
+    }
+
+    val darkMode: Flow<String> =
+        dataStore.data.map { it[Keys.DARK_MODE] ?: "SYSTEM" }
+
+    suspend fun setDarkMode(mode: String) {
+        dataStore.edit { it[Keys.DARK_MODE] = mode }
     }
 
     val onboardingDone: Flow<Boolean> =

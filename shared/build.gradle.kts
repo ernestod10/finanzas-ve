@@ -87,9 +87,11 @@ kotlin {
     }
 }
 
-// Compilador de Room para KMP (el plugin androidx.room gestiona KSP por target).
+// Compilador de Room: el plugin androidx.room gestiona el metadata común,
+// pero el target Android necesita el procesador KSP explícito.
 dependencies {
     add("kspCommonMainMetadata", libs.room.compiler)
+    add("kspAndroid", libs.room.compiler)
 }
 
 room {

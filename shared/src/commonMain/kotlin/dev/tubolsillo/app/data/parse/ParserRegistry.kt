@@ -46,6 +46,7 @@ class ParserRegistry(
         Institution.BDV -> listOf("banco de venezuela", "bdvenlinea", "bdv")
         Institution.CASHEA -> listOf("cashea", "cuota", "quincena")
         Institution.BINANCE -> listOf("binance")
-        Institution.OTHER -> null
+        // El resto se detecta por sender/package o mapeo manual (pantalla de apps).
+        else -> null
     }
 }

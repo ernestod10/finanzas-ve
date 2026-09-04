@@ -21,6 +21,7 @@ enum class SourceType(val key: String, val displayName: String) {
     SMS("SMS", "SMS"),
     NOTIFICATION("NOTIFICATION", "Push"),
     BINANCE("BINANCE", "Binance"),
+    EMAIL("EMAIL", "Correo"),
     CSV("CSV", "CSV"),
     MANUAL("MANUAL", "Manual");
 

@@ -9,10 +9,9 @@ import dev.tubolsillo.app.domain.model.ParsedTransaction
 import dev.tubolsillo.app.domain.model.TransactionCategory
 
 /**
- * Push de Cashea (com.cashea.app). Las compras BNPL viven solo en la app;
- * notificaciones típicas: compra aprobada, recordatorio de cuota, pago.
- * v1 best-effort; se afina con corpus real (push de Cashea es poco confiable,
- * el email llega en una fase futura).
+ * Push de Cashea (com.cashea.app). Cashea opera TODO en USD (el Bs. es solo
+ * el medio de pago al cobrar, al cambio BCV), así que los montos se parsean
+ * en USD. v1 best-effort; se afina con corpus real.
  */
 class CasheaParser() : InstitutionParser {
 
@@ -49,7 +48,7 @@ class CasheaParser() : InstitutionParser {
 
         for (template in templates) {
             val match = template.regex.find(text) ?: continue
-            val amountMinor = AmountNormalizer.parseMinor(match.groups["amount"]!!.value, "VES")
+            val amountMinor = AmountNormalizer.parseMinor(match.groups["amount"]!!.value, "USD")
                 ?: continue
             val merchant = ParserSupport.groupOrNull(match, "merchant")?.let { ParserSupport.cleanMerchant(it) }
                 ?: "Cashea"
@@ -59,7 +58,7 @@ class CasheaParser() : InstitutionParser {
                 institution = institution,
                 occurredAt = occurredAt,
                 amountMinor = signed,
-                currency = "VES",
+                currency = "USD",
                 merchant = merchant,
                 description = "Cashea · $merchant",
                 category = template.category,

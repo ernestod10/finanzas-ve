@@ -38,6 +38,7 @@ class TotalsCalculator() {
             currencyCode = account.currency,
             balanceMinor = account.lastBalanceMinor,
             creditLimitMinor = account.creditLimitMinor,
+            colorHex = account.colorHex,
             usdEquivalent = account.lastBalanceMinor?.let {
                 usdEquivalent(it, account.currency, rates)
             },
