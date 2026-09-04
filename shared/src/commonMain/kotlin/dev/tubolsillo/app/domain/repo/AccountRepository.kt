@@ -93,9 +93,13 @@ class AccountRepository(
         institution: dev.tubolsillo.app.domain.model.Institution,
         parsed: dev.tubolsillo.app.domain.model.ParsedTransaction,
     ): AccountEntity {
-        val isCard = parsed.raw.contains("tarjeta", ignoreCase = true) ||
-            parsed.raw.contains("credito", ignoreCase = true) ||
-            parsed.raw.contains("crédito", ignoreCase = true)
+        val esDebit = parsed.raw.contains("debit", ignoreCase = true) ||
+            parsed.raw.contains("débito", ignoreCase = true) || parsed.raw.contains("debito", ignoreCase = true)
+        val isCard = !esDebit && (
+            parsed.raw.contains("tarjeta", ignoreCase = true) ||
+                parsed.raw.contains("credito", ignoreCase = true) ||
+                parsed.raw.contains("crédito", ignoreCase = true)
+            )
         val preferredKind = when {
             // Cashea es BNPL: su deuda va en la sección Deudas, no como efectivo.
             institution == dev.tubolsillo.app.domain.model.Institution.CASHEA ->

@@ -69,6 +69,19 @@ class CapturePipeline(
                     return@withContext CaptureOutcome.Unmatched
                 }
 
+            // 2b) Ruido (promos, price alerts, chats) -> IGNORED sin tocar cuentas.
+            if (isNoise(rawText, institution)) {
+                captureEventDao.getById(eventId)?.let { event ->
+                    captureEventDao.update(
+                        event.copy(
+                            institution = institution.key,
+                            parseStatus = ParseStatus.IGNORED.key,
+                        )
+                    )
+                }
+                return@withContext CaptureOutcome.Unmatched
+            }
+
             // 3) Parseo.
             val parsed = registry.parse(institution, rawText, now)
                 ?: run {
@@ -203,6 +216,20 @@ class CapturePipeline(
 
     private fun senderInstitution(sender: String?): Institution? =
         Institution.bySmsSender(sender)
+
+    /** Textos sin valor financiero (alerts/promos de Binance, chats) que no deben crear cuentas. */
+    private fun isNoise(text: String, institution: Institution): Boolean = when (institution) {
+        Institution.BINANCE ->
+            text.contains("price alert", ignoreCase = true) ||
+                text.contains("dips below", ignoreCase = true) ||
+                text.contains("crosses", ignoreCase = true) ||
+                text.contains("premios", ignoreCase = true) ||
+                text.contains("trading para principiantes", ignoreCase = true) ||
+                text.contains("activa el recordatorio", ignoreCase = true) ||
+                text.contains("[image]", ignoreCase = true) ||
+                text.contains("está por comenzar", ignoreCase = true)
+        else -> false
+    }
 
     /**
      * Convierte el monto a la moneda de la cuenta cuando el texto trae otra

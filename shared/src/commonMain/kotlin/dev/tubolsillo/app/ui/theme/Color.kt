@@ -2,39 +2,38 @@ package dev.tubolsillo.app.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Paleta de TuBolsillo — "papel + bosque": fondos cálidos de papel, tinta
-// cálida, UN solo acento (verde bosque desaturado) y terracota solo para deuda.
+// Paleta de TuBolsillo — verde lima sobre crema, con tintas profundas (casi negro).
+//   #2A7C13 verde bosque/lima oscuro (acento principal)
+//   #76C457 verde lima claro (secundario / brillo)
+//   #FFF8CF crema claro (fondos suaves)
+//   #FBE6C2 crema durazno (superficies cálidas)
 
 // --- Luz ---
-val PaperLight = Color(0xFFF6F4EF)        // fondo cálido, no blanco puro
+val PaperLight = Color(0xFFF7F3E3)        // crema cálido (base)
 val PaperSurfaceLight = Color(0xFFFFFFFF)
-val InkLight = Color(0xFF221F1A)          // tinta cálida (no negro puro)
-val MutedLight = Color(0xFF6F6A60)
+val CreamLight = Color(0xFFFFF8CF)        // contenedor secundario
+val PeachLight = Color(0xFFFBE6C2)        // superficies variant cálidas
+val InkLight = Color(0xFF13150E)          // tinta casi negra con matiz verde
+val MutedLight = Color(0xFF5F6657)
 
-val ForestLight = Color(0xFF2E5E43)       // acento único (verde profundo)
+val ForestLight = Color(0xFF2A7C13)       // primario: verde lima profundo
 val OnForestLight = Color(0xFFFFFFFF)
-val ForestContainerLight = Color(0xFFDCE8DF)
-val OnForestContainerLight = Color(0xFF123326)
-val SageLight = Color(0xFF6B705F)         // secundario oliva, solo iconos suaves
-val GoldLight = Color(0xFFB08A3E)         // terciario: pago móvil / alertas
-val ClayLight = Color(0xFFA63D36)         // error/deuda (terracota)
+val ForestContainerLight = Color(0xFFD9EFC6)
+val OnForestContainerLight = Color(0xFF0F2A05)
+val SageLight = Color(0xFF76C457)         // secundario: lima claro
+val GoldLight = Color(0xFF8A6A1F)         // terciario: dorado para alertas
+val ClayLight = Color(0xFFB03A2E)         // error/deuda (terracota)
 
-// --- Oscuro ---
-val CharcoalDark = Color(0xFF131410)      // carbón cálido, no negro puro
-val SurfaceDark = Color(0xFF1C1D16)
-val InkDark = Color(0xFFECE9E2)
-val MutedDark = Color(0xFFB9B4A8)
+// --- Oscuro (más negro) ---
+val CharcoalDark = Color(0xFF0A0C07)      // casi negro con matiz verde
+val SurfaceDark = Color(0xFF15180F)
+val InkDark = Color(0xFFF2F4E8)
+val MutedDark = Color(0xFFB4BCA6)
 
-val ForestDark = Color(0xFF9CC5A8)
-val OnForestDark = Color(0xFF0F241A)
-val ForestContainerDark = Color(0xFF23432F)
-val OnForestContainerDark = Color(0xFFDCE8DF)
-val SageDark = Color(0xFFA8AC99)
-val GoldDark = Color(0xFFD9B96B)
-val ClayDark = Color(0xFFE3A29A)
-
-// Colores semánticos de montos (independientes del tema claro/oscuro).
-val PositiveLight = Color(0xFF2E5E43)
-val NegativeLight = Color(0xFFA63D36)
-val PositiveDark = Color(0xFF9CC5A8)
-val NegativeDark = Color(0xFFE3A29A)
+val ForestDark = Color(0xFF76C457)
+val OnForestDark = Color(0xFF0F2605)
+val ForestContainerDark = Color(0xFF23421A)
+val OnForestContainerDark = Color(0xFFD9EFC6)
+val SageDark = Color(0xFFA8DB8C)
+val GoldDark = Color(0xFFD9BC6E)
+val ClayDark = Color(0xFFE8A49A)

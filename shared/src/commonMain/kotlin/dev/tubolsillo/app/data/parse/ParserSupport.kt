@@ -17,7 +17,7 @@ data class ParserTemplate(
 object ParserSupport {
 
     private val balanceRegex = Regex(
-        "(?i)saldo:?\\s*(?:bs\\.?|bsd|b/\\.|\\$)?\\s*(?<balance>[\\d.,]+)"
+        "(?i)saldo(?:\\s+disponible)?:?\\s*(?:bs\\.?|bsd|b/\\.|\\$)?\\s*(?<balance>[\\d.,]+)"
     )
 
     /** Extrae el saldo mencionado en el texto ("Saldo: Bs. 1.234,56"), o null. */

@@ -9,8 +9,8 @@ import androidx.compose.runtime.Composable
 // Constantes de color auxiliares (sin colisiones con la API).
 private val Color_White = androidx.compose.ui.graphics.Color(0xFFFFFFFF)
 private val Color_Charcoal = androidx.compose.ui.graphics.Color(0xFF131410)
-private val Color_WarmGrayLight = androidx.compose.ui.graphics.Color(0xFFECE9E1)
-private val Color_WarmGrayDark = androidx.compose.ui.graphics.Color(0xFF26271F)
+private val Color_WarmGrayLight = androidx.compose.ui.graphics.Color(0xFFF3E9CF) // crema durazno
+private val Color_WarmGrayDark = androidx.compose.ui.graphics.Color(0xFF1C2014)
 private val Color_HairlineLight = androidx.compose.ui.graphics.Color(0x141C1B18L)
 private val Color_HairlineDark = androidx.compose.ui.graphics.Color(0x1AFFFFFFL)
 private val Color_TerracottaTintLight = androidx.compose.ui.graphics.Color(0xFFF3DCD8)
