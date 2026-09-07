@@ -120,7 +120,14 @@ class PortalConnectActivity : ComponentActivity() {
                                 settings.domStorageEnabled = true
                                 CookieManager.getInstance().setAcceptCookie(true)
                                 CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
-                                webViewClient = WebViewClient()
+                                webViewClient = object : WebViewClient() {
+                                    override fun onPageFinished(view: WebView?, url: String?) {
+                                        super.onPageFinished(view, url)
+                                        if (autoLoginAttempts < MAX_AUTO_LOGIN_ATTEMPTS) {
+                                            autoLogin()
+                                        }
+                                    }
+                                }
                                 loadUrl(startUrl)
                                 webViewRef = this
                                 portalKey = institutionKey
@@ -149,12 +156,18 @@ class PortalConnectActivity : ComponentActivity() {
     private var webViewRef: WebView? = null
     private var portalKey: String? = null
     private var portalSecret: SecretStore? = null
+    private var autoLoginAttempts = 0
+
+    private companion object {
+        const val MAX_AUTO_LOGIN_ATTEMPTS = 3
+    }
 
     /** Rellena y envía el formulario de login (una sola vez por página). */
     private fun autoLogin() {
         val webView = webViewRef ?: return
         val key = portalKey ?: return
         val creds = portalSecret?.portalCredentials(key) ?: return
+        autoLoginAttempts++
         val userJs = creds.first.replace("\\", "\\\\").replace("'", "\\'")
         val passJs = creds.second.replace("\\", "\\\\").replace("'", "\\'")
         val script = """
