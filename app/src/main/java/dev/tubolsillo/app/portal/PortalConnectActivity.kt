@@ -23,18 +23,21 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import dev.tubolsillo.app.core.di.sharedKoin
 import dev.tubolsillo.app.core.crypto.SecretStore
+import dev.tubolsillo.app.core.di.sharedKoin
 import dev.tubolsillo.app.domain.model.Institution
 
 /**
- * Vinculación del portal de un banco: el usuario inicia sesión en un WebView
- * real (resuelve 2FA/coordenadas en pantalla) y, estando dentro, toca
- * "Guardar esta página": la app guarda las cookies + URL actual cifradas.
- * La consulta posterior replica esa URL con las cookies (session-replay).
+ * Vinculación por portal con AUTO-LOGIN asistido:
+ * - Si hay credenciales guardadas, rellena y envía el formulario de login
+ *   solo (una vez por página, nunca en bucle).
+ * - Si aparece 2FA/coordenadas/pregunta/captcha, se detiene: el usuario
+ *   resuelve en pantalla y luego guarda la página de movimientos.
  */
 class PortalConnectActivity : ComponentActivity() {
 
@@ -43,20 +46,30 @@ class PortalConnectActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val institutionKey = intent.getStringExtra("institution") ?: "MERCANTIL_PA"
         val institution = Institution.fromKey(institutionKey)
+        val secretStore = sharedKoin<SecretStore>()
+        val savedCreds = secretStore.portalCredentials(institutionKey)
         val startUrl = institution.portalStartUrl ?: "https://www.mercantilbanco.com.pa/"
 
         setContent {
             MaterialTheme {
-                var status by remember { mutableStateOf("Inicia sesión en el portal y navega hasta ver tus movimientos.") }
+                var status by remember {
+                    mutableStateOf(
+                        if (savedCreds != null)
+                            "Credenciales guardadas: auto-login activo. Si pide 2FA, resuélvelo aquí."
+                        else "Inicia sesión; opcionalmente guarda credenciales para auto-login."
+                    )
+                }
                 var urlText by remember { mutableStateOf(startUrl) }
+                var user by remember { mutableStateOf(savedCreds?.first ?: "") }
+                var pass by remember { mutableStateOf(savedCreds?.second ?: "") }
+
                 Column(modifier = Modifier.fillMaxSize().padding(8.dp)) {
                     Text(
                         text = "Conectar " + institution.displayName,
                         style = MaterialTheme.typography.titleLarge,
                         modifier = Modifier.padding(8.dp),
                     )
-                    // Barra de URL editable (si el portal cambia su ruta de acceso).
-                    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         OutlinedTextField(
                             value = urlText,
                             onValueChange = { urlText = it },
@@ -64,6 +77,38 @@ class PortalConnectActivity : ComponentActivity() {
                             modifier = Modifier.weight(1f),
                         )
                         TextButton(onClick = { webViewRef?.loadUrl(urlText) }) { Text("Ir") }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        OutlinedTextField(
+                            value = user,
+                            onValueChange = { user = it },
+                            label = { Text("Usuario") },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f),
+                        )
+                        OutlinedTextField(
+                            value = pass,
+                            onValueChange = { pass = it },
+                            label = { Text("Clave") },
+                            singleLine = true,
+                            visualTransformation = PasswordVisualTransformation(),
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Button(
+                            onClick = {
+                                if (user.isNotBlank() && pass.isNotBlank()) {
+                                    secretStore.savePortalCredentials(institutionKey, user, pass)
+                                    autoLogin()
+                                    status = "Credenciales guardadas. Auto-login enviado."
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                        ) { Text("Guardar y auto-login") }
+                        Button(onClick = { autoLogin() }, modifier = Modifier.weight(1f)) {
+                            Text("Auto-login")
+                        }
                     }
                     AndroidView(
                         modifier = Modifier
@@ -78,6 +123,8 @@ class PortalConnectActivity : ComponentActivity() {
                                 webViewClient = WebViewClient()
                                 loadUrl(startUrl)
                                 webViewRef = this
+                                portalKey = institutionKey
+                                portalSecret = secretStore
                             }
                         },
                     )
@@ -87,22 +134,11 @@ class PortalConnectActivity : ComponentActivity() {
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(vertical = 6.dp),
                     )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
+                    Row(modifier = Modifier.fillMaxWidth()) {
                         Button(
-                            onClick = {
-                                saveCurrentPage(institutionKey) { ok ->
-                                    status = if (ok) {
-                                        "✓ Sesión guardada. Puedes cerrar; la app la usará para consultar."
-                                    } else {
-                                        "✗ No se pudo guardar. Verifica que estés dentro del portal."
-                                    }
-                                }
-                            },
+                            onClick = { saveCurrentPage(institutionKey) },
                             modifier = Modifier.weight(1f),
-                        ) { Text("Guardar esta página") }
+                        ) { Text("Guardar esta página (movimientos)") }
                         TextButton(onClick = { finish() }) { Text("Cerrar") }
                     }
                 }
@@ -110,26 +146,43 @@ class PortalConnectActivity : ComponentActivity() {
         }
     }
 
-    private fun saveCurrentPage(institutionKey: String, onDone: (Boolean) -> Unit) {
-        webViewRef?.let { webView ->
-            val url = webView.url ?: run { onDone(false); return }
-            val cookies = CookieManager.getInstance().getCookie(url)
-            if (cookies.isNullOrBlank() || url.length < 40) {
-                // Home o página sin sesión: pedimos que navegue dentro del portal.
-                onDone(false)
-                return
-            }
-            runCatching {
-                sharedKoin<SecretStore>().savePortalSession(institutionKey, cookies, url)
-            }.onSuccess { onDone(true) }.onFailure { onDone(false) }
-        } ?: onDone(false)
+    private var webViewRef: WebView? = null
+    private var portalKey: String? = null
+    private var portalSecret: SecretStore? = null
+
+    /** Rellena y envía el formulario de login (una sola vez por página). */
+    private fun autoLogin() {
+        val webView = webViewRef ?: return
+        val key = portalKey ?: return
+        val creds = portalSecret?.portalCredentials(key) ?: return
+        val userJs = creds.first.replace("\\", "\\\\").replace("'", "\\'")
+        val passJs = creds.second.replace("\\", "\\\\").replace("'", "\\'")
+        val script = """
+            (function(){
+              if (window.__tbAutoLoginDone) return;
+              var ins = document.querySelectorAll('input');
+              var userEl = null, passEl = null;
+              for (var i = 0; i < ins.length; i++) {
+                var t = (ins[i].type || '').toLowerCase();
+                if (t === 'password') passEl = passEl || ins[i];
+                else if (t === 'text' || t === 'email' || t === 'tel' || t === '') userEl = userEl || ins[i];
+              }
+              if (!userEl || !passEl) return;
+              userEl.value = '$userJs';
+              passEl.value = '$passJs';
+              window.__tbAutoLoginDone = true;
+              var f = userEl.form || passEl.form;
+              if (f && f.submit) { f.submit(); }
+            })();
+        """.trimIndent()
+        webView.evaluateJavascript(script, null)
     }
 
-    private var webViewRef: WebView? = null
-
-    override fun onResume() {
-        super.onResume()
-        // Se re-asigna la referencia al WebView actual al recomponer la UI.
-        // (patrón simple: la Activity es de un solo uso por vinculación)
+    private fun saveCurrentPage(institutionKey: String) {
+        val webView = webViewRef ?: return
+        val url = webView.url ?: return
+        val cookies = CookieManager.getInstance().getCookie(url)
+        if (cookies.isNullOrBlank() || url.length < 40) return
+        runCatching { portalSecret?.savePortalSession(institutionKey, cookies, url) }
     }
 }

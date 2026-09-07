@@ -29,6 +29,22 @@ class IosSecretStore : SecretStore {
         prefs.removeObjectForKey(KEY_SECRET)
     }
 
+    override fun savePortalCredentials(institutionKey: String, user: String, password: String) {
+        prefs.setObject(user, forKey = "portal_user_" + institutionKey)
+        prefs.setObject(password, forKey = "portal_pass_" + institutionKey)
+    }
+
+    override fun portalCredentials(institutionKey: String): Pair<String, String>? {
+        val u = prefs.stringForKey("portal_user_" + institutionKey) ?: return null
+        val p = prefs.stringForKey("portal_pass_" + institutionKey) ?: return null
+        return u to p
+    }
+
+    override fun clearPortalCredentials(institutionKey: String) {
+        prefs.removeObjectForKey("portal_user_" + institutionKey)
+        prefs.removeObjectForKey("portal_pass_" + institutionKey)
+    }
+
     override fun savePortalSession(institutionKey: String, cookies: String, url: String) {
         prefs.setObject(cookies, forKey = "portal_cookies_" + institutionKey)
         prefs.setObject(url, forKey = "portal_url_" + institutionKey)
