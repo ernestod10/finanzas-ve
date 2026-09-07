@@ -131,14 +131,19 @@ class CapturePipeline(
                 )
             )
 
-            // 6) Saldo mencionado en el texto + auto-etiquetado por reglas.
-            parsed.balanceMinor?.let { balance ->
-                val balanceConverted = convertToAccountCurrency(
-                    balance, parsed.balanceCurrency ?: parsed.currency, account.currency
-                )
+            // 6) Saldo: si el texto lo trae ("Saldo disponible Bs. X", "disp. Y")
+            // se usa tal cual; si no, se DERIVA = último saldo + monto (el total
+            // siempre refleja el movimiento aunque el banco no mande el saldo).
+            val balanceToStore = parsed.balanceMinor?.let { balance ->
+                convertToAccountCurrency(balance, parsed.balanceCurrency ?: parsed.currency, account.currency)
+            } ?: run {
+                val last = account.lastBalanceMinor
+                if (last != null) last + converted else null
+            }
+            balanceToStore?.let { balance ->
                 accountRepository.recordBalance(
                     accountId = account.id,
-                    amountMinor = balanceConverted,
+                    amountMinor = balance,
                     currencyCode = account.currency,
                     source = source,
                     rawText = rawText,
