@@ -35,6 +35,7 @@ import dev.tubolsillo.app.ui.account.AccountDetailScreen
 import dev.tubolsillo.app.ui.accounts.AccountsScreen
 import dev.tubolsillo.app.ui.budget.BudgetScreen
 import dev.tubolsillo.app.ui.categories.CategoriesScreen
+import dev.tubolsillo.app.ui.portal.PortalScreen
 import dev.tubolsillo.app.ui.dashboard.DashboardScreen
 import dev.tubolsillo.app.ui.events.EventsScreen
 import dev.tubolsillo.app.ui.events.ReplayScreen
@@ -58,6 +59,7 @@ object Routes {
     const val REPLAY = "replay"
     const val CSV_IMPORT = "csv_import"
     const val CATEGORIES = "categories"
+    const val PORTAL = "portal"
 
     fun account(accountId: Long) = "account/$accountId"
 }
@@ -174,7 +176,11 @@ fun TubolsilloNavHost() {
                     onBinanceClick = { navController.navigate(Routes.BINANCE) },
                     onEventsClick = { navController.navigate(Routes.EVENTS) },
                     onCsvImportClick = { navController.navigate(Routes.CSV_IMPORT) },
+                    onPortalClick = { navController.navigate(Routes.PORTAL) },
                 )
+            }
+            composable(Routes.PORTAL) {
+                PortalScreen(onBack = { navController.popBackStack() })
             }
             composable(
                 route = Routes.ACCOUNT,

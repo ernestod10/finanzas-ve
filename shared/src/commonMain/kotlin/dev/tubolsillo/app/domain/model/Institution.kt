@@ -16,6 +16,8 @@ enum class Institution(
     val notificationPackages: List<String> = emptyList(),
     val smsSenderPatterns: List<String> = emptyList(),
     val defaultCurrency: String = "VES",
+    /** URL de inicio del portal web (para vinculación por WebView). */
+    val portalStartUrl: String? = null,
 ) {
     // --- Bancos venezolanos ---
     BANESCO(
@@ -58,6 +60,7 @@ enum class Institution(
         notificationPackages = listOf("com.pa.mercantilbanco.mercantilmovil"),
         smsSenderPatterns = listOf("mercantil"),
         defaultCurrency = "USD",
+        portalStartUrl = "https://www.mercantilbanco.com.pa/",
     ),
 
     // --- Wallets / fintech ---

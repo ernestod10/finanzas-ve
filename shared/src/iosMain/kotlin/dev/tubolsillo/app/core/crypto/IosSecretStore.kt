@@ -29,6 +29,22 @@ class IosSecretStore : SecretStore {
         prefs.removeObjectForKey(KEY_SECRET)
     }
 
+    override fun savePortalSession(institutionKey: String, cookies: String, url: String) {
+        prefs.setObject(cookies, forKey = "portal_cookies_" + institutionKey)
+        prefs.setObject(url, forKey = "portal_url_" + institutionKey)
+    }
+
+    override fun portalSession(institutionKey: String): Pair<String, String>? {
+        val c = prefs.stringForKey("portal_cookies_" + institutionKey) ?: return null
+        val u = prefs.stringForKey("portal_url_" + institutionKey) ?: return null
+        return c to u
+    }
+
+    override fun clearPortalSession(institutionKey: String) {
+        prefs.removeObjectForKey("portal_cookies_" + institutionKey)
+        prefs.removeObjectForKey("portal_url_" + institutionKey)
+    }
+
     private companion object {
         const val KEY_API = "binance_api_key"
         const val KEY_SECRET = "binance_api_secret"

@@ -39,6 +39,26 @@ class AndroidSecretStore(
         prefs.edit().remove(KEY_BINANCE_API).remove(KEY_BINANCE_SECRET).apply()
     }
 
+    override fun savePortalSession(institutionKey: String, cookies: String, url: String) {
+        prefs.edit()
+            .putString("portal_cookies_" + institutionKey, cookies)
+            .putString("portal_url_" + institutionKey, url)
+            .apply()
+    }
+
+    override fun portalSession(institutionKey: String): Pair<String, String>? {
+        val c = prefs.getString("portal_cookies_" + institutionKey, null) ?: return null
+        val u = prefs.getString("portal_url_" + institutionKey, null) ?: return null
+        return c to u
+    }
+
+    override fun clearPortalSession(institutionKey: String) {
+        prefs.edit()
+            .remove("portal_cookies_" + institutionKey)
+            .remove("portal_url_" + institutionKey)
+            .apply()
+    }
+
     private companion object {
         const val KEY_BINANCE_API = "binance_api_key"
         const val KEY_BINANCE_SECRET = "binance_api_secret"

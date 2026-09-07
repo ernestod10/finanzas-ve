@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.CurrencyExchange
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.SaveAlt
@@ -41,6 +42,7 @@ fun SettingsScreen(
     onBinanceClick: () -> Unit,
     onEventsClick: () -> Unit,
     onCsvImportClick: () -> Unit,
+    onPortalClick: () -> Unit = {},
     exportViewModel: ExportViewModel = koinViewModel(),
 ) {
     val permissions = rememberPermissionActions()
@@ -148,6 +150,15 @@ fun SettingsScreen(
                 title = "Capturas",
                 subtitle = "Log crudo de SMS/push y Replay para afinar parsers",
                 onClick = onEventsClick,
+            )
+        }
+        item { HorizontalDivider() }
+        item {
+            SettingsRow(
+                icon = { Icon(Icons.Filled.Link, null) },
+                title = "Portal (beta)",
+                subtitle = "Mercantil Panamá — leer movimientos con sesión vinculada",
+                onClick = onPortalClick,
             )
         }
         item { HorizontalDivider() }

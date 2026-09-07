@@ -11,4 +11,9 @@ interface SecretStore {
     fun binanceKeys(): Pair<String, String>?
     fun hasBinanceKeys(): Boolean
     fun clearBinanceKeys()
+
+    /** Sesión del portal de un banco (cookies + url de consulta), cifrada. */
+    fun savePortalSession(institutionKey: String, cookies: String, url: String)
+    fun portalSession(institutionKey: String): Pair<String, String>?
+    fun clearPortalSession(institutionKey: String)
 }

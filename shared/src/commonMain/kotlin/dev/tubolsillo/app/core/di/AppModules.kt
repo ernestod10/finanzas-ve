@@ -21,10 +21,12 @@ import dev.tubolsillo.app.ui.budget.BudgetViewModel
 import dev.tubolsillo.app.ui.dashboard.DashboardViewModel
 import dev.tubolsillo.app.ui.events.EventsViewModel
 import dev.tubolsillo.app.ui.importcsv.CsvImportViewModel
+import dev.tubolsillo.app.ui.categories.CategoriesViewModel
 import dev.tubolsillo.app.ui.settings.BinanceSettingsViewModel
 import dev.tubolsillo.app.ui.settings.ExportViewModel
 import dev.tubolsillo.app.ui.settings.RatesViewModel
 import dev.tubolsillo.app.ui.transactions.TransactionsViewModel
+import dev.tubolsillo.app.ui.portal.PortalViewModel
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
@@ -60,4 +62,6 @@ val viewModelModule = module {
     viewModelOf(::BinanceSettingsViewModel)
     viewModelOf(::CsvImportViewModel)
     viewModelOf(::ExportViewModel)
+    viewModelOf(::PortalViewModel)
+    viewModelOf(::CategoriesViewModel)
 }
