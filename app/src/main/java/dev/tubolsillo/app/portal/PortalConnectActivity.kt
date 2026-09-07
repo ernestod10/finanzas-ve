@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -47,12 +48,23 @@ class PortalConnectActivity : ComponentActivity() {
         setContent {
             MaterialTheme {
                 var status by remember { mutableStateOf("Inicia sesión en el portal y navega hasta ver tus movimientos.") }
+                var urlText by remember { mutableStateOf(startUrl) }
                 Column(modifier = Modifier.fillMaxSize().padding(8.dp)) {
                     Text(
                         text = "Conectar " + institution.displayName,
                         style = MaterialTheme.typography.titleLarge,
                         modifier = Modifier.padding(8.dp),
                     )
+                    // Barra de URL editable (si el portal cambia su ruta de acceso).
+                    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                        OutlinedTextField(
+                            value = urlText,
+                            onValueChange = { urlText = it },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f),
+                        )
+                        TextButton(onClick = { webViewRef?.loadUrl(urlText) }) { Text("Ir") }
+                    }
                     AndroidView(
                         modifier = Modifier
                             .fillMaxWidth()

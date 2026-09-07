@@ -24,21 +24,25 @@ enum class Institution(
         "BANESCO", "Banesco",
         notificationPackages = listOf("com.banesco.samfbancamovilunificada"),
         smsSenderPatterns = listOf("banesco"),
+        portalStartUrl = "https://banesconline.banesco.com/",
     ),
     BANCARIBE(
         "BANCARIBE", "Bancaribe",
         notificationPackages = listOf("bancaribe.miconexion"),
         smsSenderPatterns = listOf("bancaribe"),
+        portalStartUrl = "https://www.bancaribe.com.ve/",
     ),
     BNC(
         "BNC", "BNC",
         notificationPackages = listOf("bnc.bncnet.mobile2"),
         smsSenderPatterns = listOf("bnc", "banco nacional de credito"),
+        portalStartUrl = "https://bnconline.com.ve/",
     ),
     BDV(
         "BDV", "Banco de Venezuela",
         notificationPackages = listOf("com.bancodevenezuela.bdvdigital"),
         smsSenderPatterns = listOf("bdv", "banco de venezuela", "bdvenlinea"),
+        portalStartUrl = "https://bdvenlinea.bancodevenezuela.com/",
     ),
     BANCO_PLAZA("BANCO_PLAZA", "Banco Plaza"),
     BOD("BOD", "BOD"),
@@ -53,6 +57,15 @@ enum class Institution(
     ACTIVO("ACTIVO", "Banco Activo"),
     MI_BANCO("MI_BANCO", "Mi Banco"),
     BANCRECER("BANCRECER", "Bancrecer"),
+
+    // --- Venezuela ---
+    MERCANTIL_VE(
+        "MERCANTIL_VE", "Mercantil Venezuela",
+        notificationPackages = listOf("com.mercantilbanco.unicoempresas", "com.mercantilbanco.personas"),
+        smsSenderPatterns = listOf("mercantil"),
+        defaultCurrency = "VES",
+        portalStartUrl = "https://www.mercantilbanco.com/",
+    ),
 
     // --- Panamá ---
     MERCANTIL_PA(
@@ -69,7 +82,10 @@ enum class Institution(
     WALLY("WALLY", "Wally", defaultCurrency = "USD"),
 
     // --- Beneficios / tickets ---
-    TODOTICKET("TODOTICKET", "TodoTicket"),
+    TODOTICKET(
+        "TODOTICKET", "TodoTicket",
+        portalStartUrl = "https://www.todoticket.com/",
+    ),
     CESTATICKET("CESTATICKET", "CestaTicket"),
 
     // --- BNPL ---
