@@ -65,10 +65,15 @@ abstract class TubolsilloDatabase : RoomDatabase() {
         /** v3→v4: categorías de gasto (presupuesto) + categoryId en transacciones. */
         val MIGRATION_3_4 = object : androidx.room.migration.Migration(3, 4) {
             override fun migrate(connection: androidx.sqlite.SQLiteConnection) {
+                // Recrea limpia por si una versión previa dejó la tabla a medias.
+                connection.prepare("DROP TABLE IF EXISTS categories").use { it.step() }
                 connection.prepare(
                     "CREATE TABLE IF NOT EXISTS categories (" +
                         "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
-                        "name TEXT NOT NULL, colorHex TEXT, sortOrder INTEGER NOT NULL DEFAULT 0)"
+                        "name TEXT NOT NULL, colorHex TEXT, sortOrder INTEGER NOT NULL)"
+                ).use { it.step() }
+                connection.prepare(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS index_categories_name ON categories (name)"
                 ).use { it.step() }
                 val presets = listOf(
                     "Comida|#2E5E43|0", "Transporte|#1E6FA3|1", "Salud|#A63D36|2",
