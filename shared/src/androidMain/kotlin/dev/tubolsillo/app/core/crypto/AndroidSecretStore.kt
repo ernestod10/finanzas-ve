@@ -59,23 +59,28 @@ class AndroidSecretStore(
             .apply()
     }
 
-    override fun savePortalSession(institutionKey: String, cookies: String, url: String) {
+    override fun savePortalLink(institutionKey: String, link: PortalLink) {
         prefs.edit()
-            .putString("portal_cookies_" + institutionKey, cookies)
-            .putString("portal_url_" + institutionKey, url)
+            .putString("portal_url_" + institutionKey, link.movementsUrl)
+            .putLong("portal_linked_" + institutionKey, link.linkedAtMs)
+            .putLong("portal_sync_" + institutionKey, link.lastSyncAtMs ?: 0L)
+            .remove("portal_cookies_" + institutionKey)
             .apply()
     }
 
-    override fun portalSession(institutionKey: String): Pair<String, String>? {
-        val c = prefs.getString("portal_cookies_" + institutionKey, null) ?: return null
-        val u = prefs.getString("portal_url_" + institutionKey, null) ?: return null
-        return c to u
+    override fun portalLink(institutionKey: String): PortalLink? {
+        val url = prefs.getString("portal_url_" + institutionKey, null) ?: return null
+        val linkedAt = prefs.getLong("portal_linked_" + institutionKey, 0L)
+        val syncAt = prefs.getLong("portal_sync_" + institutionKey, 0L)
+        return PortalLink(url, linkedAt, syncAt.takeIf { it > 0L })
     }
 
-    override fun clearPortalSession(institutionKey: String) {
+    override fun clearPortalLink(institutionKey: String) {
         prefs.edit()
-            .remove("portal_cookies_" + institutionKey)
             .remove("portal_url_" + institutionKey)
+            .remove("portal_linked_" + institutionKey)
+            .remove("portal_sync_" + institutionKey)
+            .remove("portal_cookies_" + institutionKey)
             .apply()
     }
 

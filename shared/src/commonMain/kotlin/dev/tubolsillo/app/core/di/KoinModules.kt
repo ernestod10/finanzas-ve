@@ -50,7 +50,6 @@ val networkModule = module {
     single { dev.tubolsillo.app.core.platform.createHttpClient() }
     single { dev.tubolsillo.app.data.source.binance.BinanceApi(get()) }
     single { dev.tubolsillo.app.data.source.rates.RatesApi(get()) }
-    single { dev.tubolsillo.app.data.source.portal.PortalSync(get(), get()) }
 }
 
 fun commonKoinModules(): List<Module> = listOf(dbModule, parserModule, networkModule)

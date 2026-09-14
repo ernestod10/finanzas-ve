@@ -17,8 +17,20 @@ interface SecretStore {
     fun portalCredentials(institutionKey: String): Pair<String, String>?
     fun clearPortalCredentials(institutionKey: String)
 
-    /** Sesión del portal de un banco (cookies + url de consulta), cifrada. */
-    fun savePortalSession(institutionKey: String, cookies: String, url: String)
-    fun portalSession(institutionKey: String): Pair<String, String>?
-    fun clearPortalSession(institutionKey: String)
+    /**
+     * Vínculo con el portal de un banco: solo la URL de movimientos. Las
+     * cookies YA NO se guardan: vive en el CookieManager del WebView, que las
+     * envía con el User-Agent y el Referer reales (un cliente HTTP con la
+     * cookie copiada lo rechaza el WAF del banco).
+     */
+    fun savePortalLink(institutionKey: String, link: PortalLink)
+    fun portalLink(institutionKey: String): PortalLink?
+    fun clearPortalLink(institutionKey: String)
 }
+
+/** Estado de vinculación de un portal. */
+data class PortalLink(
+    val movementsUrl: String,
+    val linkedAtMs: Long,
+    val lastSyncAtMs: Long? = null,
+)

@@ -81,6 +81,17 @@ interface TransactionDao {
     @Query("UPDATE transactions SET isReconciled = 1 WHERE id = :id")
     suspend fun markReconciled(id: Long)
 
+    @Query(
+        "SELECT * FROM transactions WHERE accountId = :accountId AND amountMinor = :amountMinor " +
+            "AND occurredAt >= :from AND occurredAt < :to LIMIT 1"
+    )
+    suspend fun findByAmountInWindow(
+        accountId: Long,
+        amountMinor: Long,
+        from: Long,
+        to: Long,
+    ): TransactionEntity?
+
     @Query("UPDATE transactions SET categoryId = :categoryId WHERE id = :id")
     suspend fun setCategory(id: Long, categoryId: Long?)
     @Query("SELECT * FROM transactions")

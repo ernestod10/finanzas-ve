@@ -47,6 +47,25 @@ class DedupGate(
             return sha256Hex(raw)
         }
 
+        /**
+         * Claves de los buckets vecinos (-1h y +1h). El bucket es de piso fijo,
+         * así que una compra capturada por push a las 10:59 y la misma fila
+         * leída del portal a las 11:00 caen en buckets distintos: sin esto, el
+         * importador del portal la duplicaría.
+         */
+        fun companionNeighborKeys(
+            institution: Institution,
+            currency: String,
+            amountMinor: Long,
+            occurredAt: Long,
+            merchant: String,
+        ): List<String> {
+            val step = BUCKET_MINUTES * 60_000L
+            return listOf(occurredAt - step, occurredAt + step).map { shifted ->
+                companionDedupKey(institution, currency, amountMinor, shifted, merchant)
+            }
+        }
+
         private fun sha256Hex(input: String): String =
             input.encodeToByteArray().toByteString().sha256().hex()
     }

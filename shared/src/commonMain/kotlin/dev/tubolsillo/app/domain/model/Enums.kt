@@ -23,6 +23,7 @@ enum class SourceType(val key: String, val displayName: String) {
     BINANCE("BINANCE", "Binance"),
     EMAIL("EMAIL", "Correo"),
     CSV("CSV", "CSV"),
+    PORTAL("PORTAL", "Portal"),
     MANUAL("MANUAL", "Manual");
 
     companion object {

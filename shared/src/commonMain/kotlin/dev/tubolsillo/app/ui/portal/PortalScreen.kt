@@ -1,153 +1,216 @@
 package dev.tubolsillo.app.ui.portal
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Link
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import dev.tubolsillo.app.core.platform.openPortalConnect
+import androidx.compose.ui.unit.sp
+import dev.tubolsillo.app.data.source.portal.PortalImportResult
 import dev.tubolsillo.app.domain.model.Institution
 import dev.tubolsillo.app.ui.components.AppHeader
+import dev.tubolsillo.app.ui.components.initialsFor
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * Conexión por portal (session-replay, beta): vincula un banco en un WebView
- * y consulta movimientos con la sesión guardada, por institución.
+ * Portales de banco: vincular una vez y consultar a demanda. Sin HTML crudo ni
+ * URLs en pantalla (llevan identificadores de cuenta).
  */
 @Composable
 fun PortalScreen(
     onBack: () -> Unit,
     viewModel: PortalViewModel = koinViewModel(),
 ) {
-    val supported by remember { mutableStateOf(viewModel.supported) }
-    val sessions by viewModel.sessions.collectAsState()
-    val dump by viewModel.dump.collectAsState()
-    val loading by viewModel.loading.collectAsState()
-    val error by viewModel.error.collectAsState()
-    var selectedKey by remember { mutableStateOf(supported.firstOrNull()?.key ?: "MERCANTIL_PA") }
-    val selected = Institution.fromKey(selectedKey)
+    val banks by viewModel.banks.collectAsState()
+    val busyKey by viewModel.busyKey.collectAsState()
+    val message by viewModel.message.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize()) {
-        AppHeader(title = "Portal (beta)")
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+        AppHeader(title = "Portales")
+        Row(modifier = Modifier.padding(horizontal = 8.dp)) {
+            TextButton(onClick = onBack) { Text("Volver") }
+        }
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text(
-                text = "Inicia sesión 1 vez en el portal (tú resuelves tu 2FA) y guarda " +
-                    "la sesión cifrada; la app consulta movimientos con ella.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                items(supported.size) { i ->
-                    val inst = supported[i]
-                    FilterChip(
-                        selected = inst.key == selectedKey,
-                        onClick = { selectedKey = inst.key },
-                        label = { Text(inst.displayName, maxLines = 1) },
-                    )
+            item {
+                Text(
+                    text = "Inicias sesión una vez en el portal del banco y la app consulta " +
+                        "tus movimientos cuando tú lo pidas. Nada se sincroniza solo.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            message?.let { current ->
+                item {
+                    MessageCard(message = current, onDismiss = viewModel::dismissMessage)
                 }
             }
 
-            val session = sessions[selectedKey]
-            if (session == null) {
-                Button(
-                    onClick = { openPortalConnect(selectedKey) },
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    androidx.compose.material3.Icon(
-                        Icons.Filled.Link,
-                        contentDescription = null,
-                        modifier = Modifier.padding(end = 6.dp),
-                    )
-                    Text("Abrir " + selected.displayName + " y vincular")
-                }
-                Text(
-                    text = "Tras iniciar sesión, navega hasta la página de movimientos " +
-                        "y toca 'Guardar esta página'.",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            } else {
-                Text(
-                    text = "✓ Sesión guardada de " + session.second.take(70) + "…",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(
-                        onClick = { viewModel.refresh(selectedKey) },
-                        enabled = !loading,
-                        modifier = Modifier.weight(1f),
-                    ) { Text("Consultar ahora") }
-                    if (loading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.padding(start = 8.dp),
-                            strokeWidth = 2.dp,
-                        )
-                    }
-                }
-                OutlinedButton(
-                    onClick = { viewModel.clear(selectedKey) },
-                    modifier = Modifier.fillMaxWidth(),
-                ) { Text("Quitar sesión") }
-                OutlinedButton(
-                    onClick = { openPortalConnect(selectedKey) },
-                    modifier = Modifier.fillMaxWidth(),
-                ) { Text("Re-vincular (si expiró)") }
-            }
-            error?.let {
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.error,
-                )
-            }
-            dump?.let { d ->
-                Text(
-                    text = "Candidatas detectadas (" + d.institutionKey + "): " + d.candidateRows.size,
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(top = 8.dp),
-                )
-                d.candidateRows.take(8).forEach { row ->
-                    Text(
-                        text = row,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Text(
-                    text = "HTML (muestra):\n" + d.htmlSample.take(1200),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 8.dp),
+            items(banks.size, key = { banks[it].institution.key }) { index ->
+                val state = banks[index]
+                BankPortalCard(
+                    state = state,
+                    busy = busyKey == state.institution.key,
+                    anyBusy = busyKey != null,
+                    onLink = { viewModel.link(state.institution) },
+                    onSync = { viewModel.sync(state.institution) },
+                    onUnlink = { viewModel.unlink(state.institution) },
                 )
             }
         }
     }
+}
+
+@Composable
+private fun BankPortalCard(
+    state: BankPortalState,
+    busy: Boolean,
+    anyBusy: Boolean,
+    onLink: () -> Unit,
+    onSync: () -> Unit,
+    onUnlink: () -> Unit,
+) {
+    val accent = MaterialTheme.colorScheme.primary
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(28.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.35f)),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                PortalMonogram(state.institution)
+                Spacer(Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = state.institution.displayName,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        text = statusLabel(state),
+                        style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.4.sp),
+                        color = when (state.status) {
+                            LinkStatus.LINKED -> MaterialTheme.colorScheme.primary
+                            LinkStatus.EXPIRED -> MaterialTheme.colorScheme.error
+                            LinkStatus.UNLINKED -> MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                    )
+                }
+                if (busy) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                }
+            }
+            Spacer(Modifier.padding(top = 10.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = if (state.status == LinkStatus.UNLINKED) onLink else onSync,
+                    enabled = !anyBusy,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text(
+                        when (state.status) {
+                            LinkStatus.UNLINKED -> "Vincular"
+                            LinkStatus.LINKED -> "Consultar"
+                            LinkStatus.EXPIRED -> "Reconectar"
+                        }
+                    )
+                }
+                if (state.status != LinkStatus.UNLINKED) {
+                    TextButton(onClick = onLink, enabled = !anyBusy) { Text("Re-vincular") }
+                    TextButton(onClick = onUnlink, enabled = !anyBusy) { Text("Quitar") }
+                }
+            }
+        }
+    }
+}
+
+/** Monograma de la institución (los logos reales no se usan: licencias). */
+@Composable
+private fun PortalMonogram(institution: Institution) {
+    Surface(
+        shape = androidx.compose.foundation.shape.CircleShape,
+        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+        modifier = Modifier.size(40.dp),
+    ) {
+        androidx.compose.foundation.layout.Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = initialsFor(institution.displayName),
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
+    }
+}
+
+@Composable
+private fun MessageCard(message: PortalMessage, onDismiss: () -> Unit) {
+    val isError = message is PortalMessage.Error
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        color = if (isError) MaterialTheme.colorScheme.errorContainer
+        else MaterialTheme.colorScheme.primaryContainer,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = when (message) {
+                    is PortalMessage.Error -> message.text
+                    is PortalMessage.Info -> message.text
+                    is PortalMessage.Imported -> importSummary(message.institution, message.result)
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f),
+            )
+            TextButton(onClick = onDismiss) { Text("OK") }
+        }
+    }
+}
+
+private fun statusLabel(state: BankPortalState): String = when (state.status) {
+    LinkStatus.UNLINKED -> "SIN VINCULAR"
+    LinkStatus.EXPIRED -> "SESIÓN EXPIRADA"
+    LinkStatus.LINKED -> "VINCULADO"
+}
+
+private fun importSummary(institution: Institution, result: PortalImportResult): String {
+    val parts = mutableListOf(
+        result.inserted.toString() + " movimientos nuevos",
+        result.reconciled.toString() + " ya registrados",
+    )
+    if (result.balanceUpdated) parts.add("saldo actualizado")
+    if (result.skipped > 0) parts.add(result.skipped.toString() + " filas ignoradas")
+    if (result.failed > 0) parts.add(result.failed.toString() + " con error")
+    return institution.displayName + ": " + parts.joinToString(" · ")
 }

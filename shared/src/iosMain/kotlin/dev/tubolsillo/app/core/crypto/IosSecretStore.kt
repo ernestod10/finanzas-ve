@@ -45,20 +45,23 @@ class IosSecretStore : SecretStore {
         prefs.removeObjectForKey("portal_pass_" + institutionKey)
     }
 
-    override fun savePortalSession(institutionKey: String, cookies: String, url: String) {
-        prefs.setObject(cookies, forKey = "portal_cookies_" + institutionKey)
-        prefs.setObject(url, forKey = "portal_url_" + institutionKey)
+    override fun savePortalLink(institutionKey: String, link: PortalLink) {
+        prefs.setObject(link.movementsUrl, forKey = "portal_url_" + institutionKey)
+        prefs.setObject(link.linkedAtMs.toString(), forKey = "portal_linked_" + institutionKey)
+        prefs.setObject((link.lastSyncAtMs ?: 0L).toString(), forKey = "portal_sync_" + institutionKey)
     }
 
-    override fun portalSession(institutionKey: String): Pair<String, String>? {
-        val c = prefs.stringForKey("portal_cookies_" + institutionKey) ?: return null
-        val u = prefs.stringForKey("portal_url_" + institutionKey) ?: return null
-        return c to u
+    override fun portalLink(institutionKey: String): PortalLink? {
+        val url = prefs.stringForKey("portal_url_" + institutionKey) ?: return null
+        val linkedAt = prefs.stringForKey("portal_linked_" + institutionKey)?.toLongOrNull() ?: 0L
+        val syncAt = prefs.stringForKey("portal_sync_" + institutionKey)?.toLongOrNull() ?: 0L
+        return PortalLink(url, linkedAt, syncAt.takeIf { it > 0L })
     }
 
-    override fun clearPortalSession(institutionKey: String) {
-        prefs.removeObjectForKey("portal_cookies_" + institutionKey)
+    override fun clearPortalLink(institutionKey: String) {
         prefs.removeObjectForKey("portal_url_" + institutionKey)
+        prefs.removeObjectForKey("portal_linked_" + institutionKey)
+        prefs.removeObjectForKey("portal_sync_" + institutionKey)
     }
 
     private companion object {

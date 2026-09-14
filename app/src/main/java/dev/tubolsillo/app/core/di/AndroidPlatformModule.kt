@@ -12,6 +12,9 @@ import dev.tubolsillo.app.core.crypto.SecretStore
 import dev.tubolsillo.app.core.notify.AndroidCaptureNotifier
 import dev.tubolsillo.app.core.notify.CaptureNotifier
 import dev.tubolsillo.app.core.platform.BackgroundScheduler
+import dev.tubolsillo.app.core.platform.CurrentActivityHolder
+import dev.tubolsillo.app.core.platform.PortalGateway
+import dev.tubolsillo.app.portal.AndroidPortalGateway
 import dev.tubolsillo.app.data.source.binance.BinanceSync
 import dev.tubolsillo.app.data.source.binance.BinanceWorker
 import org.koin.android.ext.koin.androidContext
@@ -29,6 +32,8 @@ val androidPlatformModule = module {
     single<CaptureNotifier> { AndroidCaptureNotifier(androidContext()) }
     singleOf(::BinanceSync)
     single<BackgroundScheduler> { WorkManagerScheduler(androidContext()) }
+    single { CurrentActivityHolder() }
+    single<PortalGateway> { AndroidPortalGateway(androidContext(), get()) }
 }
 
 /** Programación en segundo plano con WorkManager (sync de Binance). */

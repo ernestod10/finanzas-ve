@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.CurrencyBitcoin
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FileDownload
@@ -128,4 +129,5 @@ private fun sourceIcon(source: SourceType): ImageVector = when (source) {
     SourceType.CSV -> Icons.Filled.FileDownload
     SourceType.MANUAL -> Icons.Filled.Edit
     SourceType.EMAIL -> Icons.Filled.MailOutline
+    SourceType.PORTAL -> Icons.Filled.AccountBalance
 }

@@ -1,6 +1,7 @@
 package dev.tubolsillo.app.core.di
 
 import dev.tubolsillo.app.domain.repo.AccountRepository
+import dev.tubolsillo.app.data.source.portal.PortalImporter
 import dev.tubolsillo.app.domain.repo.CategoryRepository
 import dev.tubolsillo.app.domain.repo.BalanceRepository
 import dev.tubolsillo.app.domain.repo.BudgetRepository
@@ -43,6 +44,7 @@ val domainModule = module {
     singleOf(::TransactionRepository)
     singleOf(::BackupExporter)
     singleOf(::BudgetCalculator)
+    single { PortalImporter(get(), get(), get(), get(), get()) }
     singleOf(::CapturePipeline)
     singleOf(::DedupGate)
     singleOf(::RateProvider)

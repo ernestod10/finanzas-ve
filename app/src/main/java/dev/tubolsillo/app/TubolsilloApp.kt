@@ -30,6 +30,12 @@ class TubolsilloApp : Application(), Configuration.Provider {
                 commonKoinModules() + domainModule + viewModelModule + androidPlatformModule
             )
         }
+        // El portal se lanza desde la Activity en primer plano, no desde el
+        // contexto de aplicación: así vuelve a la pantalla de donde salió.
+        registerActivityLifecycleCallbacks(
+            org.koin.core.context.GlobalContext.get()
+                .get<dev.tubolsillo.app.core.platform.CurrentActivityHolder>()
+        )
     }
 }
 
