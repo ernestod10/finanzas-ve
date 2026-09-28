@@ -1,5 +1,23 @@
 package dev.tubolsillo.app.ui.navigation
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
+import dev.tubolsillo.app.ui.components.GlassSurface
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -64,10 +82,47 @@ object Routes {
     fun account(accountId: Long) = "account/$accountId"
 }
 
+
+/**
+ * Transición de empuje al estilo iOS: la pantalla nueva entra desde la derecha
+ * y la anterior se corre un tercio a la izquierda, no se desvanece. Al volver,
+ * el recorrido se invierte.
+ *
+ * Las pestañas NO la usan: en iOS cambiar de pestaña no desliza, así que ahí el
+ * cambio es directo y sin desplazamiento.
+ */
+private const val PUSH_MS = 340
+
+private fun iosPushTransitions(): NavTransitionSet = NavTransitionSet(
+    enter = slideInHorizontally(
+        initialOffsetX = { it },
+        animationSpec = tween(PUSH_MS, easing = FastOutSlowInEasing),
+    ),
+    exit = slideOutHorizontally(
+        targetOffsetX = { -it / 3 },
+        animationSpec = tween(PUSH_MS, easing = FastOutSlowInEasing),
+    ),
+    popEnter = slideInHorizontally(
+        initialOffsetX = { -it / 3 },
+        animationSpec = tween(PUSH_MS, easing = FastOutSlowInEasing),
+    ),
+    popExit = slideOutHorizontally(
+        targetOffsetX = { it },
+        animationSpec = tween(PUSH_MS, easing = FastOutSlowInEasing),
+    ),
+)
+
+private data class NavTransitionSet(
+    val enter: EnterTransition,
+    val exit: ExitTransition,
+    val popEnter: EnterTransition,
+    val popExit: ExitTransition,
+)
+
 private data class TopLevelDestination(
     val route: String,
     val label: String,
-    val icon: @Composable () -> Unit,
+    val icon: @Composable (androidx.compose.ui.graphics.Color) -> Unit,
 )
 
 @Composable
@@ -76,75 +131,83 @@ fun TubolsilloNavHost() {
 
     // Orden pedido por el usuario: cuentas · movimientos · inicio · presupuesto · ajustes.
     val destinations = listOf(
-        TopLevelDestination(Routes.ACCOUNTS, "Cuentas", { Icon(Icons.Filled.AccountBalance, null) }),
-        TopLevelDestination(Routes.TRANSACTIONS, "Movimientos", { Icon(Icons.Filled.ReceiptLong, null) }),
-        TopLevelDestination(Routes.DASHBOARD, "Inicio", { Icon(Icons.Filled.Home, null) }),
-        TopLevelDestination(Routes.BUDGET, "Presupuesto", { Icon(Icons.Filled.AccountBalanceWallet, null) }),
-        TopLevelDestination(Routes.SETTINGS, "Ajustes", { Icon(Icons.Filled.Settings, null) }),
+        TopLevelDestination(Routes.ACCOUNTS, "Cuentas", { tint -> Icon(Icons.Filled.AccountBalance, null, tint = tint) }),
+        TopLevelDestination(Routes.TRANSACTIONS, "Movimientos", { tint -> Icon(Icons.Filled.ReceiptLong, null, tint = tint) }),
+        TopLevelDestination(Routes.DASHBOARD, "Inicio", { tint -> Icon(Icons.Filled.Home, null, tint = tint) }),
+        TopLevelDestination(Routes.BUDGET, "Presupuesto", { tint -> Icon(Icons.Filled.AccountBalanceWallet, null, tint = tint) }),
+        TopLevelDestination(Routes.SETTINGS, "Ajustes", { tint -> Icon(Icons.Filled.Settings, null, tint = tint) }),
     )
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
             val backStackEntry by navController.currentBackStackEntryAsState()
             val currentDestination = backStackEntry?.destination
-            // Barra flotante tipo "isla".
-            androidx.compose.foundation.layout.Box(
+            // Barra flotante de la capa funcional: glass, sin sombra, y el
+            // contenido pasa por debajo (las pantallas reservan el alto al
+            // final de su lista). El acento se reserva para la pestaña activa.
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .navigationBarsPadding(),
-                contentAlignment = androidx.compose.ui.Alignment.BottomCenter,
+                    .navigationBarsPadding()
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                contentAlignment = Alignment.Center,
             ) {
-                Surface(
-                    modifier = Modifier
-                        .padding(horizontal = 14.dp, vertical = 10.dp)
-                        .fillMaxWidth(),
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(30.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                    shadowElevation = 8.dp,
-                    border = androidx.compose.foundation.BorderStroke(
-                        1.dp,
-                        MaterialTheme.colorScheme.outline.copy(alpha = 0.25f),
-                    ),
-                ) {
-                    NavigationBar(
-                        containerColor = androidx.compose.ui.graphics.Color.Transparent,
-                        tonalElevation = 0.dp,
-                        windowInsets = WindowInsets(0, 0, 0, 0),
+                GlassSurface(shape = RoundedCornerShape(26.dp)) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(2.dp),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         destinations.forEach { destination ->
-                            NavigationBarItem(
-                                selected = currentDestination?.hierarchy
-                                    ?.any { it.route == destination.route } == true,
-                                onClick = {
-                                    navController.navigate(destination.route) {
-                                        popUpTo(navController.graph.findStartDestination().id) {
-                                            saveState = true
+                            val selected = currentDestination?.hierarchy
+                                ?.any { it.route == destination.route } == true
+                            val tint = if (selected) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurfaceVariant
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(20.dp))
+                                    .clickable {
+                                        navController.navigate(destination.route) {
+                                            popUpTo(navController.graph.findStartDestination().id) {
+                                                saveState = true
+                                            }
+                                            launchSingleTop = true
+                                            restoreState = true
                                         }
-                                        launchSingleTop = true
-                                        restoreState = true
                                     }
-                                },
-                                icon = destination.icon,
-                                label = {
-                                    Text(
-                                        text = destination.label,
-                                        maxLines = 1,
-                                        softWrap = false,
-                                        overflow = TextOverflow.Ellipsis,
-                                        fontSize = 10.sp,
-                                    )
-                                },
-                            )
+                                    .padding(vertical = 7.dp, horizontal = 4.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(2.dp),
+                            ) {
+                                destination.icon(tint)
+                                Text(
+                                    text = destination.label,
+                                    maxLines = 1,
+                                    softWrap = false,
+                                    overflow = TextOverflow.Ellipsis,
+                                    fontSize = 10.sp,
+                                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+                                    color = tint,
+                                )
+                            }
                         }
                     }
                 }
             }
-        }
+        },
     ) { innerPadding ->
         NavHost(
             navController = navController,
             startDestination = Routes.DASHBOARD,
             modifier = Modifier.padding(innerPadding),
+            // Cambiar de pestaña en iOS no anima: el contenido simplemente
+            // aparece. El slide queda para las pantallas que se empujan.
+            enterTransition = { EnterTransition.None },
+            exitTransition = { ExitTransition.None },
+            popEnterTransition = { EnterTransition.None },
+            popExitTransition = { ExitTransition.None },
         ) {
             composable(Routes.DASHBOARD) {
                 DashboardScreen(
@@ -167,7 +230,13 @@ fun TubolsilloNavHost() {
                     onManageCategories = { navController.navigate(Routes.CATEGORIES) },
                 )
             }
-            composable(Routes.CATEGORIES) {
+            composable(
+                route = Routes.CATEGORIES,
+                enterTransition = { iosPushTransitions().enter },
+                exitTransition = { iosPushTransitions().exit },
+                popEnterTransition = { iosPushTransitions().popEnter },
+                popExitTransition = { iosPushTransitions().popExit },
+            ) {
                 CategoriesScreen(onBack = { navController.popBackStack() })
             }
             composable(Routes.SETTINGS) {
@@ -179,7 +248,13 @@ fun TubolsilloNavHost() {
                     onPortalClick = { navController.navigate(Routes.PORTAL) },
                 )
             }
-            composable(Routes.PORTAL) {
+            composable(
+                route = Routes.PORTAL,
+                enterTransition = { iosPushTransitions().enter },
+                exitTransition = { iosPushTransitions().exit },
+                popEnterTransition = { iosPushTransitions().popEnter },
+                popExitTransition = { iosPushTransitions().popExit },
+            ) {
                 PortalScreen(onBack = { navController.popBackStack() })
             }
             composable(
@@ -192,22 +267,52 @@ fun TubolsilloNavHost() {
                     onBack = { navController.popBackStack() },
                 )
             }
-            composable(Routes.RATES) {
+            composable(
+                route = Routes.RATES,
+                enterTransition = { iosPushTransitions().enter },
+                exitTransition = { iosPushTransitions().exit },
+                popEnterTransition = { iosPushTransitions().popEnter },
+                popExitTransition = { iosPushTransitions().popExit },
+            ) {
                 RatesScreen(onBack = { navController.popBackStack() })
             }
-            composable(Routes.BINANCE) {
+            composable(
+                route = Routes.BINANCE,
+                enterTransition = { iosPushTransitions().enter },
+                exitTransition = { iosPushTransitions().exit },
+                popEnterTransition = { iosPushTransitions().popEnter },
+                popExitTransition = { iosPushTransitions().popExit },
+            ) {
                 BinanceSettingsScreen(onBack = { navController.popBackStack() })
             }
-            composable(Routes.EVENTS) {
+            composable(
+                route = Routes.EVENTS,
+                enterTransition = { iosPushTransitions().enter },
+                exitTransition = { iosPushTransitions().exit },
+                popEnterTransition = { iosPushTransitions().popEnter },
+                popExitTransition = { iosPushTransitions().popExit },
+            ) {
                 EventsScreen(
                     onBack = { navController.popBackStack() },
                     onReplayClick = { navController.navigate(Routes.REPLAY) },
                 )
             }
-            composable(Routes.REPLAY) {
+            composable(
+                route = Routes.REPLAY,
+                enterTransition = { iosPushTransitions().enter },
+                exitTransition = { iosPushTransitions().exit },
+                popEnterTransition = { iosPushTransitions().popEnter },
+                popExitTransition = { iosPushTransitions().popExit },
+            ) {
                 ReplayScreen(onBack = { navController.popBackStack() })
             }
-            composable(Routes.CSV_IMPORT) {
+            composable(
+                route = Routes.CSV_IMPORT,
+                enterTransition = { iosPushTransitions().enter },
+                exitTransition = { iosPushTransitions().exit },
+                popEnterTransition = { iosPushTransitions().popEnter },
+                popExitTransition = { iosPushTransitions().popExit },
+            ) {
                 CsvImportScreen(onBack = { navController.popBackStack() })
             }
         }

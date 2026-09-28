@@ -1,29 +1,23 @@
 package dev.tubolsillo.app.ui.budget
 
-import org.koin.compose.viewmodel.koinViewModel
-
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.filled.ChevronLeft
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -39,9 +33,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.tubolsillo.app.core.money.MoneyFormatter
-import dev.tubolsillo.app.ui.components.TagChip
+import dev.tubolsillo.app.ui.components.GroupFooter
+import dev.tubolsillo.app.ui.components.GroupHeader
+import dev.tubolsillo.app.ui.components.GroupedGroup
+import dev.tubolsillo.app.ui.components.HeaderAction
+import dev.tubolsillo.app.ui.components.IOSScreen
 import dev.tubolsillo.app.ui.components.monthLabel
+import dev.tubolsillo.app.ui.theme.TNUM
+import org.koin.compose.viewmodel.koinViewModel
 
+/**
+ * Presupuesto del mes: total arriba y una fila por categoría con su barra de
+ * avance. El mes se cambia desde la barra de navegación.
+ */
 @Composable
 fun BudgetScreen(
     onManageCategories: () -> Unit = {},
@@ -51,134 +55,109 @@ fun BudgetScreen(
     val data by viewModel.monthData.collectAsState()
     var editingTag by remember { mutableStateOf<String?>(null) }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        // Selector de mes.
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            IconButton(onClick = { viewModel.previousMonth() }) {
-                Icon(Icons.Filled.ChevronLeft, contentDescription = "Mes anterior")
-            }
-            Text(
-                text = monthLabel(month),
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.weight(1f),
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-            )
-            IconButton(onClick = { viewModel.nextMonth() }) {
-                Icon(Icons.Filled.ChevronRight, contentDescription = "Mes siguiente")
-            }
-        }
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.End,
-        ) {
-            TextButton(onClick = onManageCategories) {
-                Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(4.dp))
-                Text("Categorías")
-            }
-        }
+    IOSScreen(
+        title = monthLabel(month),
+        actions = {
+            HeaderAction("‹") { viewModel.previousMonth() }
+            HeaderAction("›") { viewModel.nextMonth() }
+        },
+    ) {
+        val monthData = data
+        if (monthData == null) return@IOSScreen
 
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            val monthData = data
-            if (monthData == null) return@LazyColumn
-
-            item {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
+        item(key = "total") {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 32.dp, end = 32.dp, bottom = 4.dp),
+            ) {
+                Text(
+                    text = "GASTADO",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = MoneyFormatter.formatUsd(monthData.totalSpentUsd),
+                    style = MaterialTheme.typography.displayMedium.copy(fontFeatureSettings = TNUM),
+                    color = MaterialTheme.colorScheme.onBackground,
+                )
+                monthData.totalLimitUsd?.let { limit ->
                     Text(
-                        text = "Gastado " + MoneyFormatter.formatUsd(monthData.totalSpentUsd),
-                        style = MaterialTheme.typography.headlineLarge,
-                        fontWeight = FontWeight.Bold,
+                        text = "de " + MoneyFormatter.formatUsd(limit) + " presupuestado",
+                        style = MaterialTheme.typography.bodyMedium.copy(fontFeatureSettings = TNUM),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    monthData.totalLimitUsd?.let { limit ->
-                        Text(
-                            text = "de " + MoneyFormatter.formatUsd(limit) + " presupuestado",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    monthData.totalProgress?.let { progress ->
-                        Spacer(Modifier.height(10.dp))
-                        LinearProgressIndicator(
-                            progress = { progress },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(8.dp),
-                        )
-                    }
+                }
+                monthData.totalProgress?.let { progress ->
+                    Spacer(Modifier.height(10.dp))
+                    BudgetBar(progress = progress, over = monthData.totalSpentUsd > (monthData.totalLimitUsd ?: Double.MAX_VALUE))
                 }
             }
+        }
 
-            monthData.rows.forEach { row ->
-                item(key = row.tagName) {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = if (row.isOverBudget)
-                                MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f)
-                            else MaterialTheme.colorScheme.surface,
-                        ),
-                        onClick = { editingTag = row.tagName },
+        item(key = "cats-h") { GroupHeader("Categorías") }
+        item(key = "cats") {
+            GroupedGroup {
+                monthData.rows.forEachIndexed { index, row ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 56.dp)
+                            .clickable { editingTag = row.tagName }
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Column(modifier = Modifier.padding(14.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                TagChip(name = row.tagName, modifier = Modifier.weight(1f, fill = false))
-                                Spacer(Modifier.weight(1f))
-                                Text(
-                                    text = MoneyFormatter.formatUsd(row.spentUsd) +
-                                        (row.limitUsd?.let { " / " + MoneyFormatter.formatUsd(it) } ?: ""),
-                                    style = MaterialTheme.typography.bodyLarge,
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = row.tagName,
+                                style = MaterialTheme.typography.bodyLarge,
+                            )
+                            Spacer(Modifier.height(5.dp))
+                            BudgetBar(
+                                progress = row.progress ?: 0f,
+                                over = row.isOverBudget,
+                                modifier = Modifier.fillMaxWidth(0.85f),
+                            )
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(
+                                text = MoneyFormatter.formatUsd(row.spentUsd),
+                                style = MaterialTheme.typography.bodyLarge.copy(
+                                    fontFeatureSettings = TNUM,
                                     fontWeight = FontWeight.SemiBold,
-                                    color = if (row.isOverBudget) MaterialTheme.colorScheme.error
-                                    else MaterialTheme.colorScheme.onSurface,
-                                )
-                            }
-                            row.progress?.let { progressValue ->
-                                Spacer(Modifier.height(8.dp))
-                                LinearProgressIndicator(
-                                    progress = { progressValue },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(6.dp),
-                                )
-                            }
-                            row.remainingUsd?.let { remaining ->
-                                Spacer(Modifier.height(4.dp))
+                                ),
+                                color = if (row.isOverBudget) MaterialTheme.colorScheme.error
+                                else MaterialTheme.colorScheme.onSurface,
+                            )
+                            row.limitUsd?.let { limit ->
                                 Text(
-                                    text = if (remaining >= 0) "Quedan " + MoneyFormatter.formatUsd(remaining)
-                                    else "Excedido en " + MoneyFormatter.formatUsd(-remaining),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = if (remaining >= 0) MaterialTheme.colorScheme.onSurfaceVariant
-                                    else MaterialTheme.colorScheme.error,
+                                    text = "de " + MoneyFormatter.formatUsd(limit),
+                                    style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = TNUM),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                         }
                     }
+                    if (index != monthData.rows.lastIndex) {
+                        androidx.compose.material3.HorizontalDivider(
+                            modifier = Modifier.padding(start = 16.dp),
+                            thickness = 0.5.dp,
+                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                        )
+                    }
                 }
             }
+        }
 
-            item {
-                Text(
-                    text = "Toca una etiqueta para definir su presupuesto del mes.",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 8.dp),
-                )
+        item(key = "cats-f") {
+            GroupFooter("Toca una categoría para ponerle su límite del mes.")
+        }
+
+        item(key = "manage") {
+            Box(modifier = Modifier.padding(start = 32.dp, top = 4.dp)) {
+                HeaderAction("Administrar categorías", onClick = onManageCategories)
             }
         }
     }
@@ -191,6 +170,35 @@ fun BudgetScreen(
                 viewModel.setBudget(tagName, amountText, currency)
                 editingTag = null
             },
+        )
+    }
+}
+
+/** Barra de avance fina; el exceso cambia el color y engrosa el trazo. */
+@Composable
+private fun BudgetBar(
+    progress: Float,
+    over: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(5.dp)
+            .background(
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.18f),
+                shape = RoundedCornerShape(50),
+            ),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(progress.coerceIn(0f, 1f))
+                .height(5.dp)
+                .background(
+                    color = if (over) MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.primary,
+                    shape = RoundedCornerShape(50),
+                ),
         )
     }
 }

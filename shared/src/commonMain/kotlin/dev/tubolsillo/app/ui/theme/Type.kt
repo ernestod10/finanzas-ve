@@ -7,93 +7,132 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
 /**
- * Tipografía editorial-financiera: pesos 500/600/700/800 para jerarquía fina,
- * tracking negativo en titulares, labels en versalitas con tracking amplio y
- * números tabulares (tnum) para que los montos se alineen en columnas.
+ * Escala tipográfica de iOS (Dynamic Type, tamaño por defecto "Large"),
+ * medida en `typography.md › Specifications` de las HIG.
+ *
+ * Cambio de fondo frente a la escala anterior: los títulos van en **Regular**
+ * y el énfasis se logra con peso puntual (Bold en el titular, Semibold en
+ * Headline), no con ExtraBold en todo. El cuerpo sube a **17sp**, que es el
+ * tamaño de lectura por defecto de iOS y antes no existía.
+ *
+ * El tracking negativo fuerte (−0.8) se retira: iOS ajusta el tracking por
+ * tamaño de forma sutil, no editorial.
  */
 val TubolsilloTypography = Typography(
-    // Hero del patrimonio neto.
+    // Large Title 34 / Regular (Bold para el énfasis del titular).
     displayMedium = TextStyle(
         fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.ExtraBold,
-        fontSize = 38.sp,
-        lineHeight = 44.sp,
-        letterSpacing = (-0.8).sp,
+        fontWeight = FontWeight.Bold,
+        fontSize = 34.sp,
+        lineHeight = 41.sp,
+        letterSpacing = 0.37.sp,
     ),
+    displaySmall = TextStyle(
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.Bold,
+        fontSize = 28.sp,
+        lineHeight = 34.sp,
+        letterSpacing = 0.36.sp,
+    ),
+    // Title 1 · 28 / Regular.
     headlineLarge = TextStyle(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.Bold,
         fontSize = 28.sp,
         lineHeight = 34.sp,
-        letterSpacing = (-0.5).sp,
+        letterSpacing = 0.36.sp,
     ),
-    headlineSmall = TextStyle(
+    // Title 2 · 22 / Regular.
+    headlineMedium = TextStyle(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.Bold,
         fontSize = 22.sp,
         lineHeight = 28.sp,
-        letterSpacing = (-0.3).sp,
+        letterSpacing = -0.26.sp,
+    ),
+    // Title 3 · 20 / Regular (título en línea de la barra de navegación).
+    headlineSmall = TextStyle(
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 17.sp,
+        lineHeight = 22.sp,
+        letterSpacing = -0.41.sp,
     ),
     titleLarge = TextStyle(
         fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 18.sp,
-        lineHeight = 24.sp,
-        letterSpacing = (-0.2).sp,
+        fontWeight = FontWeight.Normal,
+        fontSize = 22.sp,
+        lineHeight = 28.sp,
+        letterSpacing = -0.26.sp,
     ),
+    // Headline · 17 / Semibold.
     titleMedium = TextStyle(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.SemiBold,
-        fontSize = 16.sp,
+        fontSize = 17.sp,
         lineHeight = 22.sp,
+        letterSpacing = -0.41.sp,
     ),
     titleSmall = TextStyle(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.SemiBold,
-        fontSize = 14.sp,
+        fontSize = 15.sp,
         lineHeight = 20.sp,
+        letterSpacing = -0.24.sp,
     ),
+    // Body · 17 / Regular: el tamaño de lectura de iOS.
     bodyLarge = TextStyle(
         fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.Medium,
-        fontSize = 15.sp,
+        fontWeight = FontWeight.Normal,
+        fontSize = 17.sp,
         lineHeight = 22.sp,
+        letterSpacing = -0.41.sp,
     ),
+    // Subhead · 15 / Regular.
     bodyMedium = TextStyle(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.Normal,
-        fontSize = 14.sp,
+        fontSize = 15.sp,
         lineHeight = 20.sp,
+        letterSpacing = -0.24.sp,
     ),
+    // Footnote · 13 / Regular.
     bodySmall = TextStyle(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.Normal,
-        fontSize = 12.sp,
-        lineHeight = 17.sp,
+        fontSize = 13.sp,
+        lineHeight = 18.sp,
+        letterSpacing = -0.08.sp,
     ),
+    // Botones: en iOS el texto de un botón es 17 / Regular.
     labelLarge = TextStyle(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.SemiBold,
-        fontSize = 13.sp,
-        lineHeight = 18.sp,
+        fontSize = 17.sp,
+        lineHeight = 22.sp,
+        letterSpacing = -0.41.sp,
     ),
+    // Subhead · 15.
     labelMedium = TextStyle(
         fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 12.sp,
-        lineHeight = 16.sp,
+        fontWeight = FontWeight.Normal,
+        fontSize = 15.sp,
+        lineHeight = 20.sp,
+        letterSpacing = -0.24.sp,
     ),
-    // Labels en versalitas: subir el tracking para lectura editorial.
+    // Footnote · 13: también es el encabezado de sección de las listas
+    // agrupadas de iOS (versalitas + tracking), no un caption diminuto.
     labelSmall = TextStyle(
         fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 11.sp,
-        lineHeight = 14.sp,
-        letterSpacing = 0.4.sp,
+        fontWeight = FontWeight.Medium,
+        fontSize = 13.sp,
+        lineHeight = 18.sp,
+        letterSpacing = -0.08.sp,
     ),
 )
 
-/** Estilo base para montos: números tabulares para alinear columnas. */
-val moneyTextStyle = TextStyle(
-    fontFeatureSettings = "tnum",
-)
+/** Números tabulares: alineación de columnas de montos en toda la app. */
+const val TNUM = "tnum"
+
+/** Estilo base para montos. */
+val moneyTextStyle = TextStyle(fontFeatureSettings = TNUM)

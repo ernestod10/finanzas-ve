@@ -5,75 +5,129 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 
-// Constantes de color auxiliares (sin colisiones con la API).
-private val Color_White = androidx.compose.ui.graphics.Color(0xFFFFFFFF)
-private val Color_Charcoal = androidx.compose.ui.graphics.Color(0xFF131410)
-private val Color_WarmGrayLight = androidx.compose.ui.graphics.Color(0xFFF3E9CF) // crema durazno
-private val Color_WarmGrayDark = androidx.compose.ui.graphics.Color(0xFF1C2014)
-private val Color_HairlineLight = androidx.compose.ui.graphics.Color(0x141C1B18L)
-private val Color_HairlineDark = androidx.compose.ui.graphics.Color(0x1AFFFFFFL)
-private val Color_TerracottaTintLight = androidx.compose.ui.graphics.Color(0xFFF3DCD8)
-private val Color_TerracottaInkLight = androidx.compose.ui.graphics.Color(0xFF5E1B16)
-private val Color_TerracottaTintDark = androidx.compose.ui.graphics.Color(0xFF4A221E)
-private val Color_TerracottaInkDark = androidx.compose.ui.graphics.Color(0xFFF3DCD8)
-
+/**
+ * Mapeo de los colores semánticos al ColorScheme de Material 3.
+ *
+ * La app usa los nombres de Material porque Compose los expone así, pero los
+ * valores siguen el modelo de iOS: fondo agrupado (background), superficie de
+ * fila (surface), tinta (onSurface), tinta secundaria (onSurfaceVariant) y
+ * separador (outline). El acento de marca vive en primary y nunca en el fondo.
+ */
 private val LightColors = lightColorScheme(
-    primary = ForestLight,
-    onPrimary = OnForestLight,
-    primaryContainer = ForestContainerLight,
-    onPrimaryContainer = OnForestContainerLight,
-    secondary = SageLight,
-    onSecondary = Color_White,
-    secondaryContainer = ForestContainerLight,
-    onSecondaryContainer = OnForestContainerLight,
-    tertiary = GoldLight,
-    onTertiary = Color_White,
-    error = ClayLight,
-    onError = Color_White,
-    errorContainer = Color_TerracottaTintLight,
-    onErrorContainer = Color_TerracottaInkLight,
-    background = PaperLight,
-    onBackground = InkLight,
-    surface = PaperSurfaceLight,
-    onSurface = InkLight,
-    surfaceVariant = Color_WarmGrayLight,
-    onSurfaceVariant = MutedLight,
-    outline = Color_HairlineLight,
-    outlineVariant = Color_HairlineLight,
+    primary = BrandGreen,
+    onPrimary = Color.White,
+    primaryContainer = BrandGreenSoft,
+    onPrimaryContainer = BrandGreenInk,
+
+    secondary = BrandGreenBright,
+    onSecondary = BrandGreenInk,
+
+    tertiary = AmberLight,
+    onTertiary = Color.White,
+
+    error = RedLight,
+    onError = Color.White,
+    errorContainer = RedFillLight,
+    onErrorContainer = Color(0xFF5E1B16),
+
+    background = GroupedBackgroundLight,
+    onBackground = LabelLight,
+
+    surface = SurfaceLight,
+    onSurface = LabelLight,
+
+    surfaceVariant = FillLight,
+    onSurfaceVariant = SecondaryLabelLight,
+
+    outline = SeparatorLight,
+    outlineVariant = OpaqueSeparatorLight,
+
+    surfaceContainerLowest = SurfaceLight,
+    surfaceContainerLow = SurfaceLight,
+    surfaceContainer = GroupedBackgroundLight,
+    surfaceContainerHigh = FillLight,
+    surfaceContainerHighest = FillLight,
 )
 
 private val DarkColors = darkColorScheme(
-    primary = ForestDark,
-    onPrimary = OnForestDark,
-    primaryContainer = ForestContainerDark,
-    onPrimaryContainer = OnForestContainerDark,
-    secondary = SageDark,
-    onSecondary = Color_Charcoal,
-    tertiary = GoldDark,
-    onTertiary = Color_Charcoal,
-    error = ClayDark,
-    onError = Color_Charcoal,
-    errorContainer = Color_TerracottaTintDark,
-    onErrorContainer = Color_TerracottaInkDark,
-    background = CharcoalDark,
-    onBackground = InkDark,
+    primary = BrandGreenBright,
+    onPrimary = BrandGreenInk,
+    primaryContainer = BrandGreenDeep,
+    onPrimaryContainer = BrandGreenSoft,
+
+    secondary = BrandGreenBright,
+    onSecondary = BrandGreenInk,
+
+    tertiary = AmberDark,
+    onTertiary = BrandGreenInk,
+
+    error = RedDark,
+    onError = Color(0xFF3A1A16),
+    errorContainer = RedFillDark,
+    onErrorContainer = Color(0xFFFFDAD4),
+
+    background = GroupedBackgroundDark,
+    onBackground = LabelDark,
+
     surface = SurfaceDark,
-    onSurface = InkDark,
-    surfaceVariant = Color_WarmGrayDark,
-    onSurfaceVariant = MutedDark,
-    outline = Color_HairlineDark,
-    outlineVariant = Color_HairlineDark,
+    onSurface = LabelDark,
+
+    surfaceVariant = FillDark,
+    onSurfaceVariant = SecondaryLabelDark,
+
+    outline = SeparatorDark,
+    outlineVariant = SeparatorDark,
+
+    surfaceContainerLowest = GroupedBackgroundDark,
+    surfaceContainerLow = SurfaceDark,
+    surfaceContainer = SurfaceDark,
+    surfaceContainerHigh = FillDark,
+    surfaceContainerHighest = FillDark,
 )
+
+/** Colores que los componentes leen directamente (no existen en ColorScheme). */
+val TubolsilloColors
+    @Composable get() = LocalTubolsilloColors.current
+
+data class TubolsilloExtraColors(
+    val tertiaryLabel: Color,
+    val separator: Color,
+    val groupedBackground: Color,
+)
+
+private val LocalTubolsilloColors = androidx.compose.runtime.staticCompositionLocalOf {
+    TubolsilloExtraColors(
+        tertiaryLabel = TertiaryLabelLight,
+        separator = SeparatorLight,
+        groupedBackground = GroupedBackgroundLight,
+    )
+}
 
 @Composable
 fun TubolsilloTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit,
 ) {
-    MaterialTheme(
-        colorScheme = if (darkTheme) DarkColors else LightColors,
-        typography = TubolsilloTypography,
-        content = content,
-    )
+    val extra = if (darkTheme) {
+        TubolsilloExtraColors(
+            tertiaryLabel = TertiaryLabelDark,
+            separator = SeparatorDark,
+            groupedBackground = GroupedBackgroundDark,
+        )
+    } else {
+        TubolsilloExtraColors(
+            tertiaryLabel = TertiaryLabelLight,
+            separator = SeparatorLight,
+            groupedBackground = GroupedBackgroundLight,
+        )
+    }
+    androidx.compose.runtime.CompositionLocalProvider(LocalTubolsilloColors provides extra) {
+        MaterialTheme(
+            colorScheme = if (darkTheme) DarkColors else LightColors,
+            typography = TubolsilloTypography,
+            content = content,
+        )
+    }
 }

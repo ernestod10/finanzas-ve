@@ -1,71 +1,94 @@
-# DESIGN.md — TuBolsillo
+# TuBolsillo — Sistema de diseño
 
-Sistema visual de TuBolsillo (app móvil Kotlin Multiplatform / Compose Multiplatform).
-Lo leen los agentes de IA (Claude Code, Stitch, etc.) para generar UI consistente.
-Aplicación: finanzas personales para Venezuela/Panamá — **confianza primero**.
+Reescrito con el skill `apple-design` (HIG de Apple). Android, pero con el
+lenguaje visual de iOS: las bases (tipografía, color, layout, materiales)
+vienen de las HIG; las convenciones de plataforma se aplican donde el usuario
+las reconoce.
 
-## 1. Design Read
+## 1. Principios
 
-- **Tipo**: app móvil product (finanzas personales, dashboard denso de datos).
-- **Audiencia**: consumidor individual (es-VE), sensible a la confianza y la claridad del dinero.
-- **Lenguaje**: "papel + bosque" — editorial-financiero cálido, NO tech oscuro, NO gradientes AI,
-  NO glassmorphism. Se siente como un estado de cuenta bien diseñado, no como un casino.
-- **Diales**: DESIGN_VARIANCE 4 · MOTION_INTENSITY 2 · VISUAL_DENSITY 5.
+1. **Una capa funcional y una de contenido.** El cristal vive solo en barras,
+   hojas y diálogos. Nunca sobre tarjetas, filas ni fondos.
+   (`liquid-glass.md › Review checklist`)
+2. **El acento se gana su sitio.** El verde manda en acciones y cifras; el
+   ambiente es neutro. `branding.md`: la marca cede ante el contenido.
+3. **El número es la interfaz.** Todo monto en `tnum`; el signo se dice con
+   `+/−`, color y posición, nunca solo con color.
+4. **Nada se mueve solo.** Sin refrescos automáticos, sin animaciones no pedidas.
 
-## 2. Color (tokens)
+## 2. Color
 
-**Luz:**
-- `background #F6F4EF` (papel cálido, nunca blanco puro)
-- `surface #FFFFFF` · `surfaceVariant #ECE9E1`
-- `ink #221F1A` (tinta cálida) · `muted #6F6A60`
-- `primary #2E5E43` (verde bosque, único acento) · `onPrimary #FFFFFF`
-- `primaryContainer #DCE8DF` · `onPrimaryContainer #123326`
-- `secondary #6B705F` (oliva, iconos suaves) · `tertiary #B08A3E` (dorado, alertas/pago móvil)
-- `error #A63D36` (terracota, solo deuda/TDC)
+Semántico, por rol y no por apariencia (`color.md › System colors`).
 
-**Oscuro:**
-- `background #131410` · `surface #1C1D16` · `ink #ECE9E2` · `muted #B9B4A8`
-- `primary #9CC5A8` · `primaryContainer #23432F`
-- `error #E3A29A`
+| Rol | Claro | Oscuro |
+|---|---|---|
+| Fondo agrupado | `#F2F2F7` | `#000000` |
+| Superficie (filas) | `#FFFFFF` | `#1C1C1E` |
+| Relleno terciario | `#E5E5EA` | `#2C2C2E` |
+| Tinta | `#000000` | `#FFFFFF` |
+| Tinta secundaria | `#5A5A5E` | `#A0A0A5` |
+| Separador | `#C6C6C8` | `#38383A` |
+| Acento (marca) | `#2A7C13` | `#76C457` |
+| Error / deuda | `#B03A2E` | `#FF9E90` |
 
-**Semántica de montos:** positivo = `primary` · negativo = `error` · deuda BNPL siempre neutro
-(el verde del disponible comunica salud). **Un solo acento**: no mezclar verde+ámbar+teal.
+**Contraste:** los 18 pares de texto pasan WCAG AA. El más ajustado es el acento
+claro sobre el fondo agrupado, 4.72:1.
+
+> El `secondaryLabel` real de iOS queda en ~3.5:1 y no pasa AA. Aquí se usa un
+> gris equivalente más oscuro (6.15:1) para cumplir sin perder la jerarquía.
 
 ## 3. Tipografía
 
-- Familia: Sans Serif del sistema (Roboto/SF). No cargar webfonts.
-- Jerarquía: ExtraBold 38sp display (`-0.8` tracking) → Bold 28 → SemiBold 18 → Medium 15 → 14 → 11.
-- **Regla oro: números tabulares** (`fontFeatureSettings = "tnum"`) en TODO monto.
-- Labels en versalitas con tracking amplio (`letterSpacing ≥ 1.4x`) para eyebrows y cabeceras de sección.
-- Nunca usar solo Regular/Bold: introducir 500/600 para jerarquía fina.
+Escala de iOS, tamaño por defecto *Large* (`typography.md › Specifications`).
 
-## 4. Superficie y layout
+| Estilo | Tamaño | Peso | Uso |
+|---|---|---|---|
+| Large Title | 34 | Bold | Título de pantalla, dentro del scroll |
+| Title 1 | 28 | Bold | Encabezado de sección grande |
+| Title 2 | 22 | Regular | Subtítulo |
+| Headline | 17 | SemiBold | Título de barra inline, nombre de fila |
+| Body | 17 | Regular | Cuerpo: el tamaño de lectura de iOS |
+| Subhead | 15 | Regular | Texto secundario |
+| Footnote | 13 | Regular | Meta, encabezado de grupo en versalitas |
+| Caption | 12/11 | Regular | Pie, etiquetas |
 
-- Tarjetas: `RoundedCornerShape(28)`; borde hairline 1dp del acento a 30-55% alpha; **fondo
-  tintado con el color de la cuenta** (blend 7-16% sobre surface). Sin sombras pesadas.
-- Chip de cuenta: círculo 40dp con monograma de la institución (B, BV, MP…) en el color, sobre
-  contenedor al 12% alpha. Los logos reales no se usan (licencias); el monograma es la marca.
-- Espaciado base 4dp; pantallas con padding 16; gaps entre tarjetas 10-12.
-- Headers de sección: versalitas espaciadas + hairline opcional — nunca títulos centrados.
-- FAB: extended, redondeado, única acción primaria por pantalla.
-- Header de app: 52dp compacto, título izquierda, sin appbar M3 inflada.
+Los títulos van en **Regular/Bold puntual**, no en ExtraBold: el énfasis se gana
+con un peso, no con todos. El tracking editorial fuerte se retiró.
 
-## 5. Componentes clave
+## 4. Espaciado y forma
 
-| Componente | Regla |
-|---|---|
-| Hero dashboard | eyebrow "TOTAL EN CUENTAS" caps; monto 38sp tnum; sublínea VES muted; fila "Deudas $X · Neto $Y" (deuda en error, neto muted) |
-| AccountCard (activo) | monograma + nombre + institución caps + saldo tnum + equiv USD si ≠ USD |
-| DebtCard (TDC) | monograma + saldo (deuda) en error + barra de USO (deuda/límite) error |
-| DebtCard (BNPL/Cashea) | monograma + **"Disponible" grande en primary** + barra de DISPONIBLE primaria (casi llena = sano) + "Deuda $X · de límite $Y" neutro |
-| TxRow | icono fuente 15dp al 55%, descripción Medium 15, meta caps muted, monto tnum (±color) |
-| Diálogo crear elemento | tipos por scroll horizontal; **Cashea siempre USD** con líneas Principal/Cotidiana, campos "Límite de la línea" → "Saldo disponible"; TDC "Límite" → "Deuda"; "Otra" con nombre libre; selector de color (10 dots) |
+- Margen lateral: **16dp** para grupos, **32dp** para el título grande y el hero
+  (el texto alinea con el contenido de las filas, no con su borde).
+- Grupos: radio **10dp**, una sola superficie continua por grupo.
+- Separadores: hairline 0.5dp, sangrados 16dp (o 68dp si la fila tiene icono).
+- Fila: alto mínimo **44dp** (`accessibility.md`: default 44×44pt en iOS).
+- Barra de navegación: 44dp de contenido + safe area, título centrado 17/SemiBold.
+- Barra de pestañas: cápsula flotante glass, radio 26dp, sin sombra.
 
-## 6. Reglas anti-slop (contextuales)
+## 5. Material
 
-- Sin gradientes, sin glassmorphism, sin sombras negras, sin acentos saturados múltiples.
-- Sin emojis en UI de producción.
-- Montos SIEMPRE tnum y con símbolo consistente (Bs. / $ / ₿) del `MoneyFormatter`.
-- Deuda BNPL: la salud la da el verde del disponible; no marcar deuda pequeña en rojo.
-- Respetar el modelo mental del usuario: TDC ≠ cuenta, Cashea = líneas (no cuentas), todo en USD.
-- El color de la cuenta personaliza tarjeta+monograma+borde; no cambiar colores semánticos globales.
+`GlassSurface`: relleno translúcido al 78%, borde de brillo hairline de 0.5dp, y
+**sin sombra proyectada** — la profundidad la da el material, no la sombra.
+
+**Límite real:** iOS desenfoca lo que hay *detrás* de la barra. Android no expone
+*backdrop blur* para vistas dentro de una Activity, así que el cristal aquí es
+translúcido, no desenfocado. `TubolsilloGlass.reduceTransparency` fuerza relleno
+opaco (fallback de la checklist de accesibilidad).
+
+## 6. Movimiento
+
+- **Empujar pantalla:** slide horizontal. La nueva entra desde la derecha, la
+  anterior se corre un tercio y no se desvanece; al volver se invierte.
+  `PUSH_MS = 340`, `FastOutSlowInEasing`.
+- **Cambiar de pestaña:** sin animación. En iOS el contenido simplemente
+  aparece; deslizar entre pestañas es una convención de Android.
+- **Colapsar el título:** el título grande se va con el scroll y la barra inline
+  aparece al 55% del recorrido.
+
+## 7. Reglas anti-slop
+
+- Sin degradados, sin glassmorphism en el contenido, sin sombras negras.
+- Sin emojis en la interfaz.
+- Un solo acento por pantalla.
+- El número grande de una línea de crédito es el **disponible**, no la deuda.
+- TDC ≠ cuenta; Cashea = líneas de crédito, no cuentas; todo en USD.
