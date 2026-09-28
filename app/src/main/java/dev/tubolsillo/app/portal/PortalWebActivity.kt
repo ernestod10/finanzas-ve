@@ -4,7 +4,6 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import android.view.WindowManager
 import android.webkit.CookieManager
 import android.webkit.RenderProcessGoneDetail
 import android.webkit.WebChromeClient
@@ -75,8 +74,10 @@ class PortalWebActivity : ComponentActivity() {
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // La sesión bancaria no debe quedar en la vista de recientes.
-        window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
+        // Sin FLAG_SECURE: en varios dispositivos (Samsung entre ellos) el
+        // WebView acelerado no compone dentro de una ventana segura y se ve
+        // TODO negro. La privacidad de la sesión se mantiene con
+        // excludeFromRecents en el manifiesto.
 
         val institutionKey = intent.getStringExtra(EXTRA_INSTITUTION) ?: Institution.OTHER.key
         val mode = intent.getStringExtra(EXTRA_MODE) ?: MODE_LINK
@@ -102,6 +103,7 @@ class PortalWebActivity : ComponentActivity() {
                     if (steps.size > 12) steps.removeAt(0)
                 }
 
+                Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                 Column(modifier = Modifier.fillMaxSize().padding(8.dp)) {
                     Text(
                         text = (if (mode == MODE_LINK) "Vincular " else "Consultar ") + institution.displayName,
@@ -168,12 +170,57 @@ class PortalWebActivity : ComponentActivity() {
                                     settings.domStorageEnabled = true
                                     settings.databaseEnabled = true
                                     settings.setSupportMultipleWindows(false)
+                                    settings.loadWithOverviewMode = true
+                                    settings.useWideViewPort = true
+                                    settings.builtInZoomControls = true
+                                    settings.displayZoomControls = false
+                                    // Sin esto el WebView arranca en negro y no
+                                    // repinta hasta el primer toque.
+                                    setBackgroundColor(android.graphics.Color.WHITE)
+                                    isFocusableInTouchMode = true
                                     // El User-Agent por defecto es Chrome real: NO tocarlo,
                                     // es justo lo que el WAF del banco espera ver.
                                     CookieManager.getInstance().setAcceptCookie(true)
                                     CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
-                                    webChromeClient = WebChromeClient()
+                                    webChromeClient = object : WebChromeClient() {
+                                        override fun onProgressChanged(view: WebView?, newProgress: Int) {
+                                            if (newProgress == 100) log("Página cargada.")
+                                        }
+                                    }
                                     webViewClient = object : WebViewClient() {
+                                        override fun onPageStarted(
+                                            view: WebView?,
+                                            url: String?,
+                                            favicon: android.graphics.Bitmap?,
+                                        ) {
+                                            log("Cargando " + (url ?: "").take(60) + "…")
+                                        }
+
+                                        override fun onPageFinished(view: WebView?, url: String?) {
+                                            view?.invalidate()
+                                            url?.let { urlText = it }
+                                        }
+
+                                        override fun onReceivedHttpError(
+                                            view: WebView?,
+                                            request: WebResourceRequest?,
+                                            errorResponse: android.webkit.WebResourceResponse?,
+                                        ) {
+                                            if (request?.isForMainFrame == true) {
+                                                log("El portal respondió " + (errorResponse?.statusCode ?: 0))
+                                            }
+                                        }
+
+                                        override fun onReceivedSslError(
+                                            view: WebView?,
+                                            handler: android.webkit.SslErrorHandler?,
+                                            error: android.net.http.SslError?,
+                                        ) {
+                                            // No se ignoran: un portal bancario con TLS roto no se abre.
+                                            log("Error de certificado: " + (error?.primaryError ?: -1))
+                                            handler?.cancel()
+                                        }
+
                                         override fun onReceivedError(
                                             view: WebView?,
                                             request: WebResourceRequest?,
@@ -194,6 +241,9 @@ class PortalWebActivity : ComponentActivity() {
                                         }
                                     }
                                     webView = this
+                                    resumeTimers()
+                                    onResume()
+                                    log("Abriendo " + url.take(60))
                                     loadUrl(url)
                                 }
                             },
@@ -259,6 +309,7 @@ class PortalWebActivity : ComponentActivity() {
                         }
                         TextButton(onClick = { finish() }) { Text("Cerrar") }
                     }
+                }
                 }
 
                 if (mode == MODE_FETCH) {
