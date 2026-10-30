@@ -69,10 +69,11 @@ jobs:
           TUBOLSILLO_KEYSTORE_PASSWORD: ${{ secrets.TUBOLSILLO_KEYSTORE_PASSWORD }}
           TUBOLSILLO_KEY_ALIAS: ${{ secrets.TUBOLSILLO_KEY_ALIAS }}
           TUBOLSILLO_KEY_PASSWORD: ${{ secrets.TUBOLSILLO_KEY_PASSWORD }}
+        # El versionCode lo deriva Gradle del nombre (0.1.1 → 101), así el APK
+        # de CI y el local de la misma versión son intercambiables.
         run: |
           ./gradlew :app:assembleRelease --no-daemon \
-            -PappVersionName="${GITHUB_REF_NAME}" \
-            -PappVersionCode="${GITHUB_RUN_NUMBER}"
+            -PappVersionName="${GITHUB_REF_NAME}"
 
       - name: Renombrar APK
         run: |

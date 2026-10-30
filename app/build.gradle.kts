@@ -6,11 +6,22 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
-// Versión: el workflow de release la inyecta desde el tag (`-PappVersionName=v0.2.0`)
-// y usa el número de ejecución como versionCode, que Android exige creciente.
-// En local se cae a los valores de aquí.
-val appVersionName = ((findProperty("appVersionName") as String?) ?: "0.1.0").removePrefix("v")
-val appVersionCode = (findProperty("appVersionCode") as String?)?.toIntOrNull() ?: 1
+// Versión: el workflow de release la inyecta desde el tag (`-PappVersionName=v0.2.0`);
+// en local se cae a la de aquí. El versionCode se deriva del nombre
+// (0.2.1 → 201, 1.0.0 → 10000) para que crezca junto con la versión y para que
+// un build local y el de CI de la MISMA versión compartan código: si CI usara
+// otro número, reinstalar en local exigiría bajar de versión.
+val appVersionName = ((findProperty("appVersionName") as String?) ?: "0.1.1").removePrefix("v")
+val appVersionCode = (findProperty("appVersionCode") as String?)?.toIntOrNull()
+    ?: versionCodeOf(appVersionName)
+
+fun versionCodeOf(name: String): Int {
+    val parts = name.split('.', '-', '+').map { part -> part.takeWhile(Char::isDigit).toIntOrNull() ?: 0 }
+    val major = parts.getOrElse(0) { 0 }
+    val minor = parts.getOrElse(1) { 0 }
+    val patch = parts.getOrElse(2) { 0 }
+    return major * 10_000 + minor * 100 + patch
+}
 
 // Firma: CI pasa el keystore por variables de entorno (el MISMO que firma en
 // local, para que la actualización se instale encima). Sin esa variable se
