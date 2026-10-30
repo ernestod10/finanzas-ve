@@ -34,12 +34,18 @@ class UpdateRepository(
     suspend fun check(): UpdateState {
         if (_state.value is UpdateState.Checking) return _state.value
         _state.value = UpdateState.Checking
-        val info = api.latest()
-        val result = when {
-            info == null -> UpdateState.Failed("No se pudo consultar GitHub. Revisa tu conexión.")
-            isNewerVersion(info.versionName, currentVersion) -> UpdateState.Available(info)
-            else -> UpdateState.UpToDate
-        }
+        val result = api.latest().fold(
+            onSuccess = { info ->
+                when {
+                    info == null -> UpdateState.UpToDate
+                    isNewerVersion(info.versionName, currentVersion) -> UpdateState.Available(info)
+                    else -> UpdateState.UpToDate
+                }
+            },
+            onFailure = {
+                UpdateState.Failed("No se pudo consultar GitHub. Revisa tu conexión.")
+            },
+        )
         _state.value = result
         return result
     }

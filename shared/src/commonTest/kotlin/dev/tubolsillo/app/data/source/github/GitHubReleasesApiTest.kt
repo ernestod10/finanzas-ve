@@ -48,7 +48,7 @@ class GitHubReleasesApiTest {
     @Test
     fun `lee la ultima release y elige el apk`() = runTest {
         val engine = MockEngine { respond(releaseJson, HttpStatusCode.OK, jsonHeader) }
-        val info = api(engine).latest()
+        val info = api(engine).latest().getOrNull()
 
         assertEquals("0.2.0", info?.versionName)
         assertTrue(info!!.apkUrl.endsWith("TuBolsillo-0.2.0.apk"))
@@ -65,18 +65,20 @@ class GitHubReleasesApiTest {
                 jsonHeader,
             )
         }
-        assertNull(api(engine).latest())
+        assertNull(api(engine).latest().getOrNull())
     }
 
     @Test
-    fun `un 404 del repo no rompe la pantalla`() = runTest {
+    fun `un 404 del repo significa que aun no hay releases`() = runTest {
         val engine = MockEngine { respondError(HttpStatusCode.NotFound) }
-        assertNull(api(engine).latest())
+        val result = api(engine).latest()
+        assertTrue(result.isSuccess)
+        assertNull(result.getOrNull())
     }
 
     @Test
-    fun `una respuesta con basura devuelve null`() = runTest {
+    fun `una respuesta con basura es un fallo, no un falso al dia`() = runTest {
         val engine = MockEngine { respond("<html>no json</html>", HttpStatusCode.OK, jsonHeader) }
-        assertNull(api(engine).latest())
+        assertTrue(api(engine).latest().isFailure)
     }
 }
