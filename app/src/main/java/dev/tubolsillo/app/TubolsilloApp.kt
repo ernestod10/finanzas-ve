@@ -11,6 +11,7 @@ import dev.tubolsillo.app.core.di.commonKoinModules
 import dev.tubolsillo.app.core.di.domainModule
 import dev.tubolsillo.app.core.di.viewModelModule
 import dev.tubolsillo.app.data.source.binance.BinanceWorker
+import kotlinx.coroutines.launch
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.context.startKoin
 
@@ -30,12 +31,25 @@ class TubolsilloApp : Application(), Configuration.Provider {
                 commonKoinModules() + domainModule + viewModelModule + androidPlatformModule
             )
         }
+        val koin = org.koin.core.context.GlobalContext.get()
         // El portal se lanza desde la Activity en primer plano, no desde el
         // contexto de aplicación: así vuelve a la pantalla de donde salió.
         registerActivityLifecycleCallbacks(
-            org.koin.core.context.GlobalContext.get()
-                .get<dev.tubolsillo.app.core.platform.CurrentActivityHolder>()
+            koin.get<dev.tubolsillo.app.core.platform.CurrentActivityHolder>()
         )
+        // Pre-calentar BD, flujos compartidos y Keystore en hilo I/O para que la
+        // primera composición y el cambio entre páginas no esperen disco ni IPC.
+        kotlinx.coroutines.CoroutineScope(
+            kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO
+        ).launch {
+            runCatching {
+                koin.get<dev.tubolsillo.app.domain.repo.SettingsRepository>()
+                koin.get<dev.tubolsillo.app.domain.usecase.RateProvider>()
+                koin.get<dev.tubolsillo.app.domain.repo.CategoryRepository>()
+                koin.get<dev.tubolsillo.app.domain.repo.DashboardRepository>()
+                koin.get<dev.tubolsillo.app.core.crypto.SecretStore>().hasBinanceKeys()
+            }
+        }
     }
 }
 

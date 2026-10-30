@@ -1,18 +1,26 @@
 package dev.tubolsillo.app.core.di
 
+import dev.tubolsillo.app.data.source.binance.BinanceSync
 import dev.tubolsillo.app.domain.repo.AccountRepository
 import dev.tubolsillo.app.data.source.portal.PortalImporter
 import dev.tubolsillo.app.domain.repo.CategoryRepository
 import dev.tubolsillo.app.domain.repo.BalanceRepository
 import dev.tubolsillo.app.domain.repo.BudgetRepository
 import dev.tubolsillo.app.domain.repo.DashboardRepository
+import dev.tubolsillo.app.domain.repo.PlanRepository
+import dev.tubolsillo.app.domain.repo.RatesRefresher
 import dev.tubolsillo.app.domain.repo.SettingsRepository
+import dev.tubolsillo.app.domain.repo.StatsRepository
+import dev.tubolsillo.app.domain.repo.UpdateRepository
 import dev.tubolsillo.app.domain.repo.TagRepository
 import dev.tubolsillo.app.domain.repo.TransactionRepository
 import dev.tubolsillo.app.domain.usecase.BackupExporter
 import dev.tubolsillo.app.domain.usecase.BudgetCalculator
 import dev.tubolsillo.app.domain.usecase.CapturePipeline
 import dev.tubolsillo.app.domain.usecase.DedupGate
+import dev.tubolsillo.app.domain.usecase.BalanceTrendBuilder
+import dev.tubolsillo.app.domain.usecase.PeriodMetricsCalculator
+import dev.tubolsillo.app.domain.usecase.PlanCalculator
 import dev.tubolsillo.app.domain.usecase.RateProvider
 import dev.tubolsillo.app.domain.usecase.RuleEngine
 import dev.tubolsillo.app.domain.usecase.TotalsCalculator
@@ -26,8 +34,14 @@ import dev.tubolsillo.app.ui.categories.CategoriesViewModel
 import dev.tubolsillo.app.ui.settings.BinanceSettingsViewModel
 import dev.tubolsillo.app.ui.settings.ExportViewModel
 import dev.tubolsillo.app.ui.settings.RatesViewModel
+import dev.tubolsillo.app.ui.settings.UpdateViewModel
 import dev.tubolsillo.app.ui.transactions.TransactionsViewModel
 import dev.tubolsillo.app.ui.portal.PortalViewModel
+import dev.tubolsillo.app.ui.plan.PlanViewModel
+import dev.tubolsillo.app.ui.period.PeriodState
+import dev.tubolsillo.app.ui.review.EntryDraftHolder
+import dev.tubolsillo.app.ui.review.ReviewReadingCache
+import dev.tubolsillo.app.ui.review.ReviewViewModel
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
@@ -42,15 +56,27 @@ val domainModule = module {
     singleOf(::SettingsRepository)
     singleOf(::TagRepository)
     singleOf(::TransactionRepository)
+    singleOf(::UpdateRepository)
     singleOf(::BackupExporter)
     singleOf(::BudgetCalculator)
     single { PortalImporter(get(), get(), get(), get(), get()) }
+    single { dev.tubolsillo.app.data.source.portal.PortalAutoSync(get(), get(), get(), get()) }
     singleOf(::CapturePipeline)
     singleOf(::DedupGate)
     singleOf(::RateProvider)
+    singleOf(::RatesRefresher)
     singleOf(::RuleEngine)
     singleOf(::TotalsCalculator)
     singleOf(::TransferMatcher)
+    singleOf(::PlanCalculator)
+    singleOf(::PlanRepository)
+    singleOf(::PeriodMetricsCalculator)
+    singleOf(::BalanceTrendBuilder)
+    singleOf(::StatsRepository)
+    singleOf(::PeriodState)
+    singleOf(::EntryDraftHolder)
+    singleOf(::ReviewReadingCache)
+    singleOf(::BinanceSync)
 }
 
 /** ViewModels (koinViewModel() los resuelve por clase). */
@@ -66,4 +92,7 @@ val viewModelModule = module {
     viewModelOf(::ExportViewModel)
     viewModelOf(::PortalViewModel)
     viewModelOf(::CategoriesViewModel)
+    viewModelOf(::PlanViewModel)
+    viewModelOf(::ReviewViewModel)
+    viewModelOf(::UpdateViewModel)
 }

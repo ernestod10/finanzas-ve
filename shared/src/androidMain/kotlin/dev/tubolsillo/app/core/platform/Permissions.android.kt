@@ -1,6 +1,7 @@
 package dev.tubolsillo.app.core.platform
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
@@ -8,38 +9,80 @@ import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+@Volatile
+private var cachedPermissionState: PermissionState? = null
+
+private fun readPermissionState(context: Context): PermissionState = PermissionState(
+    smsRead = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_SMS) ==
+        PackageManager.PERMISSION_GRANTED,
+    postNotifications = if (Build.VERSION.SDK_INT >= 33) {
+        ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
+            PackageManager.PERMISSION_GRANTED
+    } else true,
+    notificationListener = NotificationManagerCompat.getEnabledListenerPackages(context)
+        .contains(context.packageName),
+).also { cachedPermissionState = it }
 
 @Composable
 actual fun rememberPermissionActions(): PermissionActions {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val lifecycleOwner = LocalLifecycleOwner.current
 
-    fun readState() = PermissionState(
-        smsRead = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_SMS) ==
-            PackageManager.PERMISSION_GRANTED,
-        postNotifications = if (Build.VERSION.SDK_INT >= 33) {
-            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
-                PackageManager.PERMISSION_GRANTED
-        } else true,
-        notificationListener = NotificationManagerCompat.getEnabledListenerPackages(context)
-            .contains(context.packageName),
-    )
+    var state by remember {
+        mutableStateOf(
+            cachedPermissionState ?: PermissionState(
+                smsRead = false,
+                postNotifications = false,
+                notificationListener = false,
+            )
+        )
+    }
 
-    var state by remember { mutableStateOf(readState()) }
+    fun refreshAsync() {
+        scope.launch {
+            state = withContext(Dispatchers.Default) { readPermissionState(context) }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        state = withContext(Dispatchers.Default) { readPermissionState(context) }
+    }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                refreshAsync()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     val smsLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { state = readState() }
+    ) { refreshAsync() }
     val notifLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { state = readState() }
+    ) { refreshAsync() }
 
     val currentState by rememberUpdatedState(state)
 
@@ -56,7 +99,6 @@ actual fun rememberPermissionActions(): PermissionActions {
                 Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             )
-            state = readState()
         },
     )
 }

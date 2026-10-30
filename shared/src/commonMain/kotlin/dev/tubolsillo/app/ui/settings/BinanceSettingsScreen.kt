@@ -1,10 +1,12 @@
 package dev.tubolsillo.app.ui.settings
 
+import dev.tubolsillo.app.core.platform.openAppOrUrl
 import dev.tubolsillo.app.core.platform.openUrl
 
 import org.koin.compose.viewmodel.koinViewModel
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -77,21 +79,39 @@ fun BinanceSettingsScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 4.dp),
                 )
-                Row(modifier = Modifier.padding(top = 16.dp)) {
+                Row(
+                    modifier = Modifier.padding(top = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
                     Button(
                         onClick = { viewModel.syncNow() },
                         enabled = !busy,
                         modifier = Modifier.padding(end = 8.dp),
                     ) { Text("Sincronizar ahora") }
-                    OutlinedButton(onClick = { viewModel.clearKeys() }) { Text("Quitar llaves") }
+                    OutlinedButton(
+                        onClick = { viewModel.clearKeys() },
+                        enabled = !busy,
+                    ) { Text("Quitar llaves") }
+                    if (busy) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.padding(start = 12.dp),
+                            strokeWidth = 2.dp,
+                        )
+                    }
                 }
+                // Con las llaves ya guardadas también se puede volver a la
+                // pantalla de la app para revisarlas o revocarlas.
+                TextButton(
+                    onClick = { openAppOrUrl(BINANCE_APP_API_MANAGEMENT_LINK, BINANCE_API_MANAGEMENT_URL) },
+                    contentPadding = PaddingValues(horizontal = 0.dp, vertical = 4.dp),
+                ) { Text("Gestionar API en la app de Binance ↗") }
             } else {
                 Text(
                     text = "Conectar en 3 pasos:",
                     style = MaterialTheme.typography.bodyLarge,
                 )
                 Text(
-                    text = "1. Toca 'Abrir Binance' → entra a API Management\n" +
+                    text = "1. Toca 'Abrir Gestión de API en la app' → Crear API\n" +
                         "2. Create API → elige 'System generated' → marca SOLO 'Enable Reading'\n" +
                         "3. Pega abajo la API Key y la Secret Key.",
                     style = MaterialTheme.typography.bodyMedium,
@@ -99,9 +119,16 @@ fun BinanceSettingsScreen(
                     modifier = Modifier.padding(top = 4.dp),
                 )
                 OutlinedButton(
-                    onClick = { openUrl(BINANCE_API_MANAGEMENT_URL) },
+                    onClick = { openAppOrUrl(BINANCE_APP_API_MANAGEMENT_LINK, BINANCE_API_MANAGEMENT_URL) },
                     modifier = Modifier.padding(top = 8.dp),
-                ) { Text("Abrir Binance (API Management) ↗") }
+                ) { Text("Abrir Gestión de API en la app ↗") }
+                // Si la app no está instalada (o no atiende el enlace) se abre
+                // la misma página en el navegador; este botón es la salida
+                // manual para cuando se prefiera el navegador.
+                TextButton(
+                    onClick = { openUrl(BINANCE_API_MANAGEMENT_URL) },
+                    contentPadding = PaddingValues(horizontal = 0.dp, vertical = 4.dp),
+                ) { Text("Abrir en el navegador") }
                 OutlinedTextField(
                     value = apiKey,
                     onValueChange = { apiKey = it },
@@ -156,3 +183,17 @@ fun BinanceSettingsScreen(
 }
 
 private const val BINANCE_API_MANAGEMENT_URL = "https://www.binance.com/en/my/settings/api-management"
+
+/**
+ * Enlace profundo a la app de Binance, verificado en dispositivo (oct-2026).
+ *
+ * El enrutador exige que el host sea `app.binance.com` y solo acepta rutas de
+ * su lista blanca: `account/security` abre una pantalla nativa, pero
+ * `api-management` y compañía caen en NoSupportRouterPathActivity. La pantalla
+ * "Gestión de API" de la app es una página web dentro de su navegador interno
+ * (`com.binance.hybrid.activity.BardActivity`, dominio binance.info), y el
+ * router sí la abre con la acción `web?url=<url codificada>`.
+ */
+private const val BINANCE_APP_API_MANAGEMENT_LINK =
+    "binance://app.binance.com/web?url=" +
+        "https%3A%2F%2Fwww.binance.info%2Fes-LA%2Fmy%2Fsettings%2Fapi-management"

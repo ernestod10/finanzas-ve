@@ -28,7 +28,7 @@ class BinanceSignerTest {
         assertEquals(listOf("limit", "recvWindow", "signature", "symbol", "timestamp"), params.keys.toList())
         assertEquals(5, params.size)
         // La firma debe coincidir con la query ordenada (sin signature).
-        val query = "limit=5&recvWindow=5000&symbol=BTCUSDT&timestamp=1600000000000"
+        val query = "limit=5&recvWindow=60000&symbol=BTCUSDT&timestamp=1600000000000"
         assertEquals(signer.sign(query, "secret"), params["signature"])
     }
 

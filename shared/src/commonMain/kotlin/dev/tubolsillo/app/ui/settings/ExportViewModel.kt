@@ -19,8 +19,26 @@ class ExportViewModel(
         viewModelScope.launch {
             _status.value = null
             runCatching { backupExporter.exportJson() }
-                .onSuccess { json -> picker(json) }
+                .onSuccess { json ->
+                    picker(json)
+                    _status.value = "✓ Respaldo generado"
+                }
                 .onFailure { e -> _status.value = "✗ " + (e.message ?: "Error exportando") }
+        }
+    }
+
+    fun importBackup(rawJson: String?, fileName: String?) {
+        if (rawJson.isNullOrBlank()) return
+        viewModelScope.launch {
+            _status.value = null
+            runCatching { backupExporter.importJson(rawJson) }
+                .onSuccess { s ->
+                    _status.value = "✓ Restaurado (${fileName ?: "JSON"}): " +
+                        "${s.accounts} cuentas, ${s.transactions} movimientos, ${s.planItems} líneas del plan"
+                }
+                .onFailure { e ->
+                    _status.value = "✗ Error restaurando respaldo: " + (e.message ?: "archivo inválido")
+                }
         }
     }
 }

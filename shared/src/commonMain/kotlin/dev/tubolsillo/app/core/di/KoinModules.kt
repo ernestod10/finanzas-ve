@@ -27,6 +27,8 @@ val dbModule = module {
     single { get<TubolsilloDatabase>().tagDao() }
     single { get<TubolsilloDatabase>().categoryRuleDao() }
     single { get<TubolsilloDatabase>().categoryDao() }
+    single { get<TubolsilloDatabase>().planItemDao() }
+    single { get<TubolsilloDatabase>().planItemStateDao() }
 }
 
 /** Parsers por institución (el equivalente Koin del @IntoSet de Hilt). */
@@ -48,8 +50,10 @@ val parserModule = module {
 val networkModule = module {
     single { kotlinx.serialization.json.Json { ignoreUnknownKeys = true } }
     single { dev.tubolsillo.app.core.platform.createHttpClient() }
+    single { dev.tubolsillo.app.data.source.binance.BinanceSigner() }
     single { dev.tubolsillo.app.data.source.binance.BinanceApi(get()) }
     single { dev.tubolsillo.app.data.source.rates.RatesApi(get()) }
+    single { dev.tubolsillo.app.data.source.github.GitHubReleasesApi(get()) }
 }
 
 fun commonKoinModules(): List<Module> = listOf(dbModule, parserModule, networkModule)

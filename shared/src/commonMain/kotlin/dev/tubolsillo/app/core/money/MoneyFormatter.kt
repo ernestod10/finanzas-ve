@@ -36,13 +36,20 @@ object MoneyFormatter {
 
     /** Fiat con 2 decimales fijos y agrupación de miles. */
     private fun formatFixed(minor: Long, decimals: Int, groupSeparator: Char, decimalSeparator: Char): String {
-        val sign = if (minor < 0) "-" else ""
         val unsigned = abs(minor)
         val pow = Money.pow10Long(decimals)
         val intPart = (unsigned / pow).toString()
         val frac = (unsigned % pow).toString().padStart(decimals, '0')
-        val grouped = intPart.reversed().chunked(3).joinToString(groupSeparator.toString()).reversed()
-        return "$sign$grouped$decimalSeparator$frac"
+        val len = intPart.length
+        return buildString(len + (len - 1) / 3 + decimals + 2) {
+            if (minor < 0) append('-')
+            for (i in 0 until len) {
+                if (i > 0 && (len - i) % 3 == 0) append(groupSeparator)
+                append(intPart[i])
+            }
+            append(decimalSeparator)
+            append(frac)
+        }
     }
 
     /** Crypto: hasta [decimals] decimales, ceros finales recortados, sin agrupación. */

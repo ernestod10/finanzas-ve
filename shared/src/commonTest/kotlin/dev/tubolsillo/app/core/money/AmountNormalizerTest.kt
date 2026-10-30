@@ -64,6 +64,13 @@ class AmountNormalizerTest {
     }
 
     @Test
+    fun `crypto USDT 2 decimales con precision de exchange`() {
+        assertEquals(1409L, AmountNormalizer.parseMinor("14.09210875", "USDT"))
+        assertEquals(2050L, AmountNormalizer.parseMinor("20.50000000", "USDT"))
+        assertEquals(12L, AmountNormalizer.parseMinor("0.123", "USD"))
+    }
+
+    @Test
     fun `texto con letras alrededor`() {
         assertEquals(2500L, AmountNormalizer.parseMinor("Compra por Bs. 25,00 en FARMACIA X", "VES"))
         assertEquals(1234L, AmountNormalizer.parseMinor("B/. 12.34 Mercantil", "USD"))

@@ -46,16 +46,23 @@ class BudgetCalculator(
                 (rates[budget.currency] ?: 1.0)
         }
 
-        val catNames = (spentByCat.keys + limitByCat.keys).sorted()
+        val definedNames = categoryById.values
+            .sortedWith(compareBy<CategoryEntity> { it.sortOrder }.thenBy { it.name })
+            .map { it.name }
+        val extraNames = ((spentByCat.keys + limitByCat.keys) - definedNames.toSet())
+            .sortedWith(compareBy<String> { it == UNTAGGED_BUCKET }.thenBy { it })
+        val catNames = definedNames + extraNames
+
         val rows = catNames.map { name ->
             TagBudgetView(
                 tagName = name,
                 limitUsd = limitByCat[name],
                 spentUsd = spentByCat[name] ?: 0.0,
+                colorHex = categoryById.values.firstOrNull { it.name == name }?.colorHex,
             )
         }
         val totalSpent = rows.sumOf { it.spentUsd }
-        val totalLimit = if (rows.any { it.limitUsd == null }) null else rows.sumOf { it.limitUsd!! }
+        val totalLimit = if (limitByCat.isEmpty()) null else limitByCat.values.sum()
         return BudgetMonthData(month = month, rows = rows, totalSpentUsd = totalSpent, totalLimitUsd = totalLimit)
     }
 }

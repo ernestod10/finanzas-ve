@@ -2,6 +2,7 @@ package dev.tubolsillo.app.core.db.dao
 
 import androidx.room.Dao
 import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import dev.tubolsillo.app.core.db.entity.InstallmentEntity
 import kotlinx.coroutines.flow.Flow
@@ -17,6 +18,9 @@ interface InstallmentDao {
 
     @Insert
     suspend fun insert(installment: InstallmentEntity): Long
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertAll(installments: List<InstallmentEntity>)
 
     @Query("UPDATE installments SET status = 'PAID' WHERE id = :id")
     suspend fun markPaid(id: Long)

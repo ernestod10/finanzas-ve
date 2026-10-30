@@ -17,6 +17,25 @@ data class PortalPayload(
     val currencyText: String? = null,
     val message: String? = null,
     val rows: List<PortalRawRow> = emptyList(),
+    val accounts: List<PortalAccountBalance> = emptyList(),
+)
+
+/** Saldo detectado por producto en Directorio de Productos / Posición Consolidada. */
+@Serializable
+data class PortalAccountBalance(
+    /** CHECKING | SAVINGS | CREDIT_CARD */
+    val kind: String = "CHECKING",
+    /** VES | USD */
+    val currency: String = "VES",
+    val amountText: String = "",
+    val mask: String = "",
+    val label: String = "",
+    /**
+     * Texto completo del bloque de la tarjeta tal como se ve en pantalla.
+     * Para las TDC lo interpreta [PortalTdcParser] en Kotlin: el JS solo
+     * transporta el texto, así el parseo se testea sin dispositivo.
+     */
+    val rawText: String = "",
 )
 
 /** Una fila de movimientos tal cual se leyó del DOM. */
@@ -36,7 +55,7 @@ data class PortalRawRow(
 )
 
 object PortalJson {
-    val json: Json = Json { ignoreUnknownKeys = true; isLenient = true }
+    val json: Json = Json { ignoreUnknownKeys = true; isLenient = true; encodeDefaults = true }
 
     /** Decodifica el JSON de la receta; null si vino basura. */
     fun decode(raw: String?): PortalPayload? {
@@ -44,4 +63,7 @@ object PortalJson {
         if (text.isEmpty() || text == "null") return null
         return runCatching { json.decodeFromString<PortalPayload>(text) }.getOrNull()
     }
+
+    fun encode(payload: PortalPayload): String =
+        json.encodeToString(PortalPayload.serializer(), payload)
 }

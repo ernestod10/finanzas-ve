@@ -20,6 +20,9 @@ interface CategoryRuleDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(rule: CategoryRuleEntity)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertAll(rules: List<CategoryRuleEntity>)
+
     @Delete
     suspend fun delete(rule: CategoryRuleEntity)
 }

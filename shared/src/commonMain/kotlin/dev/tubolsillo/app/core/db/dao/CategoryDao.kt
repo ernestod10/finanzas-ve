@@ -2,6 +2,7 @@ package dev.tubolsillo.app.core.db.dao
 
 import androidx.room.Dao
 import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import dev.tubolsillo.app.core.db.entity.CategoryEntity
 import kotlinx.coroutines.flow.Flow
@@ -20,6 +21,9 @@ interface CategoryDao {
 
     @Insert
     suspend fun insert(category: CategoryEntity): Long
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertAll(categories: List<CategoryEntity>)
 
     @Query("UPDATE categories SET name = :name, colorHex = :colorHex WHERE id = :id")
     suspend fun update(id: Long, name: String, colorHex: String?)

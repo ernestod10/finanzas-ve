@@ -11,6 +11,8 @@ import dev.tubolsillo.app.core.db.dao.CaptureEventDao
 import dev.tubolsillo.app.core.db.dao.CategoryRuleDao
 import dev.tubolsillo.app.core.db.dao.CurrencyRateDao
 import dev.tubolsillo.app.core.db.dao.InstallmentDao
+import dev.tubolsillo.app.core.db.dao.PlanItemDao
+import dev.tubolsillo.app.core.db.dao.PlanItemStateDao
 import dev.tubolsillo.app.core.db.dao.TagDao
 import dev.tubolsillo.app.core.db.dao.TransactionDao
 import dev.tubolsillo.app.core.db.dao.TransferPairDao
@@ -21,6 +23,8 @@ import dev.tubolsillo.app.core.db.entity.CaptureEventEntity
 import dev.tubolsillo.app.core.db.entity.CategoryRuleEntity
 import dev.tubolsillo.app.core.db.entity.CurrencyRateEntity
 import dev.tubolsillo.app.core.db.entity.InstallmentEntity
+import dev.tubolsillo.app.core.db.entity.PlanItemEntity
+import dev.tubolsillo.app.core.db.entity.PlanItemStateEntity
 import dev.tubolsillo.app.core.db.entity.TagEntity
 import dev.tubolsillo.app.core.db.entity.TransactionEntity
 import dev.tubolsillo.app.core.db.entity.TransactionTagCrossRef
@@ -41,8 +45,10 @@ import dev.tubolsillo.app.core.db.entity.TransferPairEntity
         TransactionTagCrossRef::class,
         CategoryRuleEntity::class,
         CategoryEntity::class,
+        PlanItemEntity::class,
+        PlanItemStateEntity::class,
     ],
-    version = 4,
+    version = 6,
     exportSchema = true,
 )
 abstract class TubolsilloDatabase : RoomDatabase() {
@@ -96,6 +102,64 @@ abstract class TubolsilloDatabase : RoomDatabase() {
                 connection.prepare("ALTER TABLE transactions ADD COLUMN categoryId INTEGER").use { it.step() }
             }
         }
+
+        /**
+         * v4→v5: plan del mes (ingresos y gastos estimados) + estado por mes.
+         * El DDL replica exactamente lo que genera Room (mismos nombres de
+         * índice, sin DEFAULT espurios): Room valida con validateMigration al
+         * abrir y lanza si difiere.
+         */
+        val MIGRATION_4_5 = object : androidx.room.migration.Migration(4, 5) {
+            override fun migrate(connection: androidx.sqlite.SQLiteConnection) {
+                connection.prepare(
+                    "CREATE TABLE IF NOT EXISTS `plan_items` (" +
+                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`kind` TEXT NOT NULL, " +
+                        "`label` TEXT NOT NULL, " +
+                        "`amountMinor` INTEGER NOT NULL, " +
+                        "`currency` TEXT NOT NULL, " +
+                        "`recurrence` TEXT NOT NULL, " +
+                        "`dueAt` INTEGER, " +
+                        "`dayOfMonth` INTEGER, " +
+                        "`startMonth` TEXT, " +
+                        "`endMonth` TEXT, " +
+                        "`categoryId` INTEGER, " +
+                        "`isActive` INTEGER NOT NULL, " +
+                        "`createdAt` INTEGER NOT NULL, " +
+                        "`updatedAt` INTEGER NOT NULL)"
+                ).use { it.step() }
+                connection.prepare(
+                    "CREATE INDEX IF NOT EXISTS `index_plan_items_categoryId` ON `plan_items` (`categoryId`)"
+                ).use { it.step() }
+                connection.prepare(
+                    "CREATE TABLE IF NOT EXISTS `plan_item_states` (" +
+                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`itemId` INTEGER NOT NULL, " +
+                        "`month` TEXT NOT NULL, " +
+                        "`status` TEXT NOT NULL, " +
+                        "`txId` INTEGER, " +
+                        "`amountMinor` INTEGER, " +
+                        "`paidAt` INTEGER)"
+                ).use { it.step() }
+                connection.prepare(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS `index_plan_item_states_itemId_month` " +
+                        "ON `plan_item_states` (`itemId`, `month`)"
+                ).use { it.step() }
+            }
+        }
+
+        /**
+         * v5→v6: ficha de la tarjeta de crédito leída del portal. El límite ya
+         * existía; se suman el disponible impreso, el pago mínimo y el día de
+         * pago, que antes se perdían al no tener dónde guardarse.
+         */
+        val MIGRATION_5_6 = object : androidx.room.migration.Migration(5, 6) {
+            override fun migrate(connection: androidx.sqlite.SQLiteConnection) {
+                connection.prepare("ALTER TABLE accounts ADD COLUMN creditAvailableMinor INTEGER").use { it.step() }
+                connection.prepare("ALTER TABLE accounts ADD COLUMN minPaymentMinor INTEGER").use { it.step() }
+                connection.prepare("ALTER TABLE accounts ADD COLUMN creditDueAt INTEGER").use { it.step() }
+            }
+        }
     }
     abstract fun categoryDao(): CategoryDao
 
@@ -109,4 +173,6 @@ abstract class TubolsilloDatabase : RoomDatabase() {
     abstract fun budgetDao(): BudgetDao
     abstract fun tagDao(): TagDao
     abstract fun categoryRuleDao(): CategoryRuleDao
+    abstract fun planItemDao(): PlanItemDao
+    abstract fun planItemStateDao(): PlanItemStateDao
 }

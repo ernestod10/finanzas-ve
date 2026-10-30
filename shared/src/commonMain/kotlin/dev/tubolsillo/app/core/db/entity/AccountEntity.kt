@@ -30,4 +30,10 @@ data class AccountEntity(
     val sortOrder: Int = 0,
     val lastBalanceMinor: Long? = null,
     val lastBalanceAt: Long? = null,
+    /** Crédito disponible que imprime el portal para una TDC (positivo). */
+    val creditAvailableMinor: Long? = null,
+    /** Pago mínimo del período, si el portal lo publica. */
+    val minPaymentMinor: Long? = null,
+    /** Día de pago ("paga antes del …"), epoch ms a medianoche. */
+    val creditDueAt: Long? = null,
 )

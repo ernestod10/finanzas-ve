@@ -13,4 +13,7 @@ typealias FileResult = (content: String?, name: String?) -> Unit
 expect fun rememberCsvImportPicker(onResult: FileResult): () -> Unit
 
 @Composable
+expect fun rememberJsonImportPicker(onResult: FileResult): () -> Unit
+
+@Composable
 expect fun rememberJsonExportPicker(defaultName: String): (String) -> Unit

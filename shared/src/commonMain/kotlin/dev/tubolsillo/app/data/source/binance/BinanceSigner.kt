@@ -25,7 +25,7 @@ class BinanceSigner() {
     ): Map<String, String> {
         val sorted = sortedMapOf<String, String>()
         sorted.putAll(base)
-        sorted["recvWindow"] = "5000"
+        sorted["recvWindow"] = "60000"
         sorted["timestamp"] = timestampMs.toString()
         val query = sorted.entries.joinToString("&") { "${it.key}=${it.value}" }
         sorted["signature"] = sign(query, apiSecret)

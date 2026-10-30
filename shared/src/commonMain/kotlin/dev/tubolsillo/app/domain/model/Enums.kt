@@ -64,4 +64,9 @@ enum class ParseStatus(val key: String) {
     DUPLICATE("DUPLICATE"),
     IGNORED("IGNORED"),
     FAILED("FAILED");
+
+    companion object {
+        fun fromKey(key: String?): ParseStatus =
+            entries.firstOrNull { it.key == key } ?: UNMATCHED
+    }
 }

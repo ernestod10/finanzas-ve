@@ -59,102 +59,101 @@ fun CsvImportScreen(
     // Picker de archivo de la plataforma: entrega contenido + nombre.
     val openPicker = rememberCsvImportPicker { content, _ -> viewModel.loadContent(content) }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        TopAppBar(
-            title = { Text("Importar CSV") },
-            navigationIcon = {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
+    dev.tubolsillo.app.ui.components.IOSScreen(
+        title = "Importar CSV",
+        onBack = onBack,
+        actions = {
+            dev.tubolsillo.app.ui.components.HeaderAction("Archivo") { openPicker() }
+        },
+    ) {
+        item(key = "csv-body") {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Button(onClick = openPicker) {
+                    Text("Elegir archivo CSV")
                 }
-            },
-        )
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Button(onClick = openPicker) {
-                Text("Elegir archivo CSV")
-            }
 
-            Text(
-                text = "Template",
-                style = MaterialTheme.typography.titleLarge,
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                CsvPresets.ALL.forEach { preset ->
-                    FilterChip(
-                        selected = template.id == preset.id,
-                        onClick = { viewModel.selectTemplate(preset) },
-                        label = { Text(preset.displayName, maxLines = 1) },
-                    )
-                }
-            }
-
-            if (header.isNotEmpty()) {
                 Text(
-                    text = "Mapeo de columnas (archivo)",
+                    text = "Template",
                     style = MaterialTheme.typography.titleLarge,
                 )
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    CsvField.entries.forEach { field ->
-                        ColumnMapper(
-                            field = field,
-                            header = header,
-                            selectedIndex = template.columnMap[field],
-                            onSelect = { index -> viewModel.mapColumn(field, index) },
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    CsvPresets.ALL.forEach { preset ->
+                        FilterChip(
+                            selected = template.id == preset.id,
+                            onClick = { viewModel.selectTemplate(preset) },
+                            label = { Text(preset.displayName, maxLines = 1) },
                         )
                     }
                 }
-            }
 
-            if (rows.isNotEmpty()) {
-                Text(
-                    text = "Vista previa (${rows.size} filas)",
-                    style = MaterialTheme.typography.titleLarge,
-                )
-                rows.take(5).forEachIndexed { i, row ->
+                if (header.isNotEmpty()) {
                     Text(
-                        text = "${formatDate(row.occurredAt)} — ${row.description} — " +
-                            "${row.amountMinor / 100.0} ${row.currency}",
-                        style = MaterialTheme.typography.bodyMedium,
+                        text = "Mapeo de columnas (archivo)",
+                        style = MaterialTheme.typography.titleLarge,
                     )
-                    if (i < 4) Text("…", style = MaterialTheme.typography.labelSmall)
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        CsvField.entries.forEach { field ->
+                            ColumnMapper(
+                                field = field,
+                                header = header,
+                                selectedIndex = template.columnMap[field],
+                                onSelect = { index -> viewModel.mapColumn(field, index) },
+                            )
+                        }
+                    }
                 }
-            }
 
-            if (rows.isNotEmpty()) {
-                Text(
-                    text = "Importar a la cuenta",
-                    style = MaterialTheme.typography.titleLarge,
-                )
-                AccountDropdown(
-                    accounts = accounts,
-                    selectedId = selectedAccountId,
-                    onSelect = { selectedAccountId = it },
-                )
-                Button(
-                    enabled = selectedAccountId != null,
-                    onClick = { viewModel.import(selectedAccountId!!) },
-                ) { Text("Importar ${rows.size} movimientos") }
-            }
+                if (rows.isNotEmpty()) {
+                    Text(
+                        text = "Vista previa (${rows.size} filas)",
+                        style = MaterialTheme.typography.titleLarge,
+                    )
+                    rows.take(5).forEachIndexed { i, row ->
+                        Text(
+                            text = "${formatDate(row.occurredAt)} — ${row.description} — " +
+                                "${row.amountMinor / 100.0} ${row.currency}",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        if (i < 4) Text("…", style = MaterialTheme.typography.labelSmall)
+                    }
+                }
 
-            error?.let {
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.error,
-                )
-            }
-            result?.let {
-                Text(
-                    text = "✓ Importados: ${it.inserted} · Reconciliados (ya existían): ${it.reconciled}" +
-                        (if (it.failed > 0) " · Fallidos: ${it.failed}" else ""),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                )
+                if (rows.isNotEmpty()) {
+                    Text(
+                        text = "Importar a la cuenta",
+                        style = MaterialTheme.typography.titleLarge,
+                    )
+                    AccountDropdown(
+                        accounts = accounts,
+                        selectedId = selectedAccountId,
+                        onSelect = { selectedAccountId = it },
+                    )
+                    Button(
+                        enabled = selectedAccountId != null,
+                        onClick = { viewModel.import(selectedAccountId!!) },
+                    ) { Text("Importar ${rows.size} movimientos") }
+                }
+
+                error?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+                result?.let {
+                    Text(
+                        text = "✓ Importados: ${it.inserted} · Reconciliados (ya existían): ${it.reconciled}" +
+                            (if (it.failed > 0) " · Fallidos: ${it.failed}" else ""),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
             }
         }
     }

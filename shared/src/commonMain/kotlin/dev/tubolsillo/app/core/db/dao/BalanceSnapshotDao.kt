@@ -2,6 +2,7 @@ package dev.tubolsillo.app.core.db.dao
 
 import androidx.room.Dao
 import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import dev.tubolsillo.app.core.db.entity.BalanceSnapshotEntity
@@ -16,8 +17,19 @@ interface BalanceSnapshotDao {
     @Query("SELECT * FROM balance_snapshots WHERE accountId = :accountId ORDER BY capturedAt DESC")
     fun observeHistory(accountId: Long): Flow<List<BalanceSnapshotEntity>>
 
+    /**
+     * Snapshots desde una fecha, para la serie de saldo. El llamador pide un
+     * poco antes del inicio del rango para poder arrastrar el último valor
+     * conocido de cada cuenta.
+     */
+    @Query("SELECT * FROM balance_snapshots WHERE capturedAt >= :from ORDER BY capturedAt")
+    fun observeSince(from: Long): Flow<List<BalanceSnapshotEntity>>
+
     @Insert
     suspend fun insert(snapshot: BalanceSnapshotEntity): Long
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertAll(snapshots: List<BalanceSnapshotEntity>)
 
     /**
      * Inserta el snapshot y actualiza el saldo desnormalizado de la cuenta en

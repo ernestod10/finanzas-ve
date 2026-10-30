@@ -19,6 +19,14 @@ import androidx.compose.ui.unit.sp
  * tamaño de forma sutil, no editorial.
  */
 val TubolsilloTypography = Typography(
+    // Cifra protagonista del rediseño (saldo, total del período).
+    displayLarge = TextStyle(
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.Bold,
+        fontSize = 38.sp,
+        lineHeight = 44.sp,
+        letterSpacing = -0.6.sp,
+    ),
     // Large Title 34 / Regular (Bold para el énfasis del titular).
     displayMedium = TextStyle(
         fontFamily = FontFamily.SansSerif,

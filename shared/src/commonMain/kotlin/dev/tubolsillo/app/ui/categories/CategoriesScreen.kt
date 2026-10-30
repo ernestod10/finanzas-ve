@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -38,7 +39,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import dev.tubolsillo.app.core.db.entity.CategoryEntity
 import dev.tubolsillo.app.ui.components.ACCOUNT_PALETTE
-import dev.tubolsillo.app.ui.components.AppHeader
+import dev.tubolsillo.app.ui.components.IOSScreen
 import dev.tubolsillo.app.ui.components.parseAccountColor
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -52,66 +53,70 @@ fun CategoriesScreen(
     var editing by remember { mutableStateOf<CategoryEntity?>(null) }
     var creating by remember { mutableStateOf(false) }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        AppHeader(
-            title = "Categorías",
-            actionIcon = Icons.Filled.Add,
-            actionLabel = "Nueva",
-            onAction = { creating = true },
-        )
-        // Botón volver (la pantalla no es raíz).
-        Row(modifier = Modifier.padding(horizontal = 8.dp)) {
-            TextButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
-                Spacer(Modifier.width(4.dp))
-                Text("Volver")
-            }
+    IOSScreen(
+        title = "Categorías",
+        onBack = onBack,
+        actions = {
+            dev.tubolsillo.app.ui.components.HeaderAction("Nueva") { creating = true }
+        },
+    ) {
+        item(key = "intro", contentType = "intro") {
+            dev.tubolsillo.app.ui.components.GroupFooter(
+                "Las categorías definen tu presupuesto mensual. Toca cualquiera para editar su nombre o color."
+            )
         }
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            item {
-                Text(
-                    text = "Las categorías definen tu presupuesto mensual. " +
-                        "Cada movimiento lleva una categoría + etiquetas opcionales.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+        if (categories.isEmpty()) {
+            item(key = "empty") {
+                dev.tubolsillo.app.ui.components.GroupFooter("Aún no tienes categorías. Toca «Nueva» arriba para crear una.")
             }
-            categories.forEach { category ->
-                item(key = category.id) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { editing = category }
-                            .padding(vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Box(
-                            modifier = Modifier.size(18.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Surface(
-                                shape = CircleShape,
-                                color = parseAccountColor(category.colorHex)
-                                    ?: MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(16.dp),
-                            ) {}
-                        }
-                        Spacer(Modifier.width(12.dp))
-                        Text(
-                            text = category.name,
-                            style = MaterialTheme.typography.bodyLarge,
-                            modifier = Modifier.weight(1f),
-                        )
-                        IconButton(onClick = { viewModel.delete(category.id) }) {
-                            Icon(
-                                Icons.Filled.Delete,
-                                contentDescription = "Eliminar",
-                                tint = MaterialTheme.colorScheme.error,
-                            )
+        } else {
+            item(key = "list", contentType = "group") {
+                dev.tubolsillo.app.ui.components.GroupedGroup {
+                    categories.forEachIndexed { index, category ->
+                        Column {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { editing = category }
+                                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Box(
+                                    modifier = Modifier.size(18.dp),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Surface(
+                                        shape = CircleShape,
+                                        color = parseAccountColor(category.colorHex)
+                                            ?: MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(14.dp),
+                                    ) {}
+                                }
+                                Spacer(Modifier.width(12.dp))
+                                Text(
+                                    text = category.name,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    modifier = Modifier.weight(1f),
+                                )
+                                IconButton(
+                                    onClick = { viewModel.delete(category.id) },
+                                    modifier = Modifier.size(32.dp),
+                                ) {
+                                    Icon(
+                                        Icons.Filled.Delete,
+                                        contentDescription = "Eliminar",
+                                        tint = MaterialTheme.colorScheme.error.copy(alpha = 0.8f),
+                                        modifier = Modifier.size(18.dp),
+                                    )
+                                }
+                            }
+                            if (index != categories.lastIndex) {
+                                androidx.compose.material3.HorizontalDivider(
+                                    modifier = Modifier.padding(start = 46.dp, end = 16.dp),
+                                    thickness = 0.5.dp,
+                                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                                )
+                            }
                         }
                     }
                 }

@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Card
@@ -63,7 +64,7 @@ fun EventsScreen(
         )
         LazyColumn(modifier = Modifier.fillMaxSize()) {
             if (events.isEmpty()) {
-                item {
+                item(key = "empty", contentType = "empty") {
                     Text(
                         text = "Aún no hay capturas. Cuando llegue un SMS o push de un banco, aparecerá aquí.",
                         style = MaterialTheme.typography.bodyMedium,
@@ -72,10 +73,12 @@ fun EventsScreen(
                     )
                 }
             }
-            events.forEach { event ->
-                item(key = event.id) {
-                    EventCard(event)
-                }
+            items(
+                items = events,
+                key = { it.id },
+                contentType = { "event" },
+            ) { event ->
+                EventCard(event)
             }
         }
     }

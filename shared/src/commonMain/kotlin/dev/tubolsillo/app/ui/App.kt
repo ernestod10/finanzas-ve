@@ -6,6 +6,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import dev.tubolsillo.app.domain.repo.SettingsRepository
 import dev.tubolsillo.app.ui.navigation.TubolsilloNavHost
+import dev.tubolsillo.app.ui.theme.AppAccent
 import dev.tubolsillo.app.ui.theme.TubolsilloTheme
 import org.koin.compose.koinInject
 
@@ -14,12 +15,36 @@ import org.koin.compose.koinInject
 fun App() {
     val settings: SettingsRepository = koinInject()
     val darkMode by settings.darkMode.collectAsState(initial = "SYSTEM")
+    val accentKey by settings.accentColor.collectAsState(initial = "JADE")
     val darkTheme = when (darkMode) {
         "LIGHT" -> false
         "DARK" -> true
         else -> isSystemInDarkTheme()
     }
-    TubolsilloTheme(darkTheme = darkTheme) {
+    val autoSync: dev.tubolsillo.app.data.source.portal.PortalAutoSync = koinInject()
+    val ratesRefresher: dev.tubolsillo.app.domain.repo.RatesRefresher = koinInject()
+    val updateRepository: dev.tubolsillo.app.domain.repo.UpdateRepository = koinInject()
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        // El sync sigue siendo automático, pero espera a que la primera pantalla
+        // esté pintada: abrir WebViews durante el arranque le robaba CPU al
+        // primer frame y hacía que la app se sintiera pesada al abrir.
+        kotlinx.coroutines.delay(900)
+        runCatching {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                ratesRefresher.refreshIfStale()
+            }
+        }
+        // Una consulta liviana a GitHub Releases al abrir: si hay versión nueva,
+        // la fila de Menú queda en verde esperando el toque.
+        kotlinx.coroutines.delay(800)
+        runCatching { updateRepository.check() }
+        kotlinx.coroutines.delay(600)
+        autoSync.runOnAppOpen()
+    }
+    TubolsilloTheme(
+        darkTheme = darkTheme,
+        accent = AppAccent.fromKey(accentKey),
+    ) {
         TubolsilloNavHost()
     }
 }

@@ -17,6 +17,10 @@ data class AccountBalanceView(
     val currencyCode: String,
     val balanceMinor: Long?,
     val creditLimitMinor: Long?,
+    /** Disponible publicado por el banco para una TDC (BNC solo manda este). */
+    val creditAvailableMinor: Long? = null,
+    val minPaymentMinor: Long? = null,
+    val creditDueAt: Long? = null,
     val colorHex: String? = null,
     val usdEquivalent: Double?,
     val lastUpdateAt: Long?,

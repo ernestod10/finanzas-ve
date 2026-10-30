@@ -7,8 +7,10 @@ import dev.tubolsillo.app.domain.model.BudgetMonthData
 import dev.tubolsillo.app.domain.usecase.BudgetCalculator
 import dev.tubolsillo.app.domain.usecase.RateProvider
 import dev.tubolsillo.app.core.time.MonthBuckets
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 
 class BudgetRepository(
     private val budgetDao: BudgetDao,
@@ -30,7 +32,7 @@ class BudgetRepository(
                 month, transactions, budgets, rates,
                 categories.associateBy { it.id },
             )
-        }
+        }.flowOn(Dispatchers.Default)
     }
 
     suspend fun setBudget(month: String, tagName: String, limitMinor: Long, currencyCode: String) {

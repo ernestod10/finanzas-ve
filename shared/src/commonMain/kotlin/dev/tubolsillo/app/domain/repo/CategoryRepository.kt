@@ -2,15 +2,26 @@ package dev.tubolsillo.app.domain.repo
 
 import dev.tubolsillo.app.core.db.dao.CategoryDao
 import dev.tubolsillo.app.core.db.entity.CategoryEntity
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
 
 /** CRUD de categorías de gasto (presupuesto mensual). */
 class CategoryRepository(
     private val categoryDao: CategoryDao,
 ) {
 
-    fun observeAll(): Flow<List<CategoryEntity>> = categoryDao.observeAll()
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    val categoriesState: StateFlow<List<CategoryEntity>> =
+        categoryDao.observeAll()
+            .stateIn(scope, SharingStarted.Eagerly, emptyList())
+
+    fun observeAll(): Flow<List<CategoryEntity>> = categoriesState
 
     suspend fun getAll(): List<CategoryEntity> = categoryDao.getAll()
 

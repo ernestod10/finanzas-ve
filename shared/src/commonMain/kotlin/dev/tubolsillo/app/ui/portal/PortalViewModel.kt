@@ -15,10 +15,12 @@ import dev.tubolsillo.app.data.source.portal.PortalImporter
 import dev.tubolsillo.app.data.source.portal.PortalRecipes
 import dev.tubolsillo.app.data.source.portal.PortalRowMapper
 import dev.tubolsillo.app.domain.model.Institution
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** Estado de vinculación de un banco. */
 enum class LinkStatus { UNLINKED, LINKED, EXPIRED }
@@ -48,7 +50,9 @@ class PortalViewModel(
     private val supported: List<Institution> =
         Institution.entries.filter { it.portalStartUrl != null && it != Institution.OTHER }
 
-    private val _banks = MutableStateFlow<List<BankPortalState>>(emptyList())
+    private val _banks = MutableStateFlow<List<BankPortalState>>(
+        supported.map { BankPortalState(it, LinkStatus.UNLINKED, null) }
+    )
     val banks: StateFlow<List<BankPortalState>> = _banks.asStateFlow()
 
     private val _busyKey = MutableStateFlow<String?>(null)
@@ -61,16 +65,33 @@ class PortalViewModel(
         reload()
     }
 
-    /** Relee el estado guardado. Se llama también al volver a la pantalla. */
+    /** Relee el estado guardado fuera del hilo principal para no frenar la transición. */
     fun reload() {
-        _banks.value = supported.map { institution ->
-            val link = secretStore.portalLink(institution.key)
-            BankPortalState(
-                institution = institution,
-                status = if (link == null) LinkStatus.UNLINKED else LinkStatus.LINKED,
-                lastSyncAt = link?.lastSyncAtMs,
-            )
+        viewModelScope.launch {
+            _banks.value = withContext(Dispatchers.Default) {
+                supported.map { institution ->
+                    val rawLink = secretStore.portalLink(institution.key)
+                    val link = rawLink?.takeUnless { isDeprecatedPortalUrl(it.movementsUrl) }
+                    if (rawLink != null && link == null) {
+                        secretStore.clearPortalLink(institution.key)
+                    }
+                    BankPortalState(
+                        institution = institution,
+                        status = if (link == null) LinkStatus.UNLINKED else LinkStatus.LINKED,
+                        lastSyncAt = link?.lastSyncAtMs,
+                    )
+                }
+            }
         }
+    }
+
+    private fun isDeprecatedPortalUrl(url: String): Boolean {
+        val lower = url.lowercase()
+        return lower.contains("banesconline.banesco.com") ||
+            lower.contains("banesconecta.banesco.com") ||
+            lower.contains("bdvenlinea.bancodevenezuela.com") ||
+            lower.contains("bnconline.com.ve") ||
+            lower.contains("www.todoticket.com")
     }
 
     fun link(institution: Institution) {
@@ -80,11 +101,25 @@ class PortalViewModel(
             _message.value = null
             when (val result = gateway.link(institution.key)) {
                 is PortalLinkResult.Linked -> {
+                    val now = nowMillis()
+                    val recipe = PortalRecipes.forInstitution(institution)
+                    val imported = if (result.payload != null && recipe != null) {
+                        val mapped = PortalRowMapper.map(result.payload, recipe, now)
+                        importer.import(recipe, mapped)
+                    } else null
                     secretStore.savePortalLink(
                         institution.key,
-                        PortalLink(movementsUrl = result.movementsUrl, linkedAtMs = nowMillis()),
+                        PortalLink(
+                            movementsUrl = result.movementsUrl,
+                            linkedAtMs = now,
+                            lastSyncAtMs = if (imported != null) now else null,
+                        ),
                     )
-                    _message.value = PortalMessage.Info(institution.displayName + " vinculado.")
+                    _message.value = if (imported != null && (imported.inserted > 0 || imported.balanceUpdated)) {
+                        PortalMessage.Imported(institution, imported)
+                    } else {
+                        PortalMessage.Info(institution.displayName + " vinculado.")
+                    }
                 }
                 is PortalLinkResult.Failed ->
                     _message.value = PortalMessage.Error(result.reason)

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+    <!-- Banesco Conecta sirve su certificado hoja sin adjuntar la CA intermedia
+         DigiCert EV RSA CA G2 en el handshake TLS. Al registrarla aquí, el
+         X509TrustManager del sistema (y el WebView) valida la cadena completa
+         contra DigiCert Global Root G2 sin bajar el nivel de seguridad. -->
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">banesco.com</domain>
+        <domain includeSubdomains="true">todoticketve.com</domain>
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="@raw/digicert_ev_rsa_ca_g2" />
+        </trust-anchors>
+    </domain-config>
+</network-security-config>

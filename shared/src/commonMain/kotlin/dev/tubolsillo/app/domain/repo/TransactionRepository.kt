@@ -19,6 +19,7 @@ class TransactionRepository(
     private val tagDao: TagDao,
     private val ruleEngine: RuleEngine,
     private val rateProvider: RateProvider,
+    private val accountRepository: AccountRepository,
 ) {
 
     fun observeAll(): Flow<List<TransactionEntity>> = transactionDao.observeAll()
@@ -98,9 +99,60 @@ class TransactionRepository(
     suspend fun updateCategory(id: Long, category: TransactionCategory) =
         transactionDao.updateCategory(id, category.key)
 
-    suspend fun setUserCategory(id: Long, categoryId: Long?) =
+    /**
+     * Asigna la categoría de presupuesto a una transacción y, si [learnMerchant]
+     * es true, aplica automáticamente esa misma categoría a cualquier otro
+     * movimiento sin categoría del mismo comercio normalizado.
+     */
+    suspend fun setUserCategory(id: Long, categoryId: Long?, learnMerchant: Boolean = true) {
         transactionDao.setCategory(id, categoryId)
+        if (learnMerchant && categoryId != null) {
+            val tx = transactionDao.getById(id) ?: return
+            val pattern = MerchantNormalizer.normalize(tx.description)
+            if (pattern.length >= 3) {
+                val all = transactionDao.getAllForExport()
+                for (other in all) {
+                    if (other.id != id && other.categoryId == null) {
+                        val normOther = MerchantNormalizer.normalize(other.description)
+                        if (normOther.isNotBlank() && (normOther.contains(pattern) || pattern.contains(normOther))) {
+                            transactionDao.setCategory(other.id, categoryId)
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     suspend fun updateAmount(id: Long, amountMinor: Long) =
         transactionDao.updateAmount(id, amountMinor)
+
+    suspend fun updateDetails(id: Long, description: String, amountMinor: Long, currencyCode: String) {
+        val previous = transactionDao.getById(id) ?: return
+        val usdEquiv = usdEquivalent(amountMinor, currencyCode)
+        transactionDao.updateDetails(id, description.trim(), amountMinor, usdEquiv)
+        // Solo los movimientos manuales mueven el saldo: los capturados por el
+        // banco ya vienen reflejados en el saldo que reporta el banco.
+        if (previous.source == SourceType.MANUAL.key &&
+            previous.amountMinor != amountMinor &&
+            previous.currency.equals(currencyCode, ignoreCase = true)
+        ) {
+            accountRepository.applyTransactionDelta(
+                accountId = previous.accountId,
+                deltaMinor = amountMinor - previous.amountMinor,
+                currencyCode = previous.currency,
+            )
+        }
+    }
+
+    suspend fun delete(id: Long) {
+        val previous = transactionDao.getById(id) ?: return
+        transactionDao.deleteById(id)
+        if (previous.source == SourceType.MANUAL.key) {
+            accountRepository.applyTransactionDelta(
+                accountId = previous.accountId,
+                deltaMinor = -previous.amountMinor,
+                currencyCode = previous.currency,
+            )
+        }
+    }
 }

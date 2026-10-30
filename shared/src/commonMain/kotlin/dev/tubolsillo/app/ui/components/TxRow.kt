@@ -77,19 +77,36 @@ fun TxRow(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                val meta = buildList {
-                    accountName?.let { add(it) }
-                    categoryName?.let { add(it) }
-                    tx.tags.firstOrNull()?.let { add(it.name) }
-                }.joinToString(" · ")
-                if (meta.isNotEmpty()) {
-                    Text(
-                        text = meta,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    val catColor = parseAccountColor(categoryColorHex)
+                    if (catColor != null && categoryName != null) {
+                        Box(
+                            modifier = Modifier
+                                .padding(end = 5.dp)
+                                .size(7.dp)
+                                .background(catColor, RoundedCornerShape(50)),
+                        )
+                    }
+                    val meta = buildList {
+                        accountName?.let { add(it) }
+                        if (categoryName != null) {
+                            add(categoryName)
+                        } else if (negative) {
+                            add("Sin categoría")
+                        }
+                        tx.tags.firstOrNull()?.let { add("#" + it.name) }
+                    }.joinToString(" · ")
+                    if (meta.isNotEmpty()) {
+                        Text(
+                            text = meta,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 }
             }
             androidx.compose.foundation.layout.Spacer(Modifier.width(10.dp))

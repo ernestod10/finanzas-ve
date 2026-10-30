@@ -11,3 +11,10 @@ captures/
 *.aab
 output-metadata.json
 app/schemas/
+
+# Referencias de diseño y APKs de distribución locales
+screens/
+dist/
+.kotlin/
+*.jks
+*.keystore

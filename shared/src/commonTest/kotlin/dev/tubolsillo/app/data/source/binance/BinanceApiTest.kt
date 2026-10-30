@@ -13,6 +13,7 @@ import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 
 /**
  * Prueba BinanceApi contra MockEngine (más fuerte que MockWebServer:
@@ -66,7 +67,7 @@ class BinanceApiTest {
                     HttpStatusCode.OK, jsonHeader,
                 )
                 else -> respond(
-                    """[{"id":"wd1","amount":"0.5","coin":"BTC","network":"BTC","status":6,"txId":"def","applyTime":1600000001000}]""",
+                    """[{"id":"wd1","amount":"0.5","coin":"BTC","network":"BTC","status":6,"txId":"def","applyTime":"2020-09-13 12:00:00"}]""",
                     HttpStatusCode.OK, jsonHeader,
                 )
             }
@@ -115,6 +116,67 @@ class BinanceApiTest {
         assertEquals("my-key", capturedKey)
         assertEquals("abc", capturedSignature)
         assertEquals("12345", capturedTimestamp)
+    }
+
+    @Test
+    fun `parsea historial P2P`() = runTest {
+        var path: String? = null
+        var rows: String? = null
+        val engine = MockEngine { request ->
+            path = request.url.encodedPath
+            rows = request.url.parameters["rows"]
+            respond(
+                """
+                {"total":2,"success":true,"data":[
+                  {"orderNumber":"111","tradeType":"BUY","asset":"USDT","fiat":"VES",
+                   "fiatSymbol":"Bs","amount":"12.5","totalPrice":"1000","unitPrice":"80",
+                   "orderStatus":"COMPLETED","createTime":1600000000000,
+                   "counterPartNickName":"juan"},
+                  {"orderNumber":"112","tradeType":"SELL","asset":"USDT","fiat":"VES",
+                   "fiatSymbol":"Bs","amount":"5","totalPrice":"400","unitPrice":"80",
+                   "orderStatus":"CANCELLED","createTime":1600000001000}
+                ]}
+                """.trimIndent(),
+                HttpStatusCode.OK,
+                jsonHeader,
+            )
+        }
+        val response = apiWith(engine).p2pOrders(mapOf("rows" to "100"), "k")
+        assertEquals(2, response.data.size)
+        assertEquals("BUY", response.data[0].tradeType)
+        assertEquals("12.5", response.data[0].amount)
+        assertEquals("COMPLETED", response.data[0].orderStatus)
+        assertEquals("juan", response.data[0].counterPartNickName)
+        assertTrue(path!!.contains("listUserOrderHistory"))
+        assertEquals("100", rows)
+    }
+
+    @Test
+    fun `parsea Binance Pay`() = runTest {
+        var path: String? = null
+        val engine = MockEngine { request ->
+            path = request.url.encodedPath
+            respond(
+                """
+                {"code":"000000","message":"success","data":[
+                  {"orderType":"PAY","transactionId":"tx1","transactionTime":1600000000000,
+                   "amount":"-25.5","currency":"USDT","walletType":1,
+                   "receiverInfo":{"name":"Cafe","type":"MERCHANT"}},
+                  {"orderType":"PAY","transactionId":"tx2","transactionTime":1600000001000,
+                   "amount":"10","currency":"USDT","walletType":1,
+                   "payerInfo":{"name":"Ana","type":"USER"}}
+                ]}
+                """.trimIndent(),
+                HttpStatusCode.OK,
+                jsonHeader,
+            )
+        }
+        val response = apiWith(engine).payTransactions(mapOf("limit" to "100"), "k")
+        assertEquals(2, response.data.size)
+        assertEquals("-25.5", response.data[0].amount)
+        assertEquals("MERCHANT", response.data[0].receiverInfo?.type)
+        assertEquals("Ana", response.data[1].payerInfo?.name)
+        assertTrue(path!!.contains("/sapi/v1/pay/transactions"))
     }
 
     @Test

@@ -7,7 +7,7 @@ import kotlinx.coroutines.sync.withLock
 /** Lo que la Activity del portal devuelve al gateway. */
 sealed interface PortalActivityResult {
     data class Payload(val json: String, val url: String) : PortalActivityResult
-    data class Linked(val url: String) : PortalActivityResult
+    data class Linked(val url: String, val json: String? = null) : PortalActivityResult
     data object NeedsRelink : PortalActivityResult
     data object Cancelled : PortalActivityResult
     data class Failed(val reason: String) : PortalActivityResult

@@ -23,6 +23,21 @@ actual fun rememberCsvImportPicker(onResult: FileResult): () -> Unit {
 }
 
 @Composable
+actual fun rememberJsonImportPicker(onResult: FileResult): () -> Unit {
+    val context = LocalContext.current
+    val launcher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        if (uri == null) {
+            onResult(null, null)
+        } else {
+            onResult(readContent(context, uri), uri.lastPathSegment)
+        }
+    }
+    return { launcher.launch(arrayOf("application/json", "text/*", "*/*")) }
+}
+
+@Composable
 actual fun rememberJsonExportPicker(defaultName: String): (String) -> Unit {
     val context = LocalContext.current
     val launcher = rememberLauncherForActivityResult(

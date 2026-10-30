@@ -2,6 +2,7 @@ package dev.tubolsillo.app.core.db.dao
 
 import androidx.room.Dao
 import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
@@ -66,6 +67,9 @@ interface TransactionDao {
     @Insert
     suspend fun insertAll(transactions: List<TransactionEntity>): List<Long>
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertAll(transactions: List<TransactionEntity>)
+
     @Update
     suspend fun update(transaction: TransactionEntity)
 
@@ -74,6 +78,12 @@ interface TransactionDao {
 
     @Query("UPDATE transactions SET amountMinor = :amountMinor WHERE id = :id")
     suspend fun updateAmount(id: Long, amountMinor: Long)
+
+    @Query("UPDATE transactions SET description = :description, amountMinor = :amountMinor, usdEquivalentMinor = :usdEquivalentMinor WHERE id = :id")
+    suspend fun updateDetails(id: Long, description: String, amountMinor: Long, usdEquivalentMinor: Long?)
+
+    @Query("DELETE FROM transactions WHERE id = :id")
+    suspend fun deleteById(id: Long)
 
     @Query("UPDATE transactions SET transferPairId = :pairId WHERE id = :id")
     suspend fun setTransferPair(id: Long, pairId: Long?)

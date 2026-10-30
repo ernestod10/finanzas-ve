@@ -24,19 +24,19 @@ enum class Institution(
         "BANESCO", "Banesco",
         notificationPackages = listOf("com.banesco.samfbancamovilunificada"),
         smsSenderPatterns = listOf("banesco"),
-        portalStartUrl = "https://banesconecta.banesco.com/Authenticate/Login",
+        portalStartUrl = "https://www.banesconline.com/mantis/Website/Login.aspx",
     ),
     BANCARIBE(
         "BANCARIBE", "Bancaribe",
         notificationPackages = listOf("bancaribe.miconexion"),
         smsSenderPatterns = listOf("bancaribe"),
-        portalStartUrl = "https://www.bancaribe.com.ve/",
+        portalStartUrl = "https://www5.bancaribe.com.ve/bcm/",
     ),
     BNC(
         "BNC", "BNC",
         notificationPackages = listOf("bnc.bncnet.mobile2"),
         smsSenderPatterns = listOf("bnc", "banco nacional de credito"),
-        portalStartUrl = "https://bncenlinea.com/",
+        portalStartUrl = "https://personas.bncenlinea.com/",
     ),
     BDV(
         "BDV", "Banco de Venezuela",
@@ -64,7 +64,7 @@ enum class Institution(
         notificationPackages = listOf("com.mercantilbanco.unicoempresas", "com.mercantilbanco.personas"),
         smsSenderPatterns = listOf("mercantil"),
         defaultCurrency = "VES",
-        portalStartUrl = "https://www.mercantilbanco.com/",
+        portalStartUrl = "https://www30.mercantilbanco.com/login",
     ),
 
     // --- Panamá ---
@@ -73,7 +73,7 @@ enum class Institution(
         notificationPackages = listOf("com.pa.mercantilbanco.mercantilmovil"),
         smsSenderPatterns = listOf("mercantil"),
         defaultCurrency = "USD",
-        portalStartUrl = "https://www.mercantilbanco.com.pa/",
+        portalStartUrl = "https://melp.mercantilbanco.com.pa/DIBS_MERCANTIL_BANCO/pages/loginP.jsp",
     ),
 
     // --- Wallets / fintech ---
@@ -84,7 +84,7 @@ enum class Institution(
     // --- Beneficios / tickets ---
     TODOTICKET(
         "TODOTICKET", "TodoTicket",
-        portalStartUrl = "https://www.todoticket.com/",
+        portalStartUrl = "https://mi.todoticketve.com/login",
     ),
     CESTATICKET("CESTATICKET", "CestaTicket"),
 

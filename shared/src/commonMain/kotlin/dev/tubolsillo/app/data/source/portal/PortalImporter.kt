@@ -15,6 +15,7 @@ import dev.tubolsillo.app.domain.usecase.RuleEngine
 import dev.tubolsillo.app.domain.usecase.TransferMatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlin.math.abs
 
 data class PortalImportResult(
     val inserted: Int = 0,
@@ -48,14 +49,17 @@ class PortalImporter(
         accountId: Long? = null,
         capturedAt: Long = nowMillis(),
     ): PortalImportResult = withContext(Dispatchers.IO) {
-        if (mapped.rows.isEmpty() && mapped.balanceMinor == null) {
-            return@withContext PortalImportResult(skipped = mapped.skipped)
-        }
-
-        // La cuenta se resuelve UNA vez para todo el lote.
-        val probe = mapped.rows.firstOrNull() ?: syntheticProbe(recipe)
+        // La cuenta bancaria del portal es siempre de depósito (Corriente/Ahorro),
+        // nunca una TDC aunque el primer movimiento diga "PAGO TARJETA DE CREDITO".
+        val probe = syntheticProbe(recipe).copy(
+            currency = mapped.rows.firstOrNull()?.currency ?: mapped.balanceCurrency ?: recipe.currency,
+        )
         val account = accountId?.let { accountRepository.getById(it) }
             ?: accountRepository.findForCapture(recipe.institution, probe)
+
+        if (mapped.rows.isEmpty() && mapped.balanceMinor == null && mapped.accountBalances.isEmpty()) {
+            return@withContext PortalImportResult(skipped = mapped.skipped, accountId = account.id)
+        }
 
         var inserted = 0
         var reconciled = 0
@@ -99,14 +103,15 @@ class PortalImporter(
             }
         }
 
-        // Saldo autoritativo del banco: una sola escritura, al final.
+        // Saldo autoritativo del banco: aplica a la cuenta principal y a productos adicionales (ej. Cuenta Verde USD o TDC).
         var balanceUpdated = false
+        val primaryCurrency = mapped.balanceCurrency ?: recipe.currency
         mapped.balanceMinor?.let { balance ->
             runCatching {
                 accountRepository.recordBalance(
                     accountId = account.id,
                     amountMinor = balance,
-                    currencyCode = mapped.balanceCurrency ?: recipe.currency,
+                    currencyCode = primaryCurrency,
                     source = SourceType.PORTAL,
                     rawText = "portal:" + recipe.institution.key,
                     capturedAt = capturedAt,
@@ -115,14 +120,113 @@ class PortalImporter(
             }
         }
 
+        var primaryRecordedFromList = mapped.balanceMinor != null
+        for (extra in mapped.accountBalances) {
+            runCatching {
+                if (extra.kind != "CREDIT_CARD" && extra.currency == account.currency && !primaryRecordedFromList) {
+                    accountRepository.recordBalance(
+                        accountId = account.id,
+                        amountMinor = extra.amountMinor,
+                        currencyCode = extra.currency,
+                        source = SourceType.PORTAL,
+                        rawText = "portal:" + recipe.institution.key + ":" + extra.label,
+                        capturedAt = capturedAt,
+                    )
+                    primaryRecordedFromList = true
+                    balanceUpdated = true
+                } else if (extra.kind == "CREDIT_CARD") {
+                    val card = accountRepository.findCardForCapture(
+                        institution = recipe.institution,
+                        currencyCode = extra.currency,
+                        mask = extra.mask,
+                        cardName = extra.cardName,
+                    )
+                    if (card.id != account.id) {
+                        applyCard(card, extra, recipe, capturedAt)
+                        balanceUpdated = true
+                    }
+                } else if (extra.currency != account.currency) {
+                    val extraProbe = syntheticProbe(recipe).copy(
+                        currency = extra.currency,
+                        raw = "portal:" + recipe.institution.key,
+                    )
+                    val targetAcc = accountRepository.findForCapture(recipe.institution, extraProbe)
+                    if (targetAcc.id != account.id) {
+                        accountRepository.recordBalance(
+                            accountId = targetAcc.id,
+                            amountMinor = extra.amountMinor,
+                            currencyCode = extra.currency,
+                            source = SourceType.PORTAL,
+                            rawText = "portal:" + recipe.institution.key + ":" + extra.kind,
+                            capturedAt = capturedAt,
+                        )
+                        balanceUpdated = true
+                    }
+                }
+            }
+        }
+
         PortalImportResult(
             inserted = inserted,
             reconciled = reconciled,
             skipped = mapped.skipped,
             failed = failed,
-            balanceMinor = mapped.balanceMinor,
+            balanceMinor = mapped.balanceMinor ?: mapped.accountBalances.firstOrNull()?.amountMinor,
             balanceUpdated = balanceUpdated,
             accountId = account.id,
+        )
+    }
+
+    /**
+     * Guarda la ficha de la tarjeta tal como la publica el banco. La deuda va
+     * como saldo con signo negativo; el disponible, el mínimo y el día de pago
+     * van a sus propias columnas porque son datos distintos y no se pueden
+     * derivar unos de otros sin el límite.
+     */
+    private suspend fun applyCard(
+        card: dev.tubolsillo.app.core.db.entity.AccountEntity,
+        extra: MappedAccountBalance,
+        recipe: PortalRecipe,
+        capturedAt: Long,
+    ) {
+        accountRepository.updateCreditMeta(
+            accountId = card.id,
+            limitMinor = extra.limitMinor,
+            availableMinor = extra.availableMinor,
+            minPaymentMinor = extra.minPaymentMinor,
+            dueAt = extra.dueAt,
+            mask = extra.mask,
+        )
+        val balance = when {
+            extra.debtMinor != null -> -extra.debtMinor
+            extra.availableMinor != null && extra.limitMinor != null ->
+                -(extra.limitMinor - extra.availableMinor).coerceAtLeast(0L)
+            else -> null
+        }
+        if (balance != null) {
+            accountRepository.recordBalance(
+                accountId = card.id,
+                amountMinor = balance,
+                currencyCode = extra.currency,
+                source = SourceType.PORTAL,
+                rawText = "portal:" + recipe.institution.key + ":TDC",
+                capturedAt = capturedAt,
+            )
+        } else if (extra.availableMinor != null &&
+            card.lastBalanceMinor != null &&
+            abs(card.lastBalanceMinor) == extra.availableMinor
+        ) {
+            // Lectura vieja: el disponible de la tarjeta se guardaba como deuda.
+            accountRepository.clearLastBalance(card.id)
+        }
+        println(
+            "PortalImport: TDC " + recipe.institution.key +
+                " mask=" + extra.mask +
+                " deuda=" + extra.debtMinor +
+                " disp=" + extra.availableMinor +
+                " limite=" + extra.limitMinor +
+                " min=" + extra.minPaymentMinor +
+                " vence=" + extra.dueAt
         )
     }
 

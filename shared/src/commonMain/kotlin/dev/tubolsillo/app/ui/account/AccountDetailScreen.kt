@@ -4,8 +4,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -14,6 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ShowChart
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -42,11 +45,12 @@ import dev.tubolsillo.app.core.money.MoneyFormatter
 import dev.tubolsillo.app.domain.model.AccountKind
 import dev.tubolsillo.app.domain.model.Institution
 import dev.tubolsillo.app.ui.components.ACCOUNT_PALETTE
-import dev.tubolsillo.app.ui.components.parseAccountColor
+import dev.tubolsillo.app.ui.components.IOSScreen
 import dev.tubolsillo.app.ui.components.TagChip
 import dev.tubolsillo.app.ui.components.parseAccountColor
 import dev.tubolsillo.app.ui.components.TxRow
 import dev.tubolsillo.app.ui.components.formatDate
+import kotlin.math.roundToInt
 import org.koin.core.parameter.parametersOf
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -61,158 +65,241 @@ fun AccountDetailScreen(
     val snapshots by viewModel.snapshots.collectAsState()
     val transactions by viewModel.transactions.collectAsState()
     val allCategories by viewModel.categories.collectAsState()
-    val catById = allCategories.associateBy { it.id }
+    val catById = remember(allCategories) { allCategories.associateBy { it.id } }
+    val recentSnapshots = remember(snapshots) { snapshots.take(30) }
     var showBalanceEdit by remember { mutableStateOf(false) }
     var showLimitEdit by remember { mutableStateOf(false) }
+    var showNameEdit by remember { mutableStateOf(false) }
     var taggingTx by remember { mutableStateOf<TransactionWithTags?>(null) }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        TopAppBar(
-            title = { Text(account?.name ?: "Cuenta") },
-            navigationIcon = {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
-                }
-            },
-        )
+    IOSScreen(
+        title = account?.name ?: "Cuenta",
+        onBack = onBack,
+        actions = {
+            val acc = account
+            if (acc != null) {
+                dev.tubolsillo.app.ui.components.HeaderAction(
+                    when {
+                        isBnplCashea(acc) -> "Disponible"
+                        AccountKind.fromKey(acc.kind).isDebt -> "Deuda"
+                        else -> "Saldo"
+                    }
+                ) { showBalanceEdit = true }
+            }
+        },
+    ) {
         val acc = account
         if (acc != null) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-            ) {
-                Text(
-                    text = Institution.fromKey(acc.institution).displayName + " · " +
-                        AccountKind.fromKey(acc.kind).displayName,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = acc.lastBalanceMinor?.let { MoneyFormatter.formatMinor(it, acc.currency) } ?: "—",
-                        style = MaterialTheme.typography.headlineLarge,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.weight(1f),
-                    )
-                    TextButton(onClick = { showBalanceEdit = true }) {
-                        Text(if (isBnplCashea(acc)) "Editar disponible" else "Editar saldo")
-                    }
-                }
-                if (AccountKind.fromKey(acc.kind).isDebt) {
+            item(key = "hero", contentType = "hero") {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 32.dp, vertical = 4.dp),
+                ) {
+                    val kind = AccountKind.fromKey(acc.kind)
+                    val isDebt = kind.isDebt
+                    val debtMinor = acc.lastBalanceMinor?.let { kotlin.math.abs(it) }
+                    val limitMinor = acc.creditLimitMinor
+                    // El portal de algunos bancos (BNC) publica solo el disponible;
+                    // otros (Bancaribe) publican los dos. Se prefiere el dato del
+                    // banco y, si no vino, se deduce del límite.
+                    val availableMinor = acc.creditAvailableMinor
+                        ?: if (debtMinor != null && limitMinor != null) {
+                            (limitMinor - debtMinor).coerceAtLeast(0L)
+                        } else null
+
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = "Límite: " + (acc.creditLimitMinor?.let {
-                                MoneyFormatter.formatMinor(it, acc.currency)
-                            } ?: "—"),
-                            style = MaterialTheme.typography.bodyMedium,
+                            text = buildString {
+                                append(Institution.fromKey(acc.institution).displayName)
+                                append(" · ")
+                                append(kind.displayName)
+                                acc.accountNumberMask?.takeIf { it.isNotBlank() }?.let {
+                                    append(" · ")
+                                    append(it)
+                                }
+                            }.uppercase(),
+                            style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.weight(1f),
                         )
-                        TextButton(onClick = { showLimitEdit = true }) { Text("Editar") }
+                        TextButton(onClick = { showNameEdit = true }) { Text("Renombrar") }
                     }
-                }
-                Text(
-                    text = "Saldo manual — los conectores automáticos (SMS, push, Binance) llegan en próximas fases.",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Row(
-                    modifier = Modifier.padding(top = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
                     Text(
-                        text = "Color",
+                        text = if (isDebt) "DISPONIBLE" else "SALDO ACTUAL",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(end = 8.dp),
                     )
-                    ACCOUNT_PALETTE.forEach { hex ->
-                        val dotColor = parseAccountColor(hex)
-                            ?: MaterialTheme.colorScheme.primary
-                        val selected = acc.colorHex == hex
-                        Surface(
-                            onClick = { viewModel.updateColor(if (selected) null else hex) },
-                            shape = CircleShape,
-                            color = dotColor,
-                            modifier = Modifier
-                                .padding(end = 6.dp)
-                                .size(if (selected) 26.dp else 20.dp),
-                        ) {}
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = (when {
+                                isDebt -> availableMinor ?: debtMinor
+                                else -> acc.lastBalanceMinor
+                            })?.let { MoneyFormatter.formatMinor(it, acc.currency) } ?: "—",
+                            style = MaterialTheme.typography.displayMedium.copy(
+                                fontFeatureSettings = dev.tubolsillo.app.ui.theme.TNUM,
+                                fontWeight = FontWeight.Bold,
+                            ),
+                            modifier = Modifier.weight(1f),
+                        )
+                        TextButton(onClick = { showBalanceEdit = true }) {
+                            Text(
+                                when {
+                                    isBnplCashea(acc) -> "Editar disponible"
+                                    isDebt -> "Editar deuda"
+                                    else -> "Editar saldo"
+                                }
+                            )
+                        }
+                    }
+                    if (isDebt) {
+                        val usedPct = if (limitMinor != null && limitMinor > 0 && debtMinor != null) {
+                            (debtMinor.toFloat() / limitMinor).coerceIn(0f, 1f)
+                        } else 0f
+                        if (limitMinor != null) {
+                            dev.tubolsillo.app.ui.components.ThinBar(
+                                progress = usedPct,
+                                over = debtMinor != null && debtMinor > limitMinor,
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                text = (usedPct * 100).roundToInt().toString() + " % del límite usado",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Spacer(Modifier.height(10.dp))
+                        // La ficha de la tarjeta: cada dato en su renglón, sin
+                        // mezclar la deuda con el disponible.
+                        CreditFact("Deuda", debtMinor?.let { MoneyFormatter.formatMinor(it, acc.currency) } ?: "—")
+                        acc.minPaymentMinor?.let { min ->
+                            CreditFact("Pago mínimo", MoneyFormatter.formatMinor(min, acc.currency))
+                        }
+                        acc.creditDueAt?.let { due ->
+                            CreditFact("Paga antes del", formatDate(due))
+                        }
+                        CreditFact("Límite", limitMinor?.let { MoneyFormatter.formatMinor(it, acc.currency) } ?: "—")
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Spacer(Modifier.weight(1f))
+                            TextButton(onClick = { showLimitEdit = true }) { Text("Editar límite") }
+                        }
+                    }
+                    acc.lastBalanceAt?.let { updated ->
+                        Text(
+                            text = "Actualizado " + dev.tubolsillo.app.ui.components.dayLabel(updated),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.padding(top = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = "Color",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(end = 10.dp),
+                        )
+                        ACCOUNT_PALETTE.forEach { hex ->
+                            val dotColor = parseAccountColor(hex)
+                                ?: MaterialTheme.colorScheme.primary
+                            val selected = acc.colorHex == hex
+                            Surface(
+                                onClick = { viewModel.updateColor(if (selected) null else hex) },
+                                shape = CircleShape,
+                                color = dotColor,
+                                border = if (selected) androidx.compose.foundation.BorderStroke(
+                                    2.dp,
+                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                ) else null,
+                                modifier = Modifier
+                                    .padding(end = 8.dp)
+                                    .size(if (selected) 26.dp else 20.dp),
+                            ) {}
+                        }
                     }
                 }
             }
         }
 
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 8.dp),
-        ) {
-            if (snapshots.size > 1) {
-                item {
-                    Text(
-                        text = "Historial de saldos",
-                        style = MaterialTheme.typography.titleLarge,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                    )
-                }
-                snapshots.take(15).forEach { snapshot ->
-                    item(key = "snap-${snapshot.id}") {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 2.dp),
-                        ) {
-                            Text(
-                                text = formatDate(snapshot.capturedAt),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.weight(1f),
-                            )
-                            Text(
-                                text = MoneyFormatter.formatMinor(snapshot.amountMinor, snapshot.currency),
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                        }
-                    }
-                }
+        if (recentSnapshots.size > 1) {
+            item(key = "snap-chart", contentType = "group") {
+                BalanceHistoryCard(
+                    snapshots = recentSnapshots,
+                    currency = account?.currency ?: "USD",
+                )
             }
-            transactions.forEach { tx ->
-                item(key = "tx-${tx.transaction.id}") {
+        }
+
+        if (transactions.isNotEmpty()) {
+            item(key = "tx-header", contentType = "header") {
+                dev.tubolsillo.app.ui.components.GroupHeader("Movimientos (${transactions.size})")
+            }
+            items(
+                count = transactions.size,
+                key = { i -> "tx-${transactions[i].transaction.id}" },
+                contentType = { "tx_row" },
+            ) { index ->
+                val tx = transactions[index]
+                dev.tubolsillo.app.ui.components.GroupedItemSurface(
+                    isFirst = index == 0,
+                    isLast = index == transactions.lastIndex,
+                ) {
                     TxRow(
                         tx = tx,
                         accountName = null,
                         onClick = { taggingTx = tx },
                         categoryName = tx.transaction.categoryId?.let { catById[it]?.name },
                         categoryColorHex = tx.transaction.categoryId?.let { catById[it]?.colorHex },
+                        showSeparator = index != transactions.lastIndex,
                     )
                 }
             }
-            if (transactions.isEmpty() && snapshots.isEmpty()) {
-                item {
-                    Text(
-                        text = "Sin movimientos. Toca + en Inicio para agregar uno.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(24.dp),
-                    )
-                }
+        } else if (snapshots.isEmpty()) {
+            item(key = "empty") {
+                dev.tubolsillo.app.ui.components.GroupFooter(
+                    "Sin movimientos registrados en esta cuenta. Puedes registrar uno desde Inicio."
+                )
             }
         }
     }
 
     if (showBalanceEdit) {
         val acc = account
+        val initialVal = acc?.lastBalanceMinor?.let {
+            val v = it / 100.0
+            if (v == v.toLong().toDouble()) v.toLong().toString() else v.toString()
+        } ?: ""
         TextEditDialog(
-            title = if (acc != null && isBnplCashea(acc)) "Saldo disponible (" + acc.currency + ")"
-            else "Saldo actual (" + (account?.currency ?: "") + ")",
+            title = when {
+                acc != null && isBnplCashea(acc) -> "Saldo disponible (" + acc.currency + ")"
+                acc != null && AccountKind.fromKey(acc.kind).isDebt ->
+                    "Deuda actual (" + acc.currency + ")"
+                else -> "Saldo actual (" + (account?.currency ?: "") + ")"
+            },
+            initialValue = initialVal,
             onDismiss = { showBalanceEdit = false },
             onSave = { viewModel.updateBalance(it) },
         )
     }
+    if (showNameEdit) {
+        TextEditDialog(
+            title = "Nombre de la cuenta",
+            initialValue = account?.name ?: "",
+            onDismiss = { showNameEdit = false },
+            onSave = { viewModel.updateName(it) },
+        )
+    }
     if (showLimitEdit) {
+        val acc = account
+        val initialVal = acc?.creditLimitMinor?.let {
+            val v = it / 100.0
+            if (v == v.toLong().toDouble()) v.toLong().toString() else v.toString()
+        } ?: ""
         TextEditDialog(
             title = "Límite de crédito (" + (account?.currency ?: "") + ")",
+            initialValue = initialVal,
             onDismiss = { showLimitEdit = false },
             onSave = { viewModel.updateCreditLimit(it) },
         )
@@ -231,18 +318,136 @@ fun AccountDetailScreen(
                 viewModel.setTransactionCategory(tx.transaction.id, categoryId)
                 taggingTx = null
             },
+            onUpdateDetails = { newDesc, newMinor ->
+                viewModel.updateTransactionDetails(
+                    tx.transaction.id,
+                    newDesc,
+                    newMinor,
+                    tx.transaction.currency,
+                )
+                taggingTx = null
+            },
+            onDelete = {
+                viewModel.deleteTransaction(tx.transaction.id)
+                taggingTx = null
+            },
+        )
+    }
+}
+
+/** Renglón etiqueta/valor de la ficha de la tarjeta. */
+@Composable
+private fun CreditFact(label: String, value: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 3.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f),
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontWeight = FontWeight.SemiBold,
+                fontFeatureSettings = dev.tubolsillo.app.ui.theme.TNUM,
+            ),
+            color = MaterialTheme.colorScheme.onSurface,
         )
     }
 }
 
 /** Diálogo simple de edición de texto (saldo / límite). */
+/**
+ * Evolución del saldo de la cuenta. Reemplaza la lista de snapshots: una línea
+ * dice en un segundo lo que quince filas de fecha y monto no decían.
+ */
+@Composable
+private fun BalanceHistoryCard(
+    snapshots: List<dev.tubolsillo.app.core.db.entity.BalanceSnapshotEntity>,
+    currency: String,
+) {
+    // Los snapshots llegan del más nuevo al más viejo. Se toma UNO por día
+    // (el último) para que la línea muestre evolución diaria y no 30 puntos
+    // del mismo día.
+    val daily = remember(snapshots) {
+        snapshots
+            .groupBy { dev.tubolsillo.app.core.time.MonthBuckets.startOfDay(it.capturedAt) }
+            .values
+            .mapNotNull { day -> day.maxByOrNull { it.capturedAt } }
+            .sortedBy { it.capturedAt }
+    }
+    val values = remember(daily, currency) {
+        daily.map {
+            it.amountMinor / dev.tubolsillo.app.core.money.Money.pow10(
+                dev.tubolsillo.app.core.money.Currency.of(it.currency).decimals
+            )
+        }
+    }
+    val labels = remember(daily) {
+        if (daily.size < 2) {
+            emptyList()
+        } else {
+            listOf(
+                0,
+                daily.size / 4,
+                daily.size / 2,
+                daily.size * 3 / 4,
+                daily.lastIndex,
+            ).distinct().map { dev.tubolsillo.app.ui.components.dayMonthLabel(daily[it].capturedAt) }
+        }
+    }
+
+    dev.tubolsillo.app.ui.components.TubolsilloCard(
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+    ) {
+        dev.tubolsillo.app.ui.components.CardHeader(
+            title = "Evolución del saldo",
+            icon = Icons.Filled.ShowChart,
+        )
+        Spacer(Modifier.height(10.dp))
+        if (daily.size < 2) {
+            Text(
+                text = "Saldo actual: " + snapshots.first().let {
+                    MoneyFormatter.formatMinor(it.amountMinor, it.currency)
+                },
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "La gráfica aparece cuando haya capturas de al menos dos días distintos.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        } else {
+            dev.tubolsillo.app.ui.components.charts.TrendChart(
+                values = values,
+                xLabels = labels,
+                lineColor = MaterialTheme.colorScheme.primary,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "Un punto por día, según tus capturas de saldo.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
 @Composable
 private fun TextEditDialog(
     title: String,
+    initialValue: String = "",
     onDismiss: () -> Unit,
     onSave: (String) -> Unit,
 ) {
-    var text by remember { mutableStateOf("") }
+    var text by remember(initialValue) { mutableStateOf(initialValue) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
@@ -267,9 +472,9 @@ private fun TextEditDialog(
 }
 
 /**
- * Diálogo de etiquetado en vivo: etiquetas existentes como chips, campo para
- * crear una nueva, y "aprender" para que ese comercio se etiquete solo la
- * próxima vez.
+ * Diálogo de edición y etiquetado en vivo: permite cambiar categoría de
+ * presupuesto (aplicando a comercios iguales si "aprender" está activo),
+ * editar descripción/monto, agregar etiquetas o eliminar el movimiento.
  */
 @Composable
 fun TagTransactionDialog(
@@ -279,22 +484,78 @@ fun TagTransactionDialog(
     onDismiss: () -> Unit,
     onTag: (tagName: String, learn: Boolean) -> Unit,
     onCategory: (Long?) -> Unit,
+    onUpdateDetails: ((description: String, amountMinor: Long) -> Unit)? = null,
+    onDelete: (() -> Unit)? = null,
 ) {
     var newTag by remember { mutableStateOf("") }
     var learn by remember { mutableStateOf(true) }
+    var editingDetails by remember { mutableStateOf(false) }
+    var descText by remember(tx.transaction.id) { mutableStateOf(tx.transaction.description) }
+    val initialAbsMajor = remember(tx.transaction.id, tx.transaction.amountMinor) {
+        val v = kotlin.math.abs(tx.transaction.amountMinor) / 100.0
+        if (v == v.toLong().toDouble()) v.toLong().toString() else v.toString()
+    }
+    var amountText by remember(tx.transaction.id) { mutableStateOf(initialAbsMajor) }
+    var isExpense by remember(tx.transaction.id) { mutableStateOf(tx.transaction.amountMinor <= 0) }
     val alreadyTagged = tx.tags.map { it.name }.toSet()
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(tx.transaction.description) },
+        title = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = tx.transaction.description,
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.weight(1f),
+                )
+                if (onUpdateDetails != null) {
+                    TextButton(onClick = { editingDetails = !editingDetails }) {
+                        Text(if (editingDetails) "Ocultar" else "Editar")
+                    }
+                }
+            }
+        },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (editingDetails && onUpdateDetails != null) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(
+                            selected = isExpense,
+                            onClick = { isExpense = true },
+                            label = { Text("Gasto") },
+                        )
+                        FilterChip(
+                            selected = !isExpense,
+                            onClick = { isExpense = false },
+                            label = { Text("Ingreso") },
+                        )
+                    }
+                    OutlinedTextField(
+                        value = descText,
+                        onValueChange = { descText = it },
+                        label = { Text("Descripción") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    OutlinedTextField(
+                        value = amountText,
+                        onValueChange = { amountText = it },
+                        label = { Text("Monto (" + tx.transaction.currency + ")") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+
                 Text(
                     text = "Categoría (presupuesto)",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     item {
                         FilterChip(
                             selected = tx.transaction.categoryId == null,
@@ -331,13 +592,15 @@ fun TagTransactionDialog(
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    allTags.forEach { tag ->
-                        FilterChip(
-                            selected = alreadyTagged.contains(tag.name),
-                            onClick = { onTag(tag.name, false) },
-                            label = { Text(tag.name, maxLines = 1) },
-                        )
+                if (allTags.isNotEmpty()) {
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        items(allTags) { tag ->
+                            FilterChip(
+                                selected = alreadyTagged.contains(tag.name),
+                                onClick = { onTag(tag.name, false) },
+                                label = { Text(tag.name, maxLines = 1) },
+                            )
+                        }
                     }
                 }
                 OutlinedTextField(
@@ -350,17 +613,40 @@ fun TagTransactionDialog(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(checked = learn, onCheckedChange = { learn = it })
                     Text(
-                        text = "Aprender: etiquetar solo este comercio la próxima vez",
+                        text = "Aprender comercio para próximas veces",
                         style = MaterialTheme.typography.bodyMedium,
                     )
+                }
+                if (onDelete != null) {
+                    TextButton(
+                        onClick = onDelete,
+                        modifier = Modifier.align(Alignment.Start),
+                    ) {
+                        Text("Eliminar movimiento", color = MaterialTheme.colorScheme.error)
+                    }
                 }
             }
         },
         confirmButton = {
-            TextButton(
-                enabled = newTag.isNotBlank(),
-                onClick = { onTag(newTag.trim(), learn) },
-            ) { Text("Etiquetar") }
+            if (editingDetails && onUpdateDetails != null) {
+                val parsedMinor = dev.tubolsillo.app.core.money.AmountNormalizer.parseMinor(
+                    amountText,
+                    tx.transaction.currency,
+                )
+                TextButton(
+                    enabled = descText.isNotBlank() && parsedMinor != null,
+                    onClick = {
+                        val minor = parsedMinor ?: return@TextButton
+                        val signed = if (isExpense) -kotlin.math.abs(minor) else kotlin.math.abs(minor)
+                        onUpdateDetails(descText.trim(), signed)
+                    },
+                ) { Text("Guardar cambios") }
+            } else {
+                TextButton(
+                    enabled = newTag.isNotBlank(),
+                    onClick = { onTag(newTag.trim(), learn) },
+                ) { Text("Etiquetar") }
+            }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Cerrar") }

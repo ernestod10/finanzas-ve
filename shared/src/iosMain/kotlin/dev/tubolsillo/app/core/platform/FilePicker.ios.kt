@@ -11,5 +11,9 @@ actual fun rememberCsvImportPicker(onResult: FileResult): () -> Unit =
     { onResult(null, null) }
 
 @Composable
+actual fun rememberJsonImportPicker(onResult: FileResult): () -> Unit =
+    { onResult(null, null) }
+
+@Composable
 actual fun rememberJsonExportPicker(defaultName: String): (String) -> Unit =
     { _ -> /* TODO(M7): UIDocumentPickerViewController */ }

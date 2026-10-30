@@ -1,7 +1,9 @@
 package dev.tubolsillo.app.ui.settings
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,13 +14,19 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CurrencyExchange
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.filled.RateReview
 import androidx.compose.material.icons.filled.ReceiptLong
+import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.SaveAlt
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -29,19 +37,23 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.tubolsillo.app.core.platform.rememberJsonExportPicker
+import dev.tubolsillo.app.core.platform.rememberJsonImportPicker
 import dev.tubolsillo.app.core.platform.rememberPermissionActions
 import dev.tubolsillo.app.domain.repo.SettingsRepository
+import dev.tubolsillo.app.domain.repo.UpdateState
 import dev.tubolsillo.app.ui.components.DisclosureChevron
 import dev.tubolsillo.app.ui.components.GroupFooter
 import dev.tubolsillo.app.ui.components.GroupHeader
 import dev.tubolsillo.app.ui.components.GroupedGroup
 import dev.tubolsillo.app.ui.components.IOSScreen
+import dev.tubolsillo.app.ui.theme.AppAccent
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
@@ -57,17 +69,26 @@ fun SettingsScreen(
     onEventsClick: () -> Unit,
     onCsvImportClick: () -> Unit,
     onPortalClick: () -> Unit = {},
+    onReviewClick: () -> Unit = {},
     exportViewModel: ExportViewModel = koinViewModel(),
+    updateViewModel: UpdateViewModel = koinViewModel(),
 ) {
     val permissions = rememberPermissionActions()
     val exportStatus by exportViewModel.status.collectAsState()
     val exportPicker = rememberJsonExportPicker("tubolsillo-backup.json")
+    val importPicker = rememberJsonImportPicker { content, name ->
+        exportViewModel.importBackup(content, name)
+    }
     val settings: SettingsRepository = koinInject()
     val scope = rememberCoroutineScope()
     val darkMode by settings.darkMode.collectAsState(initial = "SYSTEM")
+    val accentKey by settings.accentColor.collectAsState(initial = "EMERALD")
+    val autoSyncPortals by settings.autoSyncPortals.collectAsState()
+    val currentAccent = AppAccent.fromKey(accentKey)
     val themeAction: (String) -> Unit = { mode -> scope.launch { settings.setDarkMode(mode) } }
+    val accentAction: (AppAccent) -> Unit = { accent -> scope.launch { settings.setAccentColor(accent.key) } }
 
-    IOSScreen(title = "Ajustes") {
+    IOSScreen(title = "Menú") {
         item(key = "apariencia-h") { GroupHeader("Apariencia") }
         item(key = "apariencia") {
             GroupedGroup {
@@ -89,6 +110,80 @@ fun SettingsScreen(
                             onClick = { themeAction(mode) },
                             modifier = Modifier.weight(1f),
                         )
+                    }
+                }
+                Separator()
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = "Color de la app",
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                    Text(
+                        text = currentAccent.label,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(start = 16.dp, end = 16.dp, bottom = 14.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    AppAccent.entries.forEach { accent ->
+                        val isSelected = accent == currentAccent
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .clickable { accentAction(accent) }
+                                .padding(horizontal = 4.dp, vertical = 2.dp),
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .then(
+                                        if (isSelected) {
+                                            Modifier.border(
+                                                width = 2.5.dp,
+                                                color = MaterialTheme.colorScheme.onSurface,
+                                                shape = CircleShape,
+                                            )
+                                        } else {
+                                            Modifier
+                                        }
+                                    )
+                                    .padding(if (isSelected) 3.dp else 0.dp)
+                                    .background(accent.primaryLight, CircleShape),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                if (isSelected) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Check,
+                                        contentDescription = accent.label,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(18.dp),
+                                    )
+                                }
+                            }
+                            Text(
+                                text = accent.label,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (isSelected) MaterialTheme.colorScheme.onSurface
+                                else MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                            )
+                        }
                     }
                 }
             }
@@ -127,6 +222,14 @@ fun SettingsScreen(
                     done = permissions.state.postNotifications,
                     onClick = permissions.requestPostNotifications,
                 )
+                Separator()
+                LinkRow(
+                    Icons.Filled.RateReview,
+                    Color(0xFF7A3FA0),
+                    "Revisión de capturas",
+                    "Lo que el parser no pudo leer",
+                    onReviewClick,
+                )
             }
         }
 
@@ -138,6 +241,28 @@ fun SettingsScreen(
                 Separator()
                 LinkRow(Icons.Filled.Link, Color(0xFF1E6FA3), "Portales de banco",
                     "Leer movimientos con la sesión vinculada", onPortalClick)
+                Separator()
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { scope.launch { settings.setAutoSyncPortals(!autoSyncPortals) } }
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Consultar bancos al abrir", style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            "Saldos y movimientos de los portales con clave guardada",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    androidx.compose.material3.Switch(
+                        checked = autoSyncPortals,
+                        onCheckedChange = { checked -> scope.launch { settings.setAutoSyncPortals(checked) } },
+                    )
+                }
                 Separator()
                 LinkRow(Icons.Filled.NotificationsActive, Color(0xFF7A3FA0), "Capturas",
                     "Registro crudo de SMS y push, con replay", onEventsClick)
@@ -154,6 +279,11 @@ fun SettingsScreen(
                     "Toda tu data a un JSON, incluye capturas crudas") {
                     exportViewModel.exportWithPicker(exportPicker)
                 }
+                Separator()
+                LinkRow(Icons.Filled.Restore, Color(0xFF2E5E43), "Restaurar respaldo",
+                    "Importar un archivo JSON de copia de seguridad") {
+                    importPicker()
+                }
             }
         }
 
@@ -161,7 +291,7 @@ fun SettingsScreen(
         item(key = "binance") {
             GroupedGroup {
                 LinkRow(null, null, "Binance",
-                    "Llaves de solo lectura, sincronización cada 15 minutos", onBinanceClick)
+                    "Saldos, depósitos, retiros, P2P y Binance Pay", onBinanceClick)
             }
         }
 
@@ -171,8 +301,65 @@ fun SettingsScreen(
             }
         }
 
+        item(key = "app-h") { GroupHeader("Aplicación") }
+        item(key = "app") {
+            GroupedGroup {
+                UpdateRow(updateViewModel)
+            }
+        }
+
         item(key = "footer") {
             GroupFooter("TuBolsillo — tu información financiera nunca sale del teléfono.")
+        }
+    }
+}
+
+/**
+ * Fila de versión: al tocarla busca actualizaciones en GitHub y, si hay una
+ * nueva, descarga el APK y abre el instalador del sistema.
+ */
+@Composable
+private fun UpdateRow(viewModel: UpdateViewModel) {
+    val state by viewModel.state.collectAsState()
+    val (subtitle, action, busy) = when (val s = state) {
+        is UpdateState.Checking -> Triple("Buscando actualizaciones…", null, true)
+        is UpdateState.Installing -> Triple("Descargando la actualización…", null, true)
+        is UpdateState.UpToDate -> Triple("Estás en la última versión", { viewModel.check() }, false)
+        is UpdateState.Available -> Triple(
+            "Versión " + s.info.versionName + " disponible — toca para actualizar",
+            { viewModel.install(s.info) },
+            false,
+        )
+        is UpdateState.Failed -> Triple(s.message, { viewModel.check() }, false)
+        UpdateState.Idle -> Triple("Toca para buscar actualizaciones", { viewModel.check() }, false)
+    }
+    val highlight = state is UpdateState.Available
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp)
+            .clickable(enabled = action != null) { action?.invoke() }
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "Versión " + viewModel.currentVersion,
+                style = MaterialTheme.typography.bodyLarge,
+                color = if (highlight) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = if (highlight) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        if (busy) {
+            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+        } else {
+            DisclosureChevron()
         }
     }
 }

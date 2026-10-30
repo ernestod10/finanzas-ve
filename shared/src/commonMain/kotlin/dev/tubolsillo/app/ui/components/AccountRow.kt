@@ -45,7 +45,8 @@ fun AccountRow(
     val isDebt = kind.isDebt
     val limitMinor = view.creditLimitMinor
     val debtMinor = view.balanceMinor?.let { kotlin.math.abs(it) } ?: 0L
-    val availableMinor = limitMinor?.let { (it - debtMinor).coerceAtLeast(0L) }
+    val availableMinor = view.creditAvailableMinor
+        ?: limitMinor?.let { (it - debtMinor).coerceAtLeast(0L) }
 
     Box(modifier = Modifier.fillMaxWidth()) {
         Row(

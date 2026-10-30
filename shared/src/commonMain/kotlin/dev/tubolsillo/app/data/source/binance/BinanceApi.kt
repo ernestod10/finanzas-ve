@@ -36,7 +36,21 @@ class BinanceApi(private val client: HttpClient) {
         }.body()
 
     suspend fun withdrawals(signed: Map<String, String>, apiKey: String): List<WithdrawRecord> =
-        client.get("$base/sapi/v1/capital/withdraw/hisrec") {
+        client.get("$base/sapi/v1/capital/withdraw/history") {
+            header("X-MBX-APIKEY", apiKey)
+            signed.forEach { (key, value) -> parameter(key, value) }
+        }.body()
+
+    /** Órdenes P2P (C2C) completadas o no; la app filtra por estado. */
+    suspend fun p2pOrders(signed: Map<String, String>, apiKey: String): P2pHistoryResponse =
+        client.get("$base/sapi/v1/c2c/orderMatch/listUserOrderHistory") {
+            header("X-MBX-APIKEY", apiKey)
+            signed.forEach { (key, value) -> parameter(key, value) }
+        }.body()
+
+    /** Movimientos de Binance Pay (USER_DATA). */
+    suspend fun payTransactions(signed: Map<String, String>, apiKey: String): PayHistoryResponse =
+        client.get("$base/sapi/v1/pay/transactions") {
             header("X-MBX-APIKEY", apiKey)
             signed.forEach { (key, value) -> parameter(key, value) }
         }.body()

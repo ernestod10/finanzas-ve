@@ -23,12 +23,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -54,36 +51,45 @@ fun IOSScreen(
     listState: LazyListState = rememberLazyListState(),
     content: LazyListScope.() -> Unit,
 ) {
-    // Progreso del colapso: 0 = título grande a la vista, 1 = barra inline.
+    // Progreso del colapso evaluado en la fase de dibujo (graphicsLayer) para
+    // evitar recomponer toda la barra en cada píxel de scroll a 120Hz.
     val density = LocalDensity.current
     val collapseHeightPx = with(density) { LargeTitleBlockHeight.toPx() }
-    val collapse by remember {
-        derivedStateOf {
-            val offset = listState.firstVisibleItemScrollOffset
-            if (listState.firstVisibleItemIndex > 0) 1f
-            else (offset / collapseHeightPx).coerceIn(0f, 1f)
-        }
-    }
 
     Box(modifier = modifier.fillMaxSize()) {
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = 96.dp),
+            contentPadding = PaddingValues(top = 44.dp, bottom = 96.dp),
         ) {
-            item(key = "__large_title") {
+            item(key = "__status_spacer", contentType = "spacer") {
+                Box(modifier = Modifier.statusBarsPadding())
+            }
+            item(key = "__large_title", contentType = "large_title") {
                 LargeTitle(title)
             }
             content()
         }
 
-        // Barra de navegación: glass, título inline centrado, acciones al lado.
-        GlassSurface(
+        // Barra de navegación superior: el fondo glass y el título inline aparecen
+        // gradualmente al hacer scroll, pero el botón Volver y las acciones (Agregar, ‹ ›)
+        // permanecen siempre visibles y accesibles desde el primer instante.
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .align(Alignment.TopCenter)
-                .alpha(((collapse - 0.55f) / 0.45f).coerceIn(0f, 1f)),
+                .align(Alignment.TopCenter),
         ) {
+            GlassSurface(
+                modifier = Modifier
+                    .matchParentSize()
+                    .graphicsLayer {
+                        val collapse = if (listState.firstVisibleItemIndex > 1) 1f
+                        else if (listState.firstVisibleItemIndex == 0) 0f
+                        else (listState.firstVisibleItemScrollOffset / collapseHeightPx).coerceIn(0f, 1f)
+                        alpha = ((collapse - 0.55f) / 0.45f).coerceIn(0f, 1f)
+                    },
+            ) {}
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -95,7 +101,9 @@ fun IOSScreen(
                 Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
                     if (onBack != null) {
                         Row(
-                            modifier = Modifier.clickableRow(onBack).padding(horizontal = 6.dp, vertical = 8.dp),
+                            modifier = Modifier
+                                .clickableRow(onBack)
+                                .padding(horizontal = 6.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Icon(
@@ -103,6 +111,11 @@ fun IOSScreen(
                                 contentDescription = "Volver",
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.height(15.dp),
+                            )
+                            Text(
+                                text = "Volver",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.primary,
                             )
                         }
                     }
@@ -112,6 +125,12 @@ fun IOSScreen(
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
+                    modifier = Modifier.graphicsLayer {
+                        val collapse = if (listState.firstVisibleItemIndex > 1) 1f
+                        else if (listState.firstVisibleItemIndex == 0) 0f
+                        else (listState.firstVisibleItemScrollOffset / collapseHeightPx).coerceIn(0f, 1f)
+                        alpha = ((collapse - 0.55f) / 0.45f).coerceIn(0f, 1f)
+                    },
                 )
                 Row(
                     modifier = Modifier.weight(1f),
@@ -131,7 +150,7 @@ fun LargeTitle(text: String, modifier: Modifier = Modifier) {
         text = text,
         style = MaterialTheme.typography.displayMedium.copy(fontWeight = FontWeight.Bold),
         color = MaterialTheme.colorScheme.onBackground,
-        modifier = modifier.padding(start = 32.dp, end = 16.dp, top = 8.dp, bottom = 10.dp),
+        modifier = modifier.padding(start = 32.dp, end = 16.dp, top = 4.dp, bottom = 10.dp),
     )
 }
 
@@ -143,11 +162,11 @@ fun LargeTitle(text: String, modifier: Modifier = Modifier) {
 fun HeaderAction(text: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Text(
         text = text,
-        style = MaterialTheme.typography.bodyLarge,
+        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
         color = MaterialTheme.colorScheme.primary,
         modifier = modifier
             .clickableRow(onClick)
-            .padding(vertical = 10.dp),
+            .padding(horizontal = 8.dp, vertical = 8.dp),
     )
 }
 

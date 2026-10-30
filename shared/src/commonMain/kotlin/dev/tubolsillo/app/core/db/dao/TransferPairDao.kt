@@ -2,6 +2,7 @@ package dev.tubolsillo.app.core.db.dao
 
 import androidx.room.Dao
 import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import dev.tubolsillo.app.core.db.entity.TransferPairEntity
 import kotlinx.coroutines.flow.Flow
@@ -17,6 +18,9 @@ interface TransferPairDao {
 
     @Insert
     suspend fun insert(pair: TransferPairEntity): Long
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertAll(pairs: List<TransferPairEntity>)
 
     @Query("UPDATE transfer_pairs SET isConfirmed = 1 WHERE id = :id")
     suspend fun confirm(id: Long)

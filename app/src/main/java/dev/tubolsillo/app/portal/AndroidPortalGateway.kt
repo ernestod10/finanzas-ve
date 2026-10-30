@@ -18,7 +18,10 @@ class AndroidPortalGateway(
         val id = PortalBroker.newRequest()
         launch(institutionKey, PortalWebActivity.MODE_LINK, id, null)
         return when (val result = PortalBroker.await(id)) {
-            is PortalActivityResult.Linked -> PortalLinkResult.Linked(result.url)
+            is PortalActivityResult.Linked -> PortalLinkResult.Linked(
+                movementsUrl = result.url,
+                payload = result.json?.let { PortalJson.decode(it) },
+            )
             is PortalActivityResult.Failed -> PortalLinkResult.Failed(result.reason)
             else -> PortalLinkResult.Cancelled
         }.also { PortalBroker.finish(id) }

@@ -15,14 +15,14 @@ import androidx.compose.ui.graphics.Color
  * fila (surface), tinta (onSurface), tinta secundaria (onSurfaceVariant) y
  * separador (outline). El acento de marca vive en primary y nunca en el fondo.
  */
-private val LightColors = lightColorScheme(
-    primary = BrandGreen,
+private fun buildLightColors(accent: AppAccent) = lightColorScheme(
+    primary = accent.primaryLight,
     onPrimary = Color.White,
-    primaryContainer = BrandGreenSoft,
-    onPrimaryContainer = BrandGreenInk,
+    primaryContainer = accent.softContainerLight,
+    onPrimaryContainer = accent.ink,
 
-    secondary = BrandGreenBright,
-    onSecondary = BrandGreenInk,
+    secondary = accent.primaryDark,
+    onSecondary = accent.ink,
 
     tertiary = AmberLight,
     onTertiary = Color.White,
@@ -32,13 +32,13 @@ private val LightColors = lightColorScheme(
     errorContainer = RedFillLight,
     onErrorContainer = Color(0xFF5E1B16),
 
-    background = GroupedBackgroundLight,
+    background = CanvasLight,
     onBackground = LabelLight,
 
-    surface = SurfaceLight,
+    surface = CardLight,
     onSurface = LabelLight,
 
-    surfaceVariant = FillLight,
+    surfaceVariant = TileFillLight,
     onSurfaceVariant = SecondaryLabelLight,
 
     outline = SeparatorLight,
@@ -51,30 +51,30 @@ private val LightColors = lightColorScheme(
     surfaceContainerHighest = FillLight,
 )
 
-private val DarkColors = darkColorScheme(
-    primary = BrandGreenBright,
-    onPrimary = BrandGreenInk,
-    primaryContainer = BrandGreenDeep,
-    onPrimaryContainer = BrandGreenSoft,
+private fun buildDarkColors(accent: AppAccent) = darkColorScheme(
+    primary = accent.primaryDark,
+    onPrimary = accent.ink,
+    primaryContainer = accent.deepContainerDark,
+    onPrimaryContainer = accent.softContainerLight,
 
-    secondary = BrandGreenBright,
-    onSecondary = BrandGreenInk,
+    secondary = accent.primaryDark,
+    onSecondary = accent.ink,
 
     tertiary = AmberDark,
-    onTertiary = BrandGreenInk,
+    onTertiary = accent.ink,
 
     error = RedDark,
     onError = Color(0xFF3A1A16),
     errorContainer = RedFillDark,
     onErrorContainer = Color(0xFFFFDAD4),
 
-    background = GroupedBackgroundDark,
+    background = CanvasDark,
     onBackground = LabelDark,
 
-    surface = SurfaceDark,
+    surface = CardDark,
     onSurface = LabelDark,
 
-    surfaceVariant = FillDark,
+    surfaceVariant = TileFillDark,
     onSurfaceVariant = SecondaryLabelDark,
 
     outline = SeparatorDark,
@@ -95,6 +95,16 @@ data class TubolsilloExtraColors(
     val tertiaryLabel: Color,
     val separator: Color,
     val groupedBackground: Color,
+    /** Superficie de tarjeta del rediseño (blanco puro / casi negro). */
+    val card: Color = CardLight,
+    /** Lienzo detrás de las tarjetas. */
+    val canvas: Color = CanvasLight,
+    /** Relleno de teselas y campos sobre una tarjeta (tasas, chips). */
+    val tileFill: Color = TileFillLight,
+    val cardBorder: Color = CardBorderLight,
+    /** Señales de resultado: delta de ingresos/gastos, tendencias. */
+    val positive: Color = PositiveLight,
+    val negative: Color = NegativeLight,
 )
 
 private val LocalTubolsilloColors = androidx.compose.runtime.staticCompositionLocalOf {
@@ -108,6 +118,7 @@ private val LocalTubolsilloColors = androidx.compose.runtime.staticCompositionLo
 @Composable
 fun TubolsilloTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
+    accent: AppAccent = AppAccent.EMERALD,
     content: @Composable () -> Unit,
 ) {
     val extra = if (darkTheme) {
@@ -115,17 +126,32 @@ fun TubolsilloTheme(
             tertiaryLabel = TertiaryLabelDark,
             separator = SeparatorDark,
             groupedBackground = GroupedBackgroundDark,
+            card = CardDark,
+            canvas = CanvasDark,
+            tileFill = TileFillDark,
+            cardBorder = CardBorderDark,
+            positive = PositiveDark,
+            negative = NegativeDark,
         )
     } else {
         TubolsilloExtraColors(
             tertiaryLabel = TertiaryLabelLight,
             separator = SeparatorLight,
             groupedBackground = GroupedBackgroundLight,
+            card = CardLight,
+            canvas = CanvasLight,
+            tileFill = TileFillLight,
+            cardBorder = CardBorderLight,
+            positive = PositiveLight,
+            negative = NegativeLight,
         )
+    }
+    val scheme = androidx.compose.runtime.remember(darkTheme, accent) {
+        if (darkTheme) buildDarkColors(accent) else buildLightColors(accent)
     }
     androidx.compose.runtime.CompositionLocalProvider(LocalTubolsilloColors provides extra) {
         MaterialTheme(
-            colorScheme = if (darkTheme) DarkColors else LightColors,
+            colorScheme = scheme,
             typography = TubolsilloTypography,
             content = content,
         )

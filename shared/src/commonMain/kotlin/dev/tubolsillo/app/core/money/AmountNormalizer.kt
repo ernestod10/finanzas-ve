@@ -52,21 +52,22 @@ object AmountNormalizer {
         }
 
         val digitsAfter = unsigned.length - sepIndex - 1
+        val isZeroMajor = unsigned.substring(0, sepIndex).all { it == '0' || it == '.' || it == ',' }
+
         return when {
-            digitsAfter == 2 || digitsAfter == 1 -> {
-                // Decimal: "25,00" → 2500 minor, "1,5" → 150 minor.
-                val major = unsigned.substring(0, sepIndex).replace(",", "").replace(".", "")
-                val frac = unsigned.substring(sepIndex + 1).padEnd(2, '0').take(2)
-                val minor = (major.toLongOrNull() ?: return null) * Money.pow10Long(currency.decimals)
-                val fracMinor =
-                    frac.toLong() * Money.pow10Long(currency.decimals) / 100
-                signed(minor + fracMinor, negative)
-            }
-            else -> {
-                // Miles: "1.234" → 1234 major. Los dígitos sobrantes se ignoran.
+            digitsAfter == 3 && !isZeroMajor -> {
+                // Miles: "1.234" → 1234 major.
                 val major = unsigned.replace(",", "").replace(".", "")
                 val value = major.toLongOrNull() ?: return null
                 signed(value * Money.pow10Long(currency.decimals), negative)
+            }
+            else -> {
+                // Decimal: "25,00", "1,5", "14.09210875" USDT, "0.123"
+                val majorStr = unsigned.substring(0, sepIndex).replace(",", "").replace(".", "")
+                val major = if (majorStr.isEmpty()) 0L else (majorStr.toLongOrNull() ?: return null)
+                val fracStr = unsigned.substring(sepIndex + 1).padEnd(currency.decimals, '0').take(currency.decimals)
+                val frac = if (fracStr.isEmpty()) 0L else (fracStr.toLongOrNull() ?: return null)
+                signed(major * Money.pow10Long(currency.decimals) + frac, negative)
             }
         }
     }
@@ -77,10 +78,11 @@ object AmountNormalizer {
             val major = normalized.toLongOrNull() ?: return null
             return signed(major * Money.pow10Long(currency.decimals), negative)
         }
-        val major = normalized.substring(0, dot).toLongOrNull() ?: return null
+        val majorStr = normalized.substring(0, dot)
+        val major = if (majorStr.isEmpty()) 0L else (majorStr.toLongOrNull() ?: return null)
         val fracRaw = normalized.substring(dot + 1).take(currency.decimals)
             .padEnd(currency.decimals, '0')
-        val frac = fracRaw.toLongOrNull() ?: return null
+        val frac = if (fracRaw.isEmpty()) 0L else (fracRaw.toLongOrNull() ?: return null)
         return signed(major * Money.pow10Long(currency.decimals) + frac, negative)
     }
 

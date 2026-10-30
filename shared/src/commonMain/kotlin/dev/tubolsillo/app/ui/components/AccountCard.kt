@@ -116,7 +116,8 @@ fun DebtCard(view: AccountBalanceView, onClick: () -> Unit, modifier: Modifier =
     val isBnpl = AccountKind.fromKey(view.kindKey) == AccountKind.BNPL
     // El dato que ve el usuario es el DISPONIBLE = límite - deuda (como en
     // Cashea y en las apps de las TDC).
-    val availableMinor = if (limitMinor != null) (limitMinor - debtMinor).coerceAtLeast(0L) else null
+    val availableMinor = view.creditAvailableMinor
+        ?: if (limitMinor != null) (limitMinor - debtMinor).coerceAtLeast(0L) else null
     val accent = parseAccountColor(view.colorHex)
         ?: if (isBnpl) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
     val dark = isSystemInDarkTheme()

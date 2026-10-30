@@ -47,12 +47,12 @@ fun AccountsScreen(
                 )
             }
         } else {
-            val assets = data.accountViews.filter { !AccountKind.fromKey(it.kindKey).isDebt }
-            val debts = data.accountViews.filter { AccountKind.fromKey(it.kindKey).isDebt }
+            val assets = data.assetViews
+            val debts = data.debtViews
 
             if (assets.isNotEmpty()) {
-                item(key = "assets-h") { GroupHeader("Cuentas") }
-                item(key = "assets") {
+                item(key = "assets-h", contentType = "header") { GroupHeader("Cuentas") }
+                item(key = "assets", contentType = "group") {
                     GroupedGroup {
                         assets.forEachIndexed { index, view ->
                             AccountRow(
@@ -66,8 +66,8 @@ fun AccountsScreen(
             }
 
             if (debts.isNotEmpty()) {
-                item(key = "debts-h") { GroupHeader("Tarjetas y líneas") }
-                item(key = "debts") {
+                item(key = "debts-h", contentType = "header") { GroupHeader("Tarjetas y líneas") }
+                item(key = "debts", contentType = "group") {
                     GroupedGroup {
                         debts.forEachIndexed { index, view ->
                             AccountRow(
@@ -78,7 +78,7 @@ fun AccountsScreen(
                         }
                     }
                 }
-                item(key = "debts-f") {
+                item(key = "debts-f", contentType = "footer") {
                     GroupFooter("En las líneas de crédito el número grande es lo disponible, no la deuda.")
                 }
             }

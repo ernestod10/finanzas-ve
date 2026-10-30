@@ -10,5 +10,11 @@ actual fun getDatabaseBuilder(): RoomDatabase.Builder<TubolsilloDatabase> =
         GlobalContext.get().get<android.content.Context>(),
         TubolsilloDatabase::class.java,
         "tubolsillo.db",
-    ).addMigrations(TubolsilloDatabase.MIGRATION_1_2, TubolsilloDatabase.MIGRATION_2_3, TubolsilloDatabase.MIGRATION_3_4)
+    ).addMigrations(
+        TubolsilloDatabase.MIGRATION_1_2,
+        TubolsilloDatabase.MIGRATION_2_3,
+        TubolsilloDatabase.MIGRATION_3_4,
+        TubolsilloDatabase.MIGRATION_4_5,
+        TubolsilloDatabase.MIGRATION_5_6,
+    )
         .setDriver(BundledSQLiteDriver())

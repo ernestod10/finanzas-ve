@@ -14,8 +14,7 @@ class CategoriesViewModel(
     private val repository: CategoryRepository,
 ) : ViewModel() {
 
-    val categories: StateFlow<List<CategoryEntity>> = repository.observeAll()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val categories: StateFlow<List<CategoryEntity>> = repository.categoriesState
 
     fun add(name: String, colorHex: String?) {
         if (name.isBlank()) return

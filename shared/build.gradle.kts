@@ -10,6 +10,12 @@ plugins {
     alias(libs.plugins.compose.multiplatform)
 }
 
+/** Recursos compartidos (logos de entidades) accesibles desde commonMain. */
+compose.resources {
+    publicResClass = true
+    packageOfResClass = "dev.tubolsillo.app.resources"
+}
+
 /**
  * Módulo compartido TuBolsillo (migración KMP).
  * M2: Room KMP (2.8.2 + sqlite-bundled) y Koin en commonMain; Retrofit,
@@ -54,6 +60,7 @@ kotlin {
             implementation(compose.foundation)
             implementation(compose.material3)
             implementation(compose.ui)
+            implementation(compose.components.resources)
             implementation(libs.material.icons.extended)
             implementation(libs.navigation.compose.kmp)
             implementation(libs.lifecycle.viewmodel.compose.kmp)
@@ -83,6 +90,11 @@ kotlin {
             implementation(libs.kotlin.test)
             implementation(libs.junit)
             implementation(libs.room.testing)
+            // Los unit tests corren en la JVM: el driver "bundled" del target
+            // Android trae .so de Android, así que se pide explícitamente el
+            // artefacto JVM para poder abrir SQLite en memoria y probar las
+            // migraciones sin emulador.
+            implementation("androidx.sqlite:sqlite-bundled-jvm:2.5.1")
         }
     }
 }

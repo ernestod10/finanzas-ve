@@ -2,6 +2,7 @@ package dev.tubolsillo.app.core.db.dao
 
 import androidx.room.Dao
 import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import dev.tubolsillo.app.core.db.entity.AccountEntity
@@ -31,6 +32,9 @@ interface AccountDao {
     @Insert
     suspend fun insert(account: AccountEntity): Long
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertAll(accounts: List<AccountEntity>)
+
     @Update
     suspend fun update(account: AccountEntity)
 
@@ -42,6 +46,35 @@ interface AccountDao {
 
     @Query("UPDATE accounts SET creditLimitMinor = :limit WHERE id = :id")
     suspend fun updateCreditLimit(id: Long, limit: Long?)
+
+    /**
+     * Ficha de la tarjeta leída del portal. La máscara solo se escribe si la
+     * cuenta aún no tiene una (no pisa lo que haya guardado el usuario).
+     */
+    @Query(
+        "UPDATE accounts SET " +
+            "creditLimitMinor = COALESCE(:limit, creditLimitMinor), " +
+            "creditAvailableMinor = :available, " +
+            "minPaymentMinor = :minPayment, " +
+            "creditDueAt = :dueAt, " +
+            "accountNumberMask = CASE WHEN accountNumberMask IS NULL OR accountNumberMask = '' " +
+            "THEN :mask ELSE accountNumberMask END " +
+            "WHERE id = :id"
+    )
+    suspend fun updateCreditMeta(
+        id: Long,
+        limit: Long?,
+        available: Long?,
+        minPayment: Long?,
+        dueAt: Long?,
+        mask: String?,
+    )
+
+    @Query("UPDATE accounts SET lastBalanceMinor = NULL, lastBalanceAt = NULL WHERE id = :id")
+    suspend fun clearLastBalance(id: Long)
+
+    @Query("UPDATE accounts SET name = :name WHERE id = :id")
+    suspend fun updateName(id: Long, name: String)
 
     @Query("UPDATE accounts SET colorHex = :colorHex WHERE id = :id")
     suspend fun updateColor(id: Long, colorHex: String?)

@@ -71,6 +71,14 @@ class AccountViewModel(
         }
     }
 
+    /** Renombra la cuenta; un nombre vacío no se guarda. */
+    fun updateName(name: String) {
+        if (name.isBlank()) return
+        viewModelScope.launch {
+            accountRepository.updateName(accountId, name)
+        }
+    }
+
     fun updateCreditLimit(limitText: String) {
         val account = account.value ?: return
         val minor = AmountNormalizer.parseMinor(limitText, account.currency)
@@ -88,13 +96,12 @@ class AccountViewModel(
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val categories: StateFlow<List<dev.tubolsillo.app.core.db.entity.CategoryEntity>> =
-        categoryRepository.observeAll()
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+        categoryRepository.categoriesState
 
     /** Asigna la categoría de gasto a una transacción (null = sin categoría). */
-    fun setTransactionCategory(transactionId: Long, categoryId: Long?) {
+    fun setTransactionCategory(transactionId: Long, categoryId: Long?, learnMerchant: Boolean = true) {
         viewModelScope.launch {
-            transactionRepository.setUserCategory(transactionId, categoryId)
+            transactionRepository.setUserCategory(transactionId, categoryId, learnMerchant)
         }
     }
 
@@ -106,6 +113,18 @@ class AccountViewModel(
                 val tx = transactionRepository.getById(transactionId)
                 tx?.let { ruleEngine.learn(it.description, tagName) }
             }
+        }
+    }
+
+    fun updateTransactionDetails(transactionId: Long, description: String, amountMinor: Long, currencyCode: String) {
+        viewModelScope.launch {
+            transactionRepository.updateDetails(transactionId, description, amountMinor, currencyCode)
+        }
+    }
+
+    fun deleteTransaction(transactionId: Long) {
+        viewModelScope.launch {
+            transactionRepository.delete(transactionId)
         }
     }
 }

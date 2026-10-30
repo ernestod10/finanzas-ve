@@ -38,21 +38,25 @@ import dev.tubolsillo.app.ui.components.GroupHeader
 import dev.tubolsillo.app.ui.components.GroupedGroup
 import dev.tubolsillo.app.ui.components.HeaderAction
 import dev.tubolsillo.app.ui.components.IOSScreen
+import dev.tubolsillo.app.ui.components.ThinBar
 import dev.tubolsillo.app.ui.components.monthLabel
+import dev.tubolsillo.app.ui.dashboard.PlanSummaryCard
 import dev.tubolsillo.app.ui.theme.TNUM
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * Presupuesto del mes: total arriba y una fila por categoría con su barra de
- * avance. El mes se cambia desde la barra de navegación.
+ * Presupuesto del mes: total arriba, plan del mes e ingresos/gastos estimados,
+ * y una fila por categoría con su barra de avance.
  */
 @Composable
 fun BudgetScreen(
     onManageCategories: () -> Unit = {},
+    onOpenPlan: () -> Unit = {},
     viewModel: BudgetViewModel = koinViewModel(),
 ) {
     val month by viewModel.month.collectAsState()
     val data by viewModel.monthData.collectAsState()
+    val planData by viewModel.planData.collectAsState()
     var editingTag by remember { mutableStateOf<String?>(null) }
 
     IOSScreen(
@@ -91,9 +95,17 @@ fun BudgetScreen(
                 }
                 monthData.totalProgress?.let { progress ->
                     Spacer(Modifier.height(10.dp))
-                    BudgetBar(progress = progress, over = monthData.totalSpentUsd > (monthData.totalLimitUsd ?: Double.MAX_VALUE))
+                    ThinBar(progress = progress, over = monthData.totalSpentUsd > (monthData.totalLimitUsd ?: Double.MAX_VALUE))
                 }
             }
+        }
+
+        item(key = "plan") {
+            PlanSummaryCard(
+                plan = planData,
+                onOpen = onOpenPlan,
+                onTogglePaid = { viewModel.togglePlanLinePaid(it) },
+            )
         }
 
         item(key = "cats-h") { GroupHeader("Categorías") }
@@ -104,7 +116,9 @@ fun BudgetScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .heightIn(min = 56.dp)
-                            .clickable { editingTag = row.tagName }
+                            .clickable(enabled = row.tagName != "Sin categoría") {
+                                editingTag = row.tagName
+                            }
                             .padding(horizontal = 16.dp, vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -114,7 +128,7 @@ fun BudgetScreen(
                                 style = MaterialTheme.typography.bodyLarge,
                             )
                             Spacer(Modifier.height(5.dp))
-                            BudgetBar(
+                            ThinBar(
                                 progress = row.progress ?: 0f,
                                 over = row.isOverBudget,
                                 modifier = Modifier.fillMaxWidth(0.85f),
@@ -131,11 +145,18 @@ fun BudgetScreen(
                                 color = if (row.isOverBudget) MaterialTheme.colorScheme.error
                                 else MaterialTheme.colorScheme.onSurface,
                             )
-                            row.limitUsd?.let { limit ->
+                            val limit = row.limitUsd
+                            if (limit != null) {
                                 Text(
                                     text = "de " + MoneyFormatter.formatUsd(limit),
                                     style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = TNUM),
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            } else if (row.tagName != "Sin categoría") {
+                                Text(
+                                    text = "Definir límite",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary,
                                 )
                             }
                         }
@@ -163,8 +184,10 @@ fun BudgetScreen(
     }
 
     editingTag?.let { tagName ->
+        val currentLimitUsd = data?.rows?.firstOrNull { it.tagName == tagName }?.limitUsd
         BudgetDialog(
             tagName = tagName,
+            initialAmountUsd = currentLimitUsd,
             onDismiss = { editingTag = null },
             onSave = { amountText, currency ->
                 viewModel.setBudget(tagName, amountText, currency)
@@ -174,42 +197,22 @@ fun BudgetScreen(
     }
 }
 
-/** Barra de avance fina; el exceso cambia el color y engrosa el trazo. */
-@Composable
-private fun BudgetBar(
-    progress: Float,
-    over: Boolean,
-    modifier: Modifier = Modifier,
-) {
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(5.dp)
-            .background(
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.18f),
-                shape = RoundedCornerShape(50),
-            ),
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth(progress.coerceIn(0f, 1f))
-                .height(5.dp)
-                .background(
-                    color = if (over) MaterialTheme.colorScheme.error
-                    else MaterialTheme.colorScheme.primary,
-                    shape = RoundedCornerShape(50),
-                ),
-        )
-    }
-}
-
 @Composable
 private fun BudgetDialog(
     tagName: String,
+    initialAmountUsd: Double?,
     onDismiss: () -> Unit,
     onSave: (amountText: String, currencyCode: String) -> Unit,
 ) {
-    var amountText by remember { mutableStateOf("") }
+    var amountText by remember(tagName, initialAmountUsd) {
+        mutableStateOf(
+            initialAmountUsd?.let {
+                val rounded = kotlin.math.round(it * 100.0) / 100.0
+                if (rounded == rounded.toLong().toDouble()) rounded.toLong().toString()
+                else rounded.toString()
+            } ?: ""
+        )
+    }
     var currency by remember { mutableStateOf("USD") }
 
     AlertDialog(

@@ -16,7 +16,7 @@ interface PortalGateway {
 }
 
 sealed interface PortalLinkResult {
-    data class Linked(val movementsUrl: String) : PortalLinkResult
+    data class Linked(val movementsUrl: String, val payload: PortalPayload? = null) : PortalLinkResult
     data object Cancelled : PortalLinkResult
     data class Failed(val reason: String) : PortalLinkResult
 }

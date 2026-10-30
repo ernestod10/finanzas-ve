@@ -10,15 +10,17 @@ class AndroidSecretStore(
     private val context: Context,
 ) : SecretStore {
 
-    private val prefs: SharedPreferences = EncryptedSharedPreferences.create(
-        context,
-        "tubolsillo_secrets",
-        MasterKey.Builder(context)
-            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-            .build(),
-        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
-    )
+    private val prefs: SharedPreferences by lazy {
+        EncryptedSharedPreferences.create(
+            context,
+            "tubolsillo_secrets",
+            MasterKey.Builder(context)
+                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                .build(),
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
+        )
+    }
 
     override fun saveBinanceKeys(apiKey: String, apiSecret: String) {
         prefs.edit()

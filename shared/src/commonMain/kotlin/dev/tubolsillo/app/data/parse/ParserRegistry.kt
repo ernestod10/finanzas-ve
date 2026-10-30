@@ -40,7 +40,14 @@ class ParserRegistry(
 
     private fun keywordsFor(inst: Institution): List<String>? = when (inst) {
         Institution.BANESCO -> listOf("banescoinforma", "banesco")
-        Institution.MERCANTIL_PA -> listOf("mercantil panam", "b/.", "mercantilpanama")
+        Institution.MERCANTIL_PA -> listOf(
+            "mercantil panam",
+            "b/.",
+            "mercantilpanama",
+            "mercantilbanco.com.pa",
+            "mercantil banco panam",
+            "zinli",
+        )
         Institution.BANCARIBE -> listOf("bancaribe", "mi conexion bancaribe")
         Institution.BNC -> listOf("bnc ", "banco nacional de credito", "bncenlinea")
         Institution.BDV -> listOf("banco de venezuela", "bdvenlinea", "bdv")

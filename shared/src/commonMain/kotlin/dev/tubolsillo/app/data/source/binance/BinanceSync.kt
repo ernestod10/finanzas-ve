@@ -14,10 +14,8 @@ import dev.tubolsillo.app.domain.model.TxStatus
 import dev.tubolsillo.app.domain.repo.AccountRepository
 import dev.tubolsillo.app.domain.usecase.RateProvider
 import dev.tubolsillo.app.domain.model.RateSource
-import io.ktor.client.network.sockets.ConnectTimeoutException
-import io.ktor.client.plugins.ClientRequestException
-import io.ktor.client.plugins.HttpRequestTimeoutException
-import io.ktor.client.plugins.ServerResponseException
+import io.ktor.client.plugins.ResponseException
+import io.ktor.client.statement.bodyAsText
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -53,9 +51,11 @@ class BinanceSync(
 
     suspend fun testConnection(): SyncResult {
         val (apiKey, apiSecret) = secretStore.binanceKeys() ?: return SyncResult(error = "Sin llaves")
+        val cleanKey = apiKey.trim()
+        val cleanSecret = apiSecret.trim()
         return try {
             refreshClockOffset()
-            api.account(signed(apiSecret), apiKey)
+            api.account(signed(cleanSecret), cleanKey)
             SyncResult()
         } catch (e: Exception) {
             SyncResult(error = friendlyError(e))
@@ -64,16 +64,18 @@ class BinanceSync(
 
     suspend fun sync(): SyncResult = syncMutex.withLock {
         val (apiKey, apiSecret) = secretStore.binanceKeys() ?: return SyncResult(error = "Sin llaves configuradas")
+        val cleanKey = apiKey.trim()
+        val cleanSecret = apiSecret.trim()
         return try {
             refreshClockOffset()
-            val info = api.account(signed(apiSecret), apiKey)
+            val info = api.account(signed(cleanSecret), cleanKey)
 
             var accountsUpdated = 0
             for (balance in info.balances) {
-                val total = balance.free.toDoubleOrNull() ?: 0.0
-                val locked = balance.locked.toDoubleOrNull() ?: 0.0
-                if (total + locked <= 0.0) continue
-                val minor = AmountNormalizer.parseMinor((total + locked).toString(), balance.asset) ?: continue
+                val freeMinor = AmountNormalizer.parseMinor(balance.free, balance.asset) ?: 0L
+                val lockedMinor = AmountNormalizer.parseMinor(balance.locked, balance.asset) ?: 0L
+                val minor = freeMinor + lockedMinor
+                if (minor <= 0L) continue
                 val account = findOrCreateAssetAccount(balance.asset)
                 accountRepository.recordBalance(
                     accountId = account.id,
@@ -85,8 +87,28 @@ class BinanceSync(
             }
 
             var newTransactions = 0
-            newTransactions += syncDeposits(apiKey, apiSecret)
-            newTransactions += syncWithdrawals(apiKey, apiSecret)
+            try {
+                newTransactions += syncDeposits(cleanKey, cleanSecret)
+            } catch (e: Exception) {
+                println("BinanceSync: syncDeposits omitido (${e.message})")
+            }
+            try {
+                newTransactions += syncWithdrawals(cleanKey, cleanSecret)
+            } catch (e: Exception) {
+                println("BinanceSync: syncWithdrawals omitido (${e.message})")
+            }
+            // P2P y Pay pueden faltar si la llave no tiene el permiso; cada uno
+            // falla aislado para no tumbar saldos ni depósitos.
+            try {
+                newTransactions += syncP2p(cleanKey, cleanSecret)
+            } catch (e: Exception) {
+                println("BinanceSync: syncP2p omitido (${e.message})")
+            }
+            try {
+                newTransactions += syncPay(cleanKey, cleanSecret)
+            } catch (e: Exception) {
+                println("BinanceSync: syncPay omitido (${e.message})")
+            }
             syncBtcRate()
 
             SyncResult(accountsUpdated = accountsUpdated, newTransactions = newTransactions)
@@ -127,7 +149,7 @@ class BinanceSync(
             insertBinanceTx(
                 dedupKey = dedupKey,
                 account = findOrCreateAssetAccount(r.coin),
-                occurredAt = if (r.applyTime > 0) r.applyTime else nowMillis(),
+                occurredAt = parseWithdrawTime(r.applyTime),
                 amountMinor = -kotlin.math.abs(minor),
                 currency = r.coin,
                 description = "Retiro ${r.coin} (${r.network})",
@@ -135,6 +157,124 @@ class BinanceSync(
             inserted++
         }
         return inserted
+    }
+
+    /**
+     * Órdenes P2P completadas. Se registra la pata cripto (lo que entra o sale
+     * de la wallet) como TRANSFER: comprar USDT con bolívares no es un ingreso,
+     * es mover plata entre tus propios activos. La pata fiat la captura el banco.
+     */
+    private suspend fun syncP2p(apiKey: String, apiSecret: String): Int {
+        val now = nowMillis() + clockOffsetMs
+        val response = api.p2pOrders(
+            signedWith(
+                apiSecret,
+                mapOf(
+                    "startTimestamp" to (now - P2P_WINDOW_MS).toString(),
+                    "endTimestamp" to now.toString(),
+                    "rows" to "100",
+                    "page" to "1",
+                ),
+            ),
+            apiKey,
+        )
+        var inserted = 0
+        for (order in response.data) {
+            if (!order.orderStatus.equals("COMPLETED", ignoreCase = true)) continue
+            val asset = order.asset.uppercase()
+            if (asset.isBlank()) continue
+            val minor = AmountNormalizer.parseMinor(order.amount, asset) ?: continue
+            if (minor <= 0L) continue
+            val isBuy = order.tradeType.equals("BUY", ignoreCase = true)
+            val dedupKey = "BINANCE|P2P|" + order.orderNumber
+            if (transactionDao.findByDedupKey(dedupKey) != null) continue
+
+            val fiatText = order.fiatSymbol + order.totalPrice
+            val counterpart = order.counterPartNickName?.takeIf { it.isNotBlank() }
+            val description = buildString {
+                append(if (isBuy) "P2P compra " else "P2P venta ")
+                append(asset)
+                append(" · ")
+                append(fiatText)
+                counterpart?.let { append(" · "); append(it) }
+            }
+            insertBinanceTx(
+                dedupKey = dedupKey,
+                account = findOrCreateAssetAccount(asset),
+                occurredAt = if (order.createTime > 0) order.createTime else nowMillis(),
+                amountMinor = if (isBuy) minor else -minor,
+                currency = asset,
+                description = description,
+                category = TransactionCategory.TRANSFER,
+            )
+            inserted++
+        }
+        return inserted
+    }
+
+    /**
+     * Binance Pay. El monto ya viene firmado por Binance. Se omiten los pares
+     * de retención (HOLDING), que duplicarían el mismo movimiento.
+     */
+    private suspend fun syncPay(apiKey: String, apiSecret: String): Int {
+        val now = nowMillis() + clockOffsetMs
+        val response = api.payTransactions(
+            signedWith(
+                apiSecret,
+                mapOf(
+                    "startTime" to (now - PAY_WINDOW_MS).toString(),
+                    "endTime" to now.toString(),
+                    "limit" to "100",
+                ),
+            ),
+            apiKey,
+        )
+        var inserted = 0
+        println("BinanceSync: Pay code=" + response.code + " n=" + response.data.size)
+        for (tx in response.data) {
+            if (tx.orderType.uppercase() in PAY_HOLDING_TYPES) continue
+            val currency = tx.currency.uppercase()
+            if (currency.isBlank()) continue
+            val minor = AmountNormalizer.parseMinor(tx.amount, currency) ?: continue
+            if (minor == 0L) continue
+            val dedupKey = "BINANCE|PAY|" + tx.transactionId
+            if (transactionDao.findByDedupKey(dedupKey) != null) continue
+
+            // La contraparte útil es a quién le pagaste (salida) o quién te pagó (entrada).
+            val party = if (minor < 0) tx.receiverInfo?.name else tx.payerInfo?.name
+            val description = buildString {
+                append("Binance Pay · ")
+                append(payTypeLabel(tx.orderType))
+                party?.takeIf { it.isNotBlank() }?.let { append(" · "); append(it) }
+            }
+            insertBinanceTx(
+                dedupKey = dedupKey,
+                account = findOrCreateAssetAccount(currency),
+                occurredAt = if (tx.transactionTime > 0) tx.transactionTime else nowMillis(),
+                amountMinor = minor,
+                currency = currency,
+                description = description,
+            )
+            inserted++
+        }
+        return inserted
+    }
+
+    private fun payTypeLabel(orderType: String): String = when (orderType.uppercase()) {
+        "PAY" -> "pago"
+        "PAY_REFUND" -> "devolución"
+        "PAYOUT" -> "retiro"
+        "REMITTANCE" -> "remesa"
+        "CRYPTO_BOX" -> "crypto box"
+        "CRYPTO_BOX_RF" -> "devolución de crypto box"
+        else -> orderType.lowercase().ifBlank { "movimiento" }
+    }
+
+    private fun parseWithdrawTime(applyTime: String?): Long {
+        if (applyTime.isNullOrBlank()) return nowMillis()
+        val asLong = applyTime.toLongOrNull()
+        if (asLong != null && asLong > 0) return asLong
+        return nowMillis()
     }
 
     private suspend fun syncBtcRate() {
@@ -179,6 +319,7 @@ class BinanceSync(
         amountMinor: Long,
         currency: String,
         description: String,
+        category: TransactionCategory = TransactionCategory.OTHER,
     ): Long = transactionDao.insert(
         TransactionEntity(
             accountId = account.id,
@@ -187,7 +328,7 @@ class BinanceSync(
             currency = currency,
             description = description,
             rawDescription = description,
-            category = TransactionCategory.OTHER.key,
+            category = category.key,
             status = TxStatus.CONFIRMED.key,
             dedupKey = dedupKey,
             source = SourceType.BINANCE.key,
@@ -198,26 +339,45 @@ class BinanceSync(
     private fun signed(apiSecret: String): Map<String, String> =
         signer.signedParams(emptyMap(), apiSecret, nowMillis() + clockOffsetMs)
 
+    /** Igual que [signed], pero con parámetros extra (ventanas de fechas). */
+    private fun signedWith(apiSecret: String, extra: Map<String, String>): Map<String, String> =
+        signer.signedParams(extra, apiSecret, nowMillis() + clockOffsetMs)
+
     /** Traduce errores de Binance a mensajes accionables (geo-bloqueo, llaves malas). */
-    private fun friendlyError(e: Exception): String {
-        val status = when (e) {
-            is ClientRequestException -> e.response.status.value
-            is ServerResponseException -> e.response.status.value
-            else -> null
+    private suspend fun friendlyError(e: Exception): String {
+        println("BinanceSync error: ${e::class.simpleName}: ${e.message}")
+        val status = (e as? ResponseException)?.response?.status?.value
+        val detail = runCatching { (e as? ResponseException)?.response?.bodyAsText() }.getOrNull()
+        if (detail != null) {
+            println("BinanceSync server detail: $detail")
         }
-        return when (status) {
-            451 -> "Binance rechazó la conexión (451). Prueba con una VPN."
-            400, 401 -> "Llaves inválidas o sin permiso de lectura. Verifícalas en Binance."
-            else -> when (e) {
-                is HttpRequestTimeoutException, is ConnectTimeoutException ->
-                    "Tiempo agotado. Revisa tu conexión a internet."
-                else -> e.message ?: "Error desconocido"
-            }
+
+        val serverMsg = detail?.let { json ->
+            val m = Regex("\"msg\"\\s*:\\s*\"([^\"]+)\"").find(json)
+            m?.groupValues?.get(1)
+        }
+
+        return when {
+            status == 451 -> "Binance rechazó la conexión (451). Prueba con una VPN."
+            serverMsg != null -> "Binance: $serverMsg"
+            status == 400 || status == 401 -> "Llaves inválidas o sin permiso de lectura. Verifícalas en Binance."
+            e is io.ktor.client.network.sockets.ConnectTimeoutException || e is io.ktor.client.plugins.HttpRequestTimeoutException ->
+                "Tiempo agotado. Revisa tu conexión a internet."
+            else -> e.message ?: "Error desconocido"
         }
     }
 
     private companion object {
         const val DEPOSIT_SUCCESS = 1
         const val WITHDRAW_SUCCESS = 6
+
+        /** La API de P2P acepta como máximo 30 días por consulta. */
+        const val P2P_WINDOW_MS = 30L * 24 * 60 * 60 * 1000
+
+        /** Pay acepta hasta 90 días; 30 alcanza y mantiene liviano el primer sync. */
+        const val PAY_WINDOW_MS = 30L * 24 * 60 * 60 * 1000
+
+        /** Pares de retención de Pay: registrar ambos duplicaría el movimiento. */
+        val PAY_HOLDING_TYPES = setOf("C2C_HOLDING", "C2C_HOLDING_RF")
     }
 }

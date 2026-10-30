@@ -30,14 +30,21 @@ data class PortalRecipe(
     /** URL de movimientos a cargar tras el login; null = quedarse donde esté. */
     val movementsUrl: String? = null,
     /** Expresión JS booleana: "hay formulario de login en pantalla". */
-    val loginFormMarkerJs: String = "(!!document.querySelector('input[type=password]'))",
+    val loginFormMarkerJs: String =
+        "(!!document.querySelector('input[type=password],input#userlogin,input#UserName,input[name=UserId]') || /\\/(login|authenticate|auth)/i.test(location.pathname))",
     /** Expresión JS booleana: "estoy dentro". Sustituye al viejo url.length < 40. */
-    val loggedInMarkerJs: String = "(!document.querySelector('input[type=password]'))",
+    val loggedInMarkerJs: String =
+        "(document.readyState === 'complete' && !document.querySelector('input[type=password],input#userlogin,input#UserName,input[name=UserId]') && !/\\/(login|authenticate|auth)/i.test(location.pathname) && (document.querySelectorAll('table tr, mat-row, [role=row]').length > 1 || /saldo/i.test((document.body && document.body.innerText) || '')))",
     val userSelector: String? = null,
+    /**
+     * Segundo campo del primer paso (p. ej. cédula en BNC). Si existe, el
+     * usuario guardado se interpreta como "valorUsuario|valorId".
+     */
+    val idSelector: String? = null,
     val passSelector: String? = null,
     /** Botón de submit: se le hace .click(), nunca form.submit(). */
     val submitSelector: String? = null,
-    val rowsSelector: String = "table tr",
+    val rowsSelector: String = "table tr, mat-row, [role=row], .movimiento-item, .movement-row, .transaction-row",
     val cellDateSelector: String? = null,
     val cellDescriptionSelector: String? = null,
     val cellAmountSelector: String? = null,
