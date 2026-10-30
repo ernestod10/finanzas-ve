@@ -28,7 +28,16 @@ jobs:
           distribution: temurin
           java-version: "21"
 
-      - uses: android-actions/setup-android@v3
+      # Las imágenes ubuntu-latest ya traen el SDK de Android y las licencias
+      # aceptadas; setup-android@v3 falla en esas imágenes por el paquete
+      # legacy 'tools', así que solo se instala lo que falte.
+      - name: SDK de Android
+        run: |
+          SDKMANAGER="${ANDROID_HOME:-/usr/local/lib/android/sdk}/cmdline-tools/latest/bin/sdkmanager"
+          if [ -x "$SDKMANAGER" ]; then
+            yes | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
+            "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0" > /dev/null || true
+          fi
 
       - name: Cache de Gradle
         uses: actions/cache@v4
