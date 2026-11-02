@@ -118,7 +118,8 @@ private fun HomeCreditsCard(
                     modifier = Modifier.weight(1f),
                 )
                 Text(
-                    text = overview.items.size.toString() + " deudas",
+                    text = if (overview.items.size == 1) "1 deuda"
+                    else overview.items.size.toString() + " deudas",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
