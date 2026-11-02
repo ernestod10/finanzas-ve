@@ -4,10 +4,15 @@ import com.google.mlkit.genai.common.DownloadStatus
 import com.google.mlkit.genai.common.FeatureStatus
 import com.google.mlkit.genai.prompt.Generation
 import com.google.mlkit.genai.prompt.GenerativeModel
+import dev.tubolsillo.app.domain.ai.AiPrompts
+import dev.tubolsillo.app.domain.ai.AiResponseParser
 import dev.tubolsillo.app.domain.ai.AnalyzerAvailability
 import dev.tubolsillo.app.domain.ai.CaptureAnalyzer
 import dev.tubolsillo.app.domain.ai.CaptureReading
-import org.json.JSONObject
+import dev.tubolsillo.app.domain.ai.CsvColumnMapping
+import dev.tubolsillo.app.domain.ai.CsvMappingParser
+import dev.tubolsillo.app.domain.ai.SearchFilter
+import dev.tubolsillo.app.domain.ai.SearchQueryParser
 
 /**
  * Lector y asistente con Gemini Nano (AICore).
@@ -69,20 +74,20 @@ class NanoCaptureAnalyzer : CaptureAnalyzer {
     }
 
     override suspend fun analyze(rawText: String, categories: List<String>): CaptureReading? = try {
-        val response = model().generateContent(buildCapturePrompt(rawText, categories))
+        val response = model().generateContent(AiPrompts.capture(rawText, categories))
         val text = response.candidates.firstOrNull()?.text
         android.util.Log.d("NanoAnalyzer", "captura: " + (text ?: "null").take(600))
-        if (text.isNullOrBlank()) null else parseReading(text, rawText)
+        if (text.isNullOrBlank()) null else AiResponseParser.reading(text)
     } catch (e: Exception) {
         android.util.Log.w("NanoAnalyzer", "analyze falló: " + e.javaClass.simpleName + ": " + e.message, e)
         null
     }
 
     override suspend fun interpretEntry(text: String): CaptureReading? = try {
-        val response = model().generateContent(buildEntryPrompt(text))
+        val response = model().generateContent(AiPrompts.entry(text))
         val raw = response.candidates.firstOrNull()?.text
         android.util.Log.d("NanoAnalyzer", "alta natural: " + (raw ?: "null").take(600))
-        if (raw.isNullOrBlank()) null else parseReading(raw, text)
+        if (raw.isNullOrBlank()) null else AiResponseParser.reading(raw)
     } catch (e: Exception) {
         android.util.Log.w("NanoAnalyzer", "interpretEntry falló", e)
         null
@@ -96,88 +101,26 @@ class NanoCaptureAnalyzer : CaptureAnalyzer {
         null
     }
 
-    private fun buildCapturePrompt(rawText: String, categories: List<String>): String {
-        val cats = if (categories.isEmpty()) "ninguna" else categories.joinToString(", ")
-        return """
-            Extrae los datos de un mensaje bancario. Responde SOLO con JSON, sin explicaciones.
-            Ejemplo:
-            Mensaje: Compra por Bs. 25,00 en FARMACIA X. Saldo: Bs. 1.000,00
-            Salida: {"is_transaction":true,"amount":25.0,"currency":"VES","merchant":"FARMACIA X","last4":null,"kind":"purchase","category":null}
-            Claves:
-            - is_transaction: false para claves/OTP, alertas de saldo, publicidad o avisos que no sean un movimiento.
-            - amount: número con punto decimal, sin separador de miles. null si no hay monto.
-            - currency: VES, USD o USDT.
-            - merchant: nombre del comercio o contraparte.
-            - last4: últimos 4 dígitos del instrumento, o null.
-            - kind: purchase, payment, transfer, income o unknown.
-            - category: una de [$cats], o null si ninguna encaja.
-            Si un dato no aparece, usa null. No inventes.
-            Mensaje: ${rawText.take(1200)}
-            Salida:
-        """.trimIndent()
+    override suspend fun parseSearch(text: String, categories: List<String>): SearchFilter? = try {
+        val response = model().generateContent(AiPrompts.search(text, categories))
+        val raw = response.candidates.firstOrNull()?.text
+        android.util.Log.d("NanoAnalyzer", "búsqueda: " + (raw ?: "null").take(400))
+        SearchQueryParser.parse(raw, categories)
+    } catch (e: Exception) {
+        android.util.Log.w("NanoAnalyzer", "parseSearch falló", e)
+        null
     }
 
-    private fun buildEntryPrompt(text: String): String = """
-        El usuario describe un movimiento que quiere registrar. Responde SOLO con JSON.
-        Ejemplo: "gasté 20 en taxi ayer"
-        Salida: {"is_transaction":true,"amount":20.0,"currency":null,"merchant":"Taxi","kind":"expense","day_offset":-1}
-        Claves:
-        - amount: número, sin separador de miles.
-        - currency: VES, USD, USDT o null (sin moneda explícita).
-        - merchant: descripción corta del gasto o ingreso.
-        - kind: income para plata que entra, expense para la que sale.
-        - day_offset: 0 si es hoy, -1 ayer, -2 anteayer; null si no se menciona fecha.
-        No inventes datos.
-        Texto: ${text.take(500)}
-        Salida:
-    """.trimIndent()
-
-    private fun parseReading(text: String, rawText: String): CaptureReading {
-        val json = extractJson(text)
-        if (json == null) {
-            android.util.Log.d("NanoAnalyzer", "sin JSON en la respuesta")
-            return CaptureReading(rawResponse = text)
-        }
-        val obj = runCatching { JSONObject(json) }.getOrNull()
-            ?: return CaptureReading(rawResponse = text)
-
-        fun str(key: String): String? =
-            if (obj.isNull(key)) null else obj.optString(key).takeIf { it.isNotBlank() && it != "null" }
-
-        val amount = if (obj.isNull("amount")) {
-            null
-        } else {
-            obj.optDouble("amount", Double.NaN).takeIf { !it.isNaN() }
-        }
-        val isTransaction = if (obj.isNull("is_transaction")) {
-            null
-        } else {
-            obj.optBoolean("is_transaction", true)
-        }
-        val dayOffset = if (obj.isNull("day_offset")) {
-            null
-        } else {
-            obj.optInt("day_offset", Int.MIN_VALUE).takeIf { it != Int.MIN_VALUE }
-        }
-        val last4 = str("last4")?.filter { it.isDigit() }?.takeLast(4)?.takeIf { it.length == 4 }
-
-        return CaptureReading(
-            amount = amount,
-            currency = str("currency")?.uppercase(),
-            merchant = str("merchant"),
-            last4 = last4,
-            kind = str("kind")?.lowercase(),
-            category = str("category"),
-            isTransaction = isTransaction,
-            dayOffset = dayOffset,
-            rawResponse = text,
-        )
-    }
-
-    /** El modelo a veces envuelve el JSON en markdown; se recorta al objeto. */
-    private fun extractJson(text: String): String? {
-        val start = text.indexOf('{')
-        val end = text.lastIndexOf('}')
-        return if (start >= 0 && end > start) text.substring(start, end + 1) else null
+    override suspend fun mapCsvColumns(
+        header: List<String>,
+        sampleRows: List<String>,
+    ): CsvColumnMapping? = try {
+        val response = model().generateContent(AiPrompts.csvMapping(header, sampleRows))
+        val raw = response.candidates.firstOrNull()?.text
+        android.util.Log.d("NanoAnalyzer", "csv: " + (raw ?: "null").take(300))
+        CsvMappingParser.parse(raw, header.size)
+    } catch (e: Exception) {
+        android.util.Log.w("NanoAnalyzer", "mapCsvColumns falló", e)
+        null
     }
 }

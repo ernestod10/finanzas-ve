@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.tubolsillo.app.core.db.dao.TransactionWithTags
 import dev.tubolsillo.app.core.db.entity.AccountEntity
+import dev.tubolsillo.app.domain.ai.CaptureAnalyzer
+import dev.tubolsillo.app.domain.ai.SearchFilter
 import dev.tubolsillo.app.domain.repo.AccountRepository
 import dev.tubolsillo.app.domain.repo.TransactionRepository
 import dev.tubolsillo.app.ui.components.currentEpochDays
@@ -29,6 +31,7 @@ class TransactionsViewModel(
     categoryRepository: dev.tubolsillo.app.domain.repo.CategoryRepository,
     private val tagRepository: dev.tubolsillo.app.domain.repo.TagRepository,
     private val ruleEngine: dev.tubolsillo.app.domain.usecase.RuleEngine,
+    private val analyzer: CaptureAnalyzer,
 ) : ViewModel() {
 
     val allTransactions: StateFlow<List<TransactionWithTags>> =
@@ -71,19 +74,43 @@ class TransactionsViewModel(
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery
 
+    /** Filtro que produce una pregunta en lenguaje natural. */
+    private val _aiFilter = MutableStateFlow<SearchFilter?>(null)
+    val aiFilter: StateFlow<SearchFilter?> = _aiFilter
+
+    private val _aiBusy = MutableStateFlow(false)
+    val aiBusy: StateFlow<Boolean> = _aiBusy
+
+    private val _aiMessage = MutableStateFlow<String?>(null)
+    val aiMessage: StateFlow<String?> = _aiMessage
+
+    /** Los tres filtros combinados en uno para no anidar combine() de seis flujos. */
+    private data class Filters(
+        val accountId: Long?,
+        val categoryId: Long?,
+        val query: String,
+        val ai: SearchFilter?,
+    )
+
+    private val filters = combine(
+        _selectedAccountId,
+        _selectedCategoryId,
+        _searchQuery,
+        _aiFilter,
+    ) { accountId, categoryId, query, ai -> Filters(accountId, categoryId, query, ai) }
+
     /** Feed filtrado por cuenta, categoría y búsqueda de texto. */
     val filtered: StateFlow<List<TransactionWithTags>> =
         combine(
             allTransactions,
-            _selectedAccountId,
-            _selectedCategoryId,
-            _searchQuery,
+            filters,
             categoryNames,
-        ) { txs, accountId, categoryId, query, catMap ->
-            val q = query.trim().lowercase()
+        ) { txs, f, catMap ->
+            val q = f.query.trim().lowercase()
             txs.filter { item ->
                 val tx = item.transaction
-                if (accountId != null && tx.accountId != accountId) return@filter false
+                if (f.accountId != null && tx.accountId != f.accountId) return@filter false
+                val categoryId = f.categoryId
                 if (categoryId != null) {
                     if (categoryId == -1L && tx.categoryId != null) return@filter false
                     if (categoryId != -1L && tx.categoryId != categoryId) return@filter false
@@ -95,6 +122,7 @@ class TransactionsViewModel(
                     val matchesCat = catName.contains(q)
                     if (!matchesDesc && !matchesTag && !matchesCat) return@filter false
                 }
+                if (!matchesAi(tx.description, item, f.ai, catMap)) return@filter false
                 true
             }
         }
@@ -121,6 +149,54 @@ class TransactionsViewModel(
 
     fun selectCategory(categoryId: Long?) {
         _selectedCategoryId.value = categoryId
+    }
+
+    /**
+     * Pregunta en lenguaje natural ("¿cuánto gasté en farmacia en septiembre?").
+     * El modelo solo produce el filtro; el filtrado es local y determinista.
+     */
+    fun askAi(question: String) {
+        if (question.isBlank()) return
+        viewModelScope.launch {
+            _aiBusy.value = true
+            val names = categories.value.map { it.name }
+            val filter = runCatching { analyzer.parseSearch(question, names) }.getOrNull()
+            _aiFilter.value = filter
+            _aiMessage.value = if (filter == null) {
+                "No pude interpretarla; búscala por texto."
+            } else null
+            if (filter == null) _searchQuery.value = question
+            _aiBusy.value = false
+        }
+    }
+
+    fun clearAiFilter() {
+        _aiFilter.value = null
+        _aiMessage.value = null
+    }
+
+    private fun matchesAi(
+        description: String,
+        item: TransactionWithTags,
+        filter: SearchFilter?,
+        catMap: Map<Long, String>,
+    ): Boolean {
+        if (filter == null) return true
+        val tx = item.transaction
+        filter.fromMs?.let { if (tx.occurredAt < it) return false }
+        filter.toMs?.let { if (tx.occurredAt > it) return false }
+        filter.income?.let { wantsIncome -> if ((tx.amountMinor > 0) != wantsIncome) return false }
+        filter.categoryName?.let { name ->
+            val catId = catMap.entries.firstOrNull { it.value.equals(name, ignoreCase = true) }?.key
+            if (catId == null || tx.categoryId != catId) return false
+        }
+        filter.text?.takeIf { it.isNotBlank() }?.let { text ->
+            val needle = text.lowercase()
+            val inDesc = description.lowercase().contains(needle)
+            val inTags = item.tags.any { it.name.lowercase().contains(needle) }
+            if (!inDesc && !inTags) return false
+        }
+        return true
     }
 
     fun updateSearchQuery(query: String) {

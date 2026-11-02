@@ -58,6 +58,18 @@ interface CaptureAnalyzer {
 
     /** Redacción libre con instrucciones acotadas (resúmenes del mes). */
     suspend fun summarize(instructions: String): String? = null
+
+    /**
+     * Traduce una pregunta ("¿cuánto gasté en farmacia en septiembre?") a un
+     * filtro. El modelo no ve los movimientos: solo produce el filtro.
+     */
+    suspend fun parseSearch(text: String, categories: List<String>): SearchFilter? = null
+
+    /** Propone qué columna de un CSV desconocido es cada dato. */
+    suspend fun mapCsvColumns(header: List<String>, sampleRows: List<String>): CsvColumnMapping? = null
+
+    /** Qué motor responde ahora mismo (para Ajustes). */
+    suspend fun engine(): AiEngine = AiEngine.NONE
 }
 
 /** Para plataformas sin modelo on-device (iOS hoy): la cola sigue funcionando a mano. */
@@ -68,4 +80,9 @@ class NoopCaptureAnalyzer : CaptureAnalyzer {
     override suspend fun analyze(rawText: String, categories: List<String>): CaptureReading? = null
     override suspend fun interpretEntry(text: String): CaptureReading? = null
     override suspend fun summarize(instructions: String): String? = null
+    override suspend fun parseSearch(text: String, categories: List<String>): SearchFilter? = null
+    override suspend fun mapCsvColumns(
+        header: List<String>,
+        sampleRows: List<String>,
+    ): CsvColumnMapping? = null
 }

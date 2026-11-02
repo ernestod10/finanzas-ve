@@ -14,6 +14,11 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.Alignment
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -53,28 +58,60 @@ fun TransactionsScreen(
     val selectedAccountId by viewModel.selectedAccountId.collectAsState()
     val selectedCategoryId by viewModel.selectedCategoryId.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
+    val aiFilter by viewModel.aiFilter.collectAsState()
+    val aiBusy by viewModel.aiBusy.collectAsState()
+    val aiMessage by viewModel.aiMessage.collectAsState()
     var editingTx by remember { mutableStateOf<TransactionWithTags?>(null) }
 
     IOSScreen(title = "Registros") {
         item(key = "search", contentType = "search") {
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { viewModel.updateSearchQuery(it) },
-                placeholder = { Text("Buscar comercio, categoría o etiqueta...") },
-                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-                trailingIcon = {
-                    if (searchQuery.isNotEmpty()) {
-                        IconButton(onClick = { viewModel.updateSearchQuery("") }) {
-                            Icon(Icons.Filled.Clear, contentDescription = "Limpiar")
+            Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { viewModel.updateSearchQuery(it) },
+                    placeholder = { Text("Buscar comercio, categoría o etiqueta...") },
+                    leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { viewModel.updateSearchQuery("") }) {
+                                Icon(Icons.Filled.Clear, contentDescription = "Limpiar")
+                            }
                         }
+                    },
+                    singleLine = true,
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                // Preguntar en lenguaje natural: el modelo traduce a filtro y el
+                // filtrado ocurre aquí, así ninguna cifra la pone el modelo.
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = aiMessage ?: "Pregunta: \"¿cuánto gasté en farmacia en septiembre?\"",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f),
+                    )
+                    if (aiBusy) {
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                    } else {
+                        TextButton(
+                            enabled = searchQuery.isNotBlank(),
+                            onClick = { viewModel.askAi(searchQuery) },
+                        ) { Text("Preguntar") }
                     }
-                },
-                singleLine = true,
-                shape = RoundedCornerShape(14.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-            )
+                }
+                aiFilter?.let { filter ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "Filtro: " + filter.describe(),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.weight(1f),
+                        )
+                        TextButton(onClick = { viewModel.clearAiFilter() }) { Text("Quitar") }
+                    }
+                }
+            }
         }
 
         item(key = "filters", contentType = "filters") {

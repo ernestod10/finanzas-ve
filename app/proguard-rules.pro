@@ -23,3 +23,12 @@
 # Koin: los ViewModels se resuelven por constructor; conserva sus nombres para
 # que los mensajes de error sigan siendo legibles.
 -keepnames class dev.tubolsillo.app.ui.**.*ViewModel
+
+# MediaPipe LLM (modelos locales) referencia anotaciones de protobuf que no
+# vienen en el artefacto: no se usan en tiempo de ejecución.
+-dontwarn com.google.protobuf.**
+-keep class com.google.mediapipe.tasks.genai.llminference.** { *; }
+# Solo se usa texto (no visión/audio): las clases de imagen de MediaPipe no
+# están en el artefacto y no se tocan.
+-dontwarn com.google.mediapipe.framework.**
+-dontwarn com.google.mediapipe.tasks.**

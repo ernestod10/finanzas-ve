@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CurrencyExchange
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.NotificationsActive
@@ -70,6 +71,7 @@ fun SettingsScreen(
     onCsvImportClick: () -> Unit,
     onPortalClick: () -> Unit = {},
     onReviewClick: () -> Unit = {},
+    onAiModelClick: () -> Unit = {},
     exportViewModel: ExportViewModel = koinViewModel(),
     updateViewModel: UpdateViewModel = koinViewModel(),
 ) {
@@ -304,6 +306,9 @@ fun SettingsScreen(
         item(key = "app-h") { GroupHeader("Aplicación") }
         item(key = "app") {
             GroupedGroup {
+                LinkRow(Icons.Filled.AutoAwesome, Color(0xFF7B3DEC), "Modelo de lenguaje",
+                    "Quién lee tus capturas: Gemini Nano o un modelo local", onAiModelClick)
+                Separator()
                 UpdateRow(updateViewModel)
             }
         }

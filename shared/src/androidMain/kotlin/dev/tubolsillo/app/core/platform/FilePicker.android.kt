@@ -67,3 +67,26 @@ private fun readContent(context: Context, uri: Uri): String? =
     runCatching {
         context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
     }.getOrNull()
+
+@Composable
+actual fun rememberModelImportPicker(onResult: (path: String?, name: String?) -> Unit): () -> Unit {
+    val context = LocalContext.current
+    val launcher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        if (uri == null) {
+            onResult(null, null)
+            return@rememberLauncherForActivityResult
+        }
+        val name = uri.lastPathSegment?.substringAfterLast('/') ?: "modelo.task"
+        val target = java.io.File(java.io.File(context.filesDir, "models").apply { mkdirs() }, name)
+        val copied = runCatching {
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                target.outputStream().use { output -> input.copyTo(output) }
+            }
+            target.takeIf { it.length() > 0 }
+        }.getOrNull()
+        onResult(copied?.absolutePath, name)
+    }
+    return { launcher.launch(arrayOf("*/*")) }
+}

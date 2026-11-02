@@ -15,8 +15,14 @@ dato financiero sale del dispositivo.
   histórico cuando el banco central no publica.
 - **Plan del mes**: ingresos y gastos estimados por fecha, enfrentados a lo real.
 - **Estadísticas**: tendencia del saldo y estructura del gasto.
-- **Gemini Nano on-device** (AICore) para interpretar capturas, descartar
-  ruido, sugerir categorías y redactar el resumen del mes.
+- **IA on-device**: Gemini Nano (AICore) para interpretar capturas, descartar
+  ruido, sugerir categorías y redactar el resumen del mes. Si el teléfono no
+  tiene Nano, se importa un modelo `.task` (LiteRT/MediaPipe) — la app
+  recomienda cuál según la RAM.
+- **Búsqueda en lenguaje natural**: "¿cuánto gasté en farmacia en septiembre?"
+  El modelo solo produce el filtro; la consulta la hace la app.
+- **Mapeo de CSV con IA**: un estado de cuenta de un banco desconocido se mapea
+  solo (el usuario revisa antes de importar).
 - **Actualizaciones fuera de la Play Store**: la app lee la última release de
   este repo y se descarga el APK.
 

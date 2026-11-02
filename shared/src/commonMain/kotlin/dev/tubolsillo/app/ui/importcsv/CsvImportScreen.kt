@@ -13,6 +13,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.Alignment
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -58,6 +62,8 @@ fun CsvImportScreen(
 
     // Picker de archivo de la plataforma: entrega contenido + nombre.
     val openPicker = rememberCsvImportPicker { content, _ -> viewModel.loadContent(content) }
+    val aiBusy by viewModel.aiBusy.collectAsState()
+    val aiMessage by viewModel.aiMessage.collectAsState()
 
     dev.tubolsillo.app.ui.components.IOSScreen(
         title = "Importar CSV",
@@ -96,6 +102,23 @@ fun CsvImportScreen(
                         text = "Mapeo de columnas (archivo)",
                         style = MaterialTheme.typography.titleLarge,
                     )
+                    // Para estados de cuenta de bancos sin preset: el modelo
+                    // propone el mapeo y el usuario lo confirma en los chips.
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = aiMessage ?: "¿Banco nuevo? Que el modelo proponga el mapeo.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f),
+                        )
+                        if (aiBusy) {
+                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                        } else {
+                            TextButton(onClick = { viewModel.suggestMappingWithAi() }) {
+                                Text("Proponer")
+                            }
+                        }
+                    }
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         CsvField.entries.forEach { field ->
                             ColumnMapper(

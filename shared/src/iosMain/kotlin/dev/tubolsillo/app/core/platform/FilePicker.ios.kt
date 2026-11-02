@@ -17,3 +17,8 @@ actual fun rememberJsonImportPicker(onResult: FileResult): () -> Unit =
 @Composable
 actual fun rememberJsonExportPicker(defaultName: String): (String) -> Unit =
     { _ -> /* TODO(M7): UIDocumentPickerViewController */ }
+
+/** iOS no corre MediaPipe LLM: los modelos locales son solo de Android. */
+@Composable
+actual fun rememberModelImportPicker(onResult: (path: String?, name: String?) -> Unit): () -> Unit =
+    { onResult(null, null) }

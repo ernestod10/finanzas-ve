@@ -42,6 +42,7 @@ import dev.tubolsillo.app.ui.portal.PortalScreen
 import dev.tubolsillo.app.ui.record.NewRecordScreen
 import dev.tubolsillo.app.ui.review.EntryDraftHolder
 import dev.tubolsillo.app.ui.review.ReviewScreen
+import dev.tubolsillo.app.ui.settings.AiModelScreen
 import dev.tubolsillo.app.ui.settings.BinanceSettingsScreen
 import dev.tubolsillo.app.ui.settings.RatesScreen
 import dev.tubolsillo.app.ui.settings.SettingsScreen
@@ -78,6 +79,7 @@ object Routes {
     const val CSV_IMPORT = "csv_import"
     const val CATEGORIES = "categories"
     const val PORTAL = "portal"
+    const val AI_MODEL = "ai_model"
     const val PLAN = "plan"
     const val RECORD = "record/{income}"
     const val REVIEW = "review"
@@ -231,6 +233,9 @@ fun TubolsilloNavHost() {
             composable(Routes.PORTAL) {
                 PortalScreen(onBack = { navController.popBackStack() })
             }
+            composable(Routes.AI_MODEL) {
+                AiModelScreen(onBack = { navController.popBackStack() })
+            }
             composable(
                 route = Routes.ACCOUNT,
                 arguments = listOf(navArgument("accountId") { type = NavType.LongType }),
@@ -280,6 +285,7 @@ private fun TabPager(
             Routes.STATS -> StatsScreen(viewModel = dashboardViewModel)
 
             Routes.MENU -> SettingsScreen(
+                onAiModelClick = { navController.navigate(Routes.AI_MODEL) },
                 onRatesClick = { navController.navigate(Routes.RATES) },
                 onBinanceClick = { navController.navigate(Routes.BINANCE) },
                 onEventsClick = { navController.navigate(Routes.EVENTS) },

@@ -17,3 +17,10 @@ expect fun rememberJsonImportPicker(onResult: FileResult): () -> Unit
 
 @Composable
 expect fun rememberJsonExportPicker(defaultName: String): (String) -> Unit
+
+/**
+ * Importa un modelo `.task` (cientos de MB). Copia el archivo al almacenamiento
+ * privado de la app y devuelve su ruta; null si el usuario canceló o falló.
+ */
+@Composable
+expect fun rememberModelImportPicker(onResult: (path: String?, name: String?) -> Unit): () -> Unit

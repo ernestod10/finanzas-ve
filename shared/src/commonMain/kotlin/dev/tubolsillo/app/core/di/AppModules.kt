@@ -35,6 +35,7 @@ import dev.tubolsillo.app.ui.settings.BinanceSettingsViewModel
 import dev.tubolsillo.app.ui.settings.ExportViewModel
 import dev.tubolsillo.app.ui.settings.RatesViewModel
 import dev.tubolsillo.app.ui.settings.UpdateViewModel
+import dev.tubolsillo.app.ui.settings.AiModelViewModel
 import dev.tubolsillo.app.ui.transactions.TransactionsViewModel
 import dev.tubolsillo.app.ui.portal.PortalViewModel
 import dev.tubolsillo.app.ui.plan.PlanViewModel
@@ -95,4 +96,5 @@ val viewModelModule = module {
     viewModelOf(::PlanViewModel)
     viewModelOf(::ReviewViewModel)
     viewModelOf(::UpdateViewModel)
+    viewModelOf(::AiModelViewModel)
 }
