@@ -16,6 +16,9 @@ interface InstallmentDao {
     @Query("SELECT * FROM installments WHERE status = 'PENDING' ORDER BY dueAt")
     fun observePending(): Flow<List<InstallmentEntity>>
 
+    @Query("SELECT * FROM installments ORDER BY dueAt")
+    fun observeAll(): Flow<List<InstallmentEntity>>
+
     @Insert
     suspend fun insert(installment: InstallmentEntity): Long
 

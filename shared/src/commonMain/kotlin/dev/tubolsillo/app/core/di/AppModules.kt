@@ -12,6 +12,8 @@ import dev.tubolsillo.app.domain.repo.RatesRefresher
 import dev.tubolsillo.app.domain.repo.SettingsRepository
 import dev.tubolsillo.app.domain.repo.StatsRepository
 import dev.tubolsillo.app.domain.repo.UpdateRepository
+import dev.tubolsillo.app.domain.repo.CreditsRepository
+import dev.tubolsillo.app.domain.assistant.AssistantEngine
 import dev.tubolsillo.app.domain.repo.TagRepository
 import dev.tubolsillo.app.domain.repo.TransactionRepository
 import dev.tubolsillo.app.domain.usecase.BackupExporter
@@ -29,13 +31,14 @@ import dev.tubolsillo.app.ui.account.AccountViewModel
 import dev.tubolsillo.app.ui.budget.BudgetViewModel
 import dev.tubolsillo.app.ui.dashboard.DashboardViewModel
 import dev.tubolsillo.app.ui.events.EventsViewModel
-import dev.tubolsillo.app.ui.importcsv.CsvImportViewModel
 import dev.tubolsillo.app.ui.categories.CategoriesViewModel
 import dev.tubolsillo.app.ui.settings.BinanceSettingsViewModel
 import dev.tubolsillo.app.ui.settings.ExportViewModel
 import dev.tubolsillo.app.ui.settings.RatesViewModel
 import dev.tubolsillo.app.ui.settings.UpdateViewModel
 import dev.tubolsillo.app.ui.settings.AiModelViewModel
+import dev.tubolsillo.app.ui.credits.CreditsViewModel
+import dev.tubolsillo.app.ui.assistant.AssistantViewModel
 import dev.tubolsillo.app.ui.transactions.TransactionsViewModel
 import dev.tubolsillo.app.ui.portal.PortalViewModel
 import dev.tubolsillo.app.ui.plan.PlanViewModel
@@ -58,6 +61,8 @@ val domainModule = module {
     singleOf(::TagRepository)
     singleOf(::TransactionRepository)
     singleOf(::UpdateRepository)
+    singleOf(::CreditsRepository)
+    singleOf(::AssistantEngine)
     singleOf(::BackupExporter)
     singleOf(::BudgetCalculator)
     single { PortalImporter(get(), get(), get(), get(), get()) }
@@ -89,7 +94,6 @@ val viewModelModule = module {
     viewModelOf(::EventsViewModel)
     viewModelOf(::RatesViewModel)
     viewModelOf(::BinanceSettingsViewModel)
-    viewModelOf(::CsvImportViewModel)
     viewModelOf(::ExportViewModel)
     viewModelOf(::PortalViewModel)
     viewModelOf(::CategoriesViewModel)
@@ -97,4 +101,6 @@ val viewModelModule = module {
     viewModelOf(::ReviewViewModel)
     viewModelOf(::UpdateViewModel)
     viewModelOf(::AiModelViewModel)
+    viewModelOf(::CreditsViewModel)
+    viewModelOf(::AssistantViewModel)
 }

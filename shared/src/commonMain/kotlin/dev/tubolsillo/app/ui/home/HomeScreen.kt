@@ -87,6 +87,65 @@ import kotlin.math.roundToInt
  * superiores (Cuentas / Presupuestos), saludo, tasas del día, saldo, alta
  * rápida, grilla de cuentas y métricas del período.
  */
+
+/**
+ * Resumen de deudas en Inicio: cuánto se debe y cuándo es el próximo pago.
+ * El detalle (tarjetas, Cashea, cuotas) vive en su propia pantalla.
+ */
+@Composable
+private fun HomeCreditsCard(
+    onOpenCredits: () -> Unit,
+    viewModel: dev.tubolsillo.app.ui.credits.CreditsViewModel = koinViewModel(),
+) {
+    val overview by viewModel.overview.collectAsState()
+    if (overview.isEmpty) return
+    val next = overview.nextPayment
+    Surface(
+        onClick = onOpenCredits,
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surface,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "CRÉDITOS",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    text = overview.items.size.toString() + " deudas",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Spacer(Modifier.height(6.dp))
+            overview.debtByCurrency.forEach { (currency, debt) ->
+                Text(
+                    text = dev.tubolsillo.app.core.money.MoneyFormatter.formatMinor(debt, currency),
+                    style = MaterialTheme.typography.headlineSmall.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontFeatureSettings = dev.tubolsillo.app.ui.theme.TNUM,
+                    ),
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+            next?.dueAt?.let { due ->
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "Próximo pago · " + dev.tubolsillo.app.ui.components.formatDate(due) +
+                        (next.dueAmountMinor?.let { " · " + dev.tubolsillo.app.core.money.MoneyFormatter.formatMinor(it, next.currency) } ?: ""),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+        }
+    }
+}
+
 @Composable
 fun HomeScreen(
     onAccountClick: (Long) -> Unit,
@@ -94,6 +153,7 @@ fun HomeScreen(
     onOpenPlan: () -> Unit,
     onOpenRates: () -> Unit,
     onManageCategories: () -> Unit,
+    onOpenCredits: () -> Unit = {},
     viewModel: DashboardViewModel = koinViewModel(),
     budgetViewModel: BudgetViewModel = koinViewModel(),
 ) {
@@ -165,6 +225,7 @@ fun HomeScreen(
                     onAddAccount = { showAddAccount = true },
                 )
             }
+            item(key = "credits") { HomeCreditsCard(onOpenCredits = onOpenCredits) }
             item(key = "period") {
                 PeriodSelector(
                     month = month,

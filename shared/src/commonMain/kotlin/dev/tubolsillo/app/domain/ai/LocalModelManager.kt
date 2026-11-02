@@ -48,4 +48,14 @@ interface LocalModelManager {
 
     /** Borra el modelo importado y libera el espacio. */
     suspend fun remove()
+
+    /**
+     * Descarga el modelo dentro de la app desde [LocalModel.downloadUrl] y lo
+     * deja instalado. [onProgress] recibe bytes descargados y total (0 si el
+     * servidor no lo declara).
+     */
+    suspend fun downloadModel(
+        model: LocalModel,
+        onProgress: (downloaded: Long, total: Long) -> Unit = { _, _ -> },
+    ): Result<Unit>
 }

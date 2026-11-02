@@ -1,6 +1,8 @@
 package dev.tubolsillo.app.ui
 
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.Modifier
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -45,6 +47,12 @@ fun App() {
         darkTheme = darkTheme,
         accent = AppAccent.fromKey(accentKey),
     ) {
-        TubolsilloNavHost()
+        // La burbuja del asistente flota sobre toda la app.
+        androidx.compose.foundation.layout.Box(
+            modifier = androidx.compose.ui.Modifier.fillMaxSize(),
+        ) {
+            TubolsilloNavHost()
+            dev.tubolsillo.app.ui.assistant.AssistantOverlay()
+        }
     }
 }

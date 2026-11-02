@@ -56,6 +56,31 @@ class AiModelViewModel(
         }
     }
 
+    private val _downloadingId = MutableStateFlow<String?>(null)
+    val downloadingId: StateFlow<String?> = _downloadingId.asStateFlow()
+
+    private val _progress = MutableStateFlow(0f)
+    val progress: StateFlow<Float> = _progress.asStateFlow()
+
+    /** Descarga el modelo dentro de la app (con barra de progreso). */
+    fun download(model: dev.tubolsillo.app.domain.ai.LocalModel) {
+        if (_downloadingId.value != null) return
+        viewModelScope.launch {
+            _downloadingId.value = model.id
+            _progress.value = 0f
+            manager.downloadModel(model) { downloaded, total ->
+                _progress.value = if (total > 0) {
+                    (downloaded.toFloat() / total).coerceIn(0f, 1f)
+                } else 0f
+            }
+                .onSuccess { _message.value = "Modelo descargado: " + model.name }
+                .onFailure { _message.value = it.message ?: "No se pudo descargar el modelo." }
+            _engine.value = runCatching { analyzer.engine() }.getOrDefault(AiEngine.NONE)
+            _downloadingId.value = null
+            _progress.value = 0f
+        }
+    }
+
     fun removeModel() {
         viewModelScope.launch {
             _busy.value = true

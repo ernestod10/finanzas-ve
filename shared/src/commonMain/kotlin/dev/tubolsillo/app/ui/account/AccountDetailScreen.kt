@@ -98,14 +98,18 @@ fun AccountDetailScreen(
                 ) {
                     val kind = AccountKind.fromKey(acc.kind)
                     val isDebt = kind.isDebt
-                    val debtMinor = acc.lastBalanceMinor?.let { kotlin.math.abs(it) }
                     val limitMinor = acc.creditLimitMinor
+                    val storedDebt = acc.lastBalanceMinor?.let { kotlin.math.abs(it) }
                     // El portal de algunos bancos (BNC) publica solo el disponible;
-                    // otros (Bancaribe) publican los dos. Se prefiere el dato del
-                    // banco y, si no vino, se deduce del límite.
+                    // otros (Bancaribe) publican los dos. Con el límite conocido,
+                    // el dato que falte se deduce: deuda = límite − disponible.
                     val availableMinor = acc.creditAvailableMinor
-                        ?: if (debtMinor != null && limitMinor != null) {
-                            (limitMinor - debtMinor).coerceAtLeast(0L)
+                        ?: if (storedDebt != null && limitMinor != null) {
+                            (limitMinor - storedDebt).coerceAtLeast(0L)
+                        } else null
+                    val debtMinor = storedDebt
+                        ?: if (limitMinor != null && availableMinor != null) {
+                            (limitMinor - availableMinor).coerceAtLeast(0L)
                         } else null
 
                     Row(verticalAlignment = Alignment.CenterVertically) {

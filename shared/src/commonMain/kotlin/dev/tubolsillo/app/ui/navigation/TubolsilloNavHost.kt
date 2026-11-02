@@ -36,12 +36,12 @@ import dev.tubolsillo.app.ui.dashboard.DashboardViewModel
 import dev.tubolsillo.app.ui.events.EventsScreen
 import dev.tubolsillo.app.ui.events.ReplayScreen
 import dev.tubolsillo.app.ui.home.HomeScreen
-import dev.tubolsillo.app.ui.importcsv.CsvImportScreen
 import dev.tubolsillo.app.ui.plan.PlanScreen
 import dev.tubolsillo.app.ui.portal.PortalScreen
 import dev.tubolsillo.app.ui.record.NewRecordScreen
 import dev.tubolsillo.app.ui.review.EntryDraftHolder
 import dev.tubolsillo.app.ui.review.ReviewScreen
+import dev.tubolsillo.app.ui.credits.CreditsScreen
 import dev.tubolsillo.app.ui.settings.AiModelScreen
 import dev.tubolsillo.app.ui.settings.BinanceSettingsScreen
 import dev.tubolsillo.app.ui.settings.RatesScreen
@@ -76,10 +76,10 @@ object Routes {
     const val BINANCE = "binance"
     const val EVENTS = "events"
     const val REPLAY = "replay"
-    const val CSV_IMPORT = "csv_import"
     const val CATEGORIES = "categories"
     const val PORTAL = "portal"
     const val AI_MODEL = "ai_model"
+    const val CREDITS = "credits"
     const val PLAN = "plan"
     const val RECORD = "record/{income}"
     const val REVIEW = "review"
@@ -227,14 +227,17 @@ fun TubolsilloNavHost() {
             composable(Routes.REPLAY) {
                 ReplayScreen(onBack = { navController.popBackStack() })
             }
-            composable(Routes.CSV_IMPORT) {
-                CsvImportScreen(onBack = { navController.popBackStack() })
-            }
             composable(Routes.PORTAL) {
                 PortalScreen(onBack = { navController.popBackStack() })
             }
             composable(Routes.AI_MODEL) {
                 AiModelScreen(onBack = { navController.popBackStack() })
+            }
+            composable(Routes.CREDITS) {
+                CreditsScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpenAccount = { id -> navController.navigate(Routes.account(id)) },
+                )
             }
             composable(
                 route = Routes.ACCOUNT,
@@ -276,6 +279,7 @@ private fun TabPager(
                 onNewRecord = { income -> navController.navigate(Routes.record(income)) },
                 onOpenPlan = { navController.navigate(Routes.PLAN) },
                 onOpenRates = { navController.navigate(Routes.RATES) },
+                onOpenCredits = { navController.navigate(Routes.CREDITS) },
                 onManageCategories = { navController.navigate(Routes.CATEGORIES) },
                 viewModel = dashboardViewModel,
             )
@@ -286,10 +290,10 @@ private fun TabPager(
 
             Routes.MENU -> SettingsScreen(
                 onAiModelClick = { navController.navigate(Routes.AI_MODEL) },
+                onCreditsClick = { navController.navigate(Routes.CREDITS) },
                 onRatesClick = { navController.navigate(Routes.RATES) },
                 onBinanceClick = { navController.navigate(Routes.BINANCE) },
                 onEventsClick = { navController.navigate(Routes.EVENTS) },
-                onCsvImportClick = { navController.navigate(Routes.CSV_IMPORT) },
                 onPortalClick = { navController.navigate(Routes.PORTAL) },
                 onReviewClick = { navController.navigate(Routes.REVIEW) },
             )

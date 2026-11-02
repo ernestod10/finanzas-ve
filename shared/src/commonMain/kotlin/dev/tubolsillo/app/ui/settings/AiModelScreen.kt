@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -47,6 +48,8 @@ fun AiModelScreen(
     val engine by viewModel.engine.collectAsState()
     val busy by viewModel.busy.collectAsState()
     val message by viewModel.message.collectAsState()
+    val downloadingId by viewModel.downloadingId.collectAsState()
+    val progress by viewModel.progress.collectAsState()
 
     val picker = rememberModelImportPicker { path, name ->
         viewModel.importModel(path, name)
@@ -136,7 +139,14 @@ fun AiModelScreen(
             GroupedGroup {
                 LocalModelCatalog.ALL.forEachIndexed { index, model ->
                     if (index > 0) GroupSeparator()
-                    CatalogRow(model = model, status = local, onOpen = { openUrl(model.downloadUrl) })
+                    CatalogRow(
+                        model = model,
+                        status = local,
+                        downloading = downloadingId == model.id,
+                        progress = if (downloadingId == model.id) progress else 0f,
+                        onDownload = { viewModel.download(model) },
+                        onOpen = { openUrl(model.downloadUrl) },
+                    )
                 }
             }
         }
@@ -178,7 +188,14 @@ private fun ModelRow(
 }
 
 @Composable
-private fun CatalogRow(model: LocalModel, status: LocalModelStatus, onOpen: () -> Unit) {
+private fun CatalogRow(
+    model: LocalModel,
+    status: LocalModelStatus,
+    downloading: Boolean,
+    progress: Float,
+    onDownload: () -> Unit,
+    onOpen: () -> Unit,
+) {
     val isRecommended = status.recommended?.id == model.id
     val compatible = model.minRamGb <= status.totalRamGb || status.totalRamGb == 0.0
     Column(
@@ -214,16 +231,38 @@ private fun CatalogRow(model: LocalModel, status: LocalModelStatus, onOpen: () -
         )
         Spacer(Modifier.height(2.dp))
         Text(
-            text = model.note + if (model.requiresAccount) " (requiere iniciar sesión en Hugging Face)" else "",
+            text = model.note,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Text(
-            text = "Abrir la descarga ↗",
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(top = 4.dp),
-        )
+        if (downloading) {
+            Spacer(Modifier.height(6.dp))
+            LinearProgressIndicator(
+                progress = { progress },
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Text(
+                text = "Descargando… " + (progress * 100).roundToInt().toString() + " %",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(top = 3.dp),
+            )
+        } else {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                TextButton(
+                    onClick = onDownload,
+                    enabled = !status.hasLocalModel,
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 0.dp),
+                ) {
+                    Text("Descargar (" + model.sizeMb + " MB)")
+                }
+                Spacer(Modifier.weight(1f))
+                TextButton(
+                    onClick = onOpen,
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 0.dp),
+                ) { Text("Enlace ↗") }
+            }
+        }
     }
 }
 

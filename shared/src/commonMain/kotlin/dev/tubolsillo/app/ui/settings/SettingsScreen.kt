@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.CurrencyExchange
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.NotificationsActive
@@ -68,10 +69,10 @@ fun SettingsScreen(
     onRatesClick: () -> Unit,
     onBinanceClick: () -> Unit,
     onEventsClick: () -> Unit,
-    onCsvImportClick: () -> Unit,
     onPortalClick: () -> Unit = {},
     onReviewClick: () -> Unit = {},
     onAiModelClick: () -> Unit = {},
+    onCreditsClick: () -> Unit = {},
     exportViewModel: ExportViewModel = koinViewModel(),
     updateViewModel: UpdateViewModel = koinViewModel(),
 ) {
@@ -268,9 +269,6 @@ fun SettingsScreen(
                 Separator()
                 LinkRow(Icons.Filled.NotificationsActive, Color(0xFF7A3FA0), "Capturas",
                     "Registro crudo de SMS y push, con replay", onEventsClick)
-                Separator()
-                LinkRow(Icons.Filled.ReceiptLong, Color(0xFF8A5A2B), "Importar CSV",
-                    "Estados de cuenta de tu ebanking", onCsvImportClick)
             }
         }
 
@@ -286,6 +284,14 @@ fun SettingsScreen(
                     "Importar un archivo JSON de copia de seguridad") {
                     importPicker()
                 }
+            }
+        }
+
+        item(key = "creditos-h") { GroupHeader("Créditos") }
+        item(key = "creditos") {
+            GroupedGroup {
+                LinkRow(Icons.Filled.CreditCard, Color(0xFFB3413B), "Créditos y deudas",
+                    "Tarjetas, Cashea y cuotas con su fecha de pago", onCreditsClick)
             }
         }
 

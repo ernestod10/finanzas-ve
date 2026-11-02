@@ -76,6 +76,32 @@ object AiPrompts {
         """.trimIndent()
     }
 
+    /** Traduce un pedido del chat a una acción ejecutable. */
+    fun assistant(question: String, today: String, categories: List<String>): String {
+        val cats = if (categories.isEmpty()) "ninguna" else categories.joinToString(", ")
+        return """
+            Eres el asistente de finanzas de la app. Traduce el pedido a UNA acción en JSON.
+            Hoy es $today.
+            Acciones:
+            {"action":"stats","months_back":0,"category":null,"text":null}
+            {"action":"find","text":null,"amount":20.0,"days_ago":1}
+            {"action":"update","amount":20.0,"days_ago":1,"description":"Almuerzo","category":"Comida"}
+            {"action":"compare","price_usd":360,"price_bs":500000,"discount_pct":null}
+            {"action":"help"}
+            Reglas:
+            - months_back: 0 este mes, 1 dos meses atrás, 2 tres meses.
+            - days_ago: 0 hoy, 1 ayer, 2 anteayer.
+            - compare: si dan DOS precios del mismo producto (uno en divisas y otro
+              en bolívares a BCV), usa price_usd y price_bs. Si dan uno solo,
+              deja el otro en null. discount_pct solo si mencionan un porcentaje.
+            - category: una de [$cats] o null.
+            - Usa SOLO los números que aparecen en el pedido; no inventes montos.
+            - Responde solo con el JSON, sin explicaciones.
+            Pedido: ${question.take(300)}
+            Salida:
+        """.trimIndent()
+    }
+
     fun csvMapping(header: List<String>, sampleRows: List<String>): String = """
         Te doy el encabezado y dos filas de un estado de cuenta. Indica qué columna es cada dato.
         Responde SOLO con JSON usando índices que empiezan en 0 (o null si no existe).
@@ -101,17 +127,17 @@ object AiResponseParser {
 
     fun reading(response: String?): CaptureReading? {
         val obj = jsonObject(response) ?: return null
-        val amount = obj.double("amount")
-        val last4 = obj.string("last4")?.filter { it.isDigit() }?.takeLast(4)?.takeIf { it.length == 4 }
+        val amount = obj.aiDouble("amount")
+        val last4 = obj.aiString("last4")?.filter { it.isDigit() }?.takeLast(4)?.takeIf { it.length == 4 }
         return CaptureReading(
             amount = amount,
-            currency = obj.string("currency")?.uppercase(),
-            merchant = obj.string("merchant"),
+            currency = obj.aiString("currency")?.uppercase(),
+            merchant = obj.aiString("merchant"),
             last4 = last4,
-            kind = obj.string("kind")?.lowercase(),
-            category = obj.string("category"),
-            isTransaction = obj.boolean("is_transaction"),
-            dayOffset = obj.int("day_offset"),
+            kind = obj.aiString("kind")?.lowercase(),
+            category = obj.aiString("category"),
+            isTransaction = obj.aiBoolean("is_transaction"),
+            dayOffset = obj.aiInt("day_offset"),
             rawResponse = response,
         )
     }
@@ -127,42 +153,43 @@ object AiResponseParser {
         }.getOrNull()
     }
 
-    private fun JsonObject.primitive(key: String): JsonPrimitive? {
-        val value = this[key] ?: return null
-        val p = runCatching { value.jsonPrimitive }.getOrNull() ?: return null
-        if (!p.isString && p.content == "null") return null
-        return p
+}
+
+/** Lectura tolerante de campos JSON (los modelos chicos cambian tipos). */
+fun JsonObject.aiPrimitive(key: String): JsonPrimitive? {
+    val value = this[key] ?: return null
+    val p = runCatching { value.jsonPrimitive }.getOrNull() ?: return null
+    if (!p.isString && p.content == "null") return null
+    return p
+}
+
+fun JsonObject.aiString(key: String): String? =
+    aiPrimitive(key)?.content?.trim()?.takeIf { it.isNotBlank() && it != "null" }
+
+fun JsonObject.aiDouble(key: String): Double? {
+    val p = aiPrimitive(key) ?: return null
+    p.doubleOrNull?.let { return it }
+    val raw = p.content.replace(" ", "")
+    if (raw.isBlank()) return null
+    val normalized = when {
+        raw.contains(',') && raw.contains('.') -> raw.replace(".", "").replace(',', '.')
+        raw.contains(',') -> raw.replace(',', '.')
+        else -> raw
     }
+    return normalized.toDoubleOrNull()
+}
 
-    fun JsonObject.string(key: String): String? =
-        primitive(key)?.content?.trim()?.takeIf { it.isNotBlank() && it != "null" }
+fun JsonObject.aiInt(key: String): Int? {
+    val p = aiPrimitive(key) ?: return null
+    return p.intOrNull ?: p.content.toDoubleOrNull()?.toInt()
+}
 
-    fun JsonObject.double(key: String): Double? {
-        val p = primitive(key) ?: return null
-        p.doubleOrNull?.let { return it }
-        // "25,00" o "1.234,56": se normaliza a mano.
-        val raw = p.content.replace(" ", "")
-        if (raw.isBlank()) return null
-        val normalized = when {
-            raw.contains(',') && raw.contains('.') -> raw.replace(".", "").replace(',', '.')
-            raw.contains(',') -> raw.replace(',', '.')
-            else -> raw
-        }
-        return normalized.toDoubleOrNull()
-    }
-
-    fun JsonObject.int(key: String): Int? {
-        val p = primitive(key) ?: return null
-        return p.intOrNull ?: p.content.toDoubleOrNull()?.toInt()
-    }
-
-    fun JsonObject.boolean(key: String): Boolean? {
-        val p = primitive(key) ?: return null
-        p.booleanOrNull?.let { return it }
-        return when (p.content.lowercase()) {
-            "true", "1", "yes", "si", "sí" -> true
-            "false", "0", "no" -> false
-            else -> null
-        }
+fun JsonObject.aiBoolean(key: String): Boolean? {
+    val p = aiPrimitive(key) ?: return null
+    p.booleanOrNull?.let { return it }
+    return when (p.content.lowercase()) {
+        "true", "1", "yes", "si", "sí" -> true
+        "false", "0", "no" -> false
+        else -> null
     }
 }

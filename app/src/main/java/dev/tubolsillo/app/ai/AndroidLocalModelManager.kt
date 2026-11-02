@@ -2,6 +2,7 @@ package dev.tubolsillo.app.ai
 
 import android.app.ActivityManager
 import android.content.Context
+import dev.tubolsillo.app.domain.ai.LocalModel
 import dev.tubolsillo.app.domain.ai.LocalModelCatalog
 import dev.tubolsillo.app.domain.ai.LocalModelManager
 import dev.tubolsillo.app.domain.ai.LocalModelStatus
@@ -45,6 +46,62 @@ class AndroidLocalModelManager(
             .putString(KEY_ID, id)
             .apply()
         _state.value = readState()
+    }
+
+    override suspend fun downloadModel(
+        model: LocalModel,
+        onProgress: (downloaded: Long, total: Long) -> Unit,
+    ): Result<Unit> = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        val dir = modelsDir()
+        val target = File(dir, model.id + ".task")
+        val partial = File(dir, model.id + ".task.part")
+        runCatching {
+            val connection = (java.net.URL(model.downloadUrl).openConnection() as java.net.HttpURLConnection).apply {
+                instanceFollowRedirects = true
+                connectTimeout = 20_000
+                readTimeout = 60_000
+                setRequestProperty("Accept", "application/octet-stream")
+            }
+            try {
+                val code = connection.responseCode
+                when {
+                    code == 401 || code == 403 -> error(
+                        "Ese modelo pide iniciar sesión en Hugging Face. Descárgalo en el navegador y usa 'Importar archivo .task'."
+                    )
+                    code !in 200..299 -> error("La descarga falló (HTTP " + code + ").")
+                }
+                val total = connection.contentLengthLong
+                connection.inputStream.use { input ->
+                    partial.outputStream().use { output ->
+                        val buffer = ByteArray(256 * 1024)
+                        var downloaded = 0L
+                        var lastNotified = 0L
+                        while (true) {
+                            val read = input.read(buffer)
+                            if (read < 0) break
+                            output.write(buffer, 0, read)
+                            downloaded += read
+                            // Avisar cada 4 MB: suficiente para la barra y barato.
+                            if (downloaded - lastNotified >= 4L * 1024 * 1024) {
+                                lastNotified = downloaded
+                                onProgress(downloaded, total)
+                            }
+                        }
+                    }
+                }
+                onProgress(partial.length(), partial.length())
+                if (!partial.renameTo(target)) {
+                    partial.copyTo(target, overwrite = true)
+                    partial.delete()
+                }
+                installFromFile(target.absolutePath, model.id).getOrThrow()
+            } finally {
+                connection.disconnect()
+            }
+        }.onFailure {
+            partial.delete()
+            target.delete()
+        }
     }
 
     override suspend fun remove() {
