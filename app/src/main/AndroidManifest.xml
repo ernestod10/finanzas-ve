@@ -58,6 +58,7 @@
         <activity
             android:name=".portal.PortalWebActivity"
             android:exported="false"
+            android:theme="@style/Theme.Tubolsillo.Portal"
             android:excludeFromRecents="true"
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize"

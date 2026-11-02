@@ -48,7 +48,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -159,8 +161,20 @@ class PortalWebActivity : ComponentActivity() {
                     if (steps.size > 12) steps.removeAt(0)
                 }
 
-                Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                    Column(modifier = Modifier.fillMaxSize().padding(8.dp)) {
+                // Consulta automática: la ventana es translúcida y el contenido
+                // (WebView incluido) queda invisible; el aviso se pinta en un
+                // diálogo aparte. Con showWeb (login/2FA) vuelve todo a la vista.
+                val compact = !showWeb
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = if (compact) Color.Transparent else MaterialTheme.colorScheme.background,
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .alpha(if (compact) 0f else 1f)
+                            .padding(8.dp),
+                    ) {
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically,
@@ -368,10 +382,15 @@ class PortalWebActivity : ComponentActivity() {
                                 },
                             )
                             if (busy && !showWeb) {
-                                PortalLoadingOverlay(
-                                    institution = institution,
-                                    steps = steps,
-                                )
+                                // Diálogo con ventana propia: se ve aunque la
+                                // columna esté atenuada.
+                                androidx.compose.ui.window.Dialog(onDismissRequest = { }) {
+                                    CompactSyncCard(
+                                        institution = institution,
+                                        message = steps.lastOrNull() ?: "Abriendo el portal…",
+                                        onCancel = { finish() },
+                                    )
+                                }
                             }
                         }
 
@@ -888,4 +907,47 @@ private fun friendlyPhase(step: String?): String = when {
     step.contains("Error", ignoreCase = true) ||
         step.contains("respondió", ignoreCase = true) -> "Revisando un aviso del banco"
     else -> "Preparando la sesión"
+}
+
+/**
+ * Aviso de la consulta automática: tarjeta con el logo del banco y el paso
+ * actual, para no bloquear la pantalla. La actividad completa solo aparece
+ * cuando el portal pide una acción.
+ */
+@Composable
+private fun CompactSyncCard(
+    institution: Institution,
+    message: String,
+    onCancel: () -> Unit,
+) {
+    Surface(
+        shape = RoundedCornerShape(18.dp),
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 10.dp,
+    ) {
+        Row(
+            modifier = Modifier.padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            InstitutionBadge(institution, size = 36)
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Consultando " + institution.displayName,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                )
+                Spacer(Modifier.height(6.dp))
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            }
+            TextButton(onClick = onCancel) { Text("Cerrar") }
+        }
+    }
 }

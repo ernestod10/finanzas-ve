@@ -1,4 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.Tubolsillo" parent="android:Theme.Material.NoActionBar" />
+
+    <!-- Consulta de portal: la ventana es translúcida para que la app siga
+         visible detrás del aviso; el WebView se pinta opaco cuando hace falta
+         que el usuario actúe (login, 2FA). -->
+    <style name="Theme.Tubolsillo.Portal" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowAnimationStyle">@null</item>
+    </style>
 </resources>
