@@ -44,7 +44,11 @@ sealed interface AssistantIntent {
      * bolívares.
      */
     data class Compare(
+        /** Precio pagando en dólares en efectivo. */
         val usdPrice: Double? = null,
+        /** Precio en dólares que se pagan en bolívares a la tasa BCV ("580 a BCV"). */
+        val bcvUsdPrice: Double? = null,
+        /** Precio ya expresado en bolívares. */
         val bsPrice: Double? = null,
         /** Descuento sobre la opción en divisas, si lo mencionan. */
         val discountPct: Double? = null,
@@ -84,17 +88,21 @@ object AssistantIntentParser {
 
             "compare" -> {
                 val usd = obj.aiDouble("price_usd") ?: obj.aiDouble("usd")
+                val bcvUsd = obj.aiDouble("price_bcv_usd") ?: obj.aiDouble("bcv_usd")
                 val bs = obj.aiDouble("price_bs") ?: obj.aiDouble("bs")
                 // Compatibilidad: "price" con currency.
                 val legacy = obj.aiDouble("price")
                 val legacyCurrency = obj.aiString("currency")?.uppercase()
                 val usdPrice = usd ?: legacy?.takeIf { legacyCurrency != "VES" }
                 val bsPrice = bs ?: legacy?.takeIf { legacyCurrency == "VES" }
-                if ((usdPrice == null || usdPrice <= 0) && (bsPrice == null || bsPrice <= 0)) {
+                val bcvUsdPrice = bcvUsd?.takeIf { it > 0 }
+                val hasAny = listOfNotNull(usdPrice, bcvUsdPrice, bsPrice).any { it > 0 }
+                if (!hasAny) {
                     AssistantIntent.Help
                 } else {
                     AssistantIntent.Compare(
                         usdPrice = usdPrice?.takeIf { it > 0 },
+                        bcvUsdPrice = bcvUsdPrice,
                         bsPrice = bsPrice?.takeIf { it > 0 },
                         discountPct = obj.aiDouble("discount_pct"),
                     )
@@ -135,17 +143,19 @@ object AssistantIntentParser {
                 val explicitUsd = Regex("(\\d+(?:[.,]\\d+)?)\\s*(?:en\\s+)?divisas", RegexOption.IGNORE_CASE)
                     .find(text)?.groupValues?.get(1)
                     ?.replace(".", "")?.replace(',', '.')?.toDoubleOrNull()
-                val explicitBs = Regex("(\\d+(?:[.,]\\d+)?)\\s*(?:a|en|por)\\s*(?:la\\s+)?(?:tasa\\s+)?bcv", RegexOption.IGNORE_CASE)
+                // "580 a tasa BCV" se dice en Venezuela para un precio en DÓLARES
+                // que se paga en bolívares al cambio oficial.
+                val explicitBcvUsd = Regex("(\\d+(?:[.,]\\d+)?)\\s*(?:usd|d[oó]lares|\\$)?\\s*(?:a|en|por)\\s*(?:la\\s+)?(?:tasa\\s+)?bcv", RegexOption.IGNORE_CASE)
+                    .find(text)?.groupValues?.get(1)
+                    ?.replace(".", "")?.replace(',', '.')?.toDoubleOrNull()
+                val explicitBs = Regex("(\\d+(?:[.,]\\d+)?)\\s*(?:bs|bol[ií]vares)", RegexOption.IGNORE_CASE)
                     .find(text)?.groupValues?.get(1)
                     ?.replace(".", "")?.replace(',', '.')?.toDoubleOrNull()
                 val withoutDiscount = numbers.filter { it != discountValue }
                 return AssistantIntent.Compare(
-                    usdPrice = explicitUsd
-                        ?: withoutDiscount.firstOrNull()
-                        ?: numbers.firstOrNull(),
-                    bsPrice = explicitBs
-                        ?: withoutDiscount.getOrNull(1)
-                        ?: numbers.getOrNull(1),
+                    usdPrice = explicitUsd ?: withoutDiscount.firstOrNull() ?: numbers.firstOrNull(),
+                    bcvUsdPrice = explicitBcvUsd,
+                    bsPrice = explicitBs,
                     discountPct = discountValue,
                 )
             }

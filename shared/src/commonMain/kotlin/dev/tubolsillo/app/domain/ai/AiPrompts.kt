@@ -76,8 +76,13 @@ object AiPrompts {
         """.trimIndent()
     }
 
-    /** Traduce un pedido del chat a una acción ejecutable. */
-    fun assistant(question: String, today: String, categories: List<String>): String {
+    /** Traduce un pedido del chat a una acción ejecutable (con la charla previa). */
+    fun assistant(
+        question: String,
+        today: String,
+        categories: List<String>,
+        history: String = "",
+    ): String {
         val cats = if (categories.isEmpty()) "ninguna" else categories.joinToString(", ")
         return """
             Eres el asistente de finanzas de la app. Traduce el pedido a UNA acción en JSON.
@@ -86,17 +91,20 @@ object AiPrompts {
             {"action":"stats","months_back":0,"category":null,"text":null}
             {"action":"find","text":null,"amount":20.0,"days_ago":1}
             {"action":"update","amount":20.0,"days_ago":1,"description":"Almuerzo","category":"Comida"}
-            {"action":"compare","price_usd":360,"price_bs":500000,"discount_pct":null}
+            {"action":"compare","price_usd":360,"price_bcv_usd":580,"price_bs":null,"discount_pct":null}
             {"action":"help"}
             Reglas:
             - months_back: 0 este mes, 1 dos meses atrás, 2 tres meses.
             - days_ago: 0 hoy, 1 ayer, 2 anteayer.
-            - compare: si dan DOS precios del mismo producto (uno en divisas y otro
-              en bolívares a BCV), usa price_usd y price_bs. Si dan uno solo,
-              deja el otro en null. discount_pct solo si mencionan un porcentaje.
+            - compare: "X en divisas" o "X dólares" → price_usd (dólares en efectivo).
+              "Y a tasa BCV" o "Y a bcv" → price_bcv_usd (Y dólares que se pagan
+              en bolívares al cambio oficial). "Y bolívares" o "Y Bs" → price_bs.
+              discount_pct solo si mencionan un porcentaje.
             - category: una de [$cats] o null.
             - Usa SOLO los números que aparecen en el pedido; no inventes montos.
             - Responde solo con el JSON, sin explicaciones.
+            Conversación previa:
+            ${history.take(600).ifBlank { "(nada)" }}
             Pedido: ${question.take(300)}
             Salida:
         """.trimIndent()

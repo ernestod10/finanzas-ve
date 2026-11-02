@@ -194,30 +194,52 @@ class AssistantEngine(
             return AssistantAnswer("Todavía no tengo las tasas de hoy. Actualízalas en Menú → Tasa de cambio.")
         }
         val p2p = if (rates.p2pUsdtVes > 0) rates.p2pUsdtVes else rates.bcvUsdBs
-        // Si solo dieron un precio, la otra opción es el mismo producto a BCV.
+        val discount = (intent.discountPct ?: 0.0) / 100.0
+
+        // La opción en divisas: dólares en efectivo (con descuento si lo dan).
+        // La otra opción se lleva a dólares reales valorando los bolívares al P2P:
+        // si pagas "580 USD a BCV", esos bolívares cuestan 580 * bcv / p2p dólares.
         val usdPrice = intent.usdPrice
+            ?: intent.bcvUsdPrice
             ?: intent.bsPrice?.let { it / rates.bcvUsdBs }
             ?: return AssistantAnswer("Necesito un precio para comparar.")
-        val bsPrice = intent.bsPrice ?: usdPrice * rates.bcvUsdBs
-        val comparison = compareOptions(usdPrice, bsPrice, intent.discountPct ?: 0.0, p2p)
+
+        val otherUsd: Double = when {
+            intent.bcvUsdPrice != null -> intent.bcvUsdPrice * rates.bcvUsdBs / p2p
+            intent.bsPrice != null -> intent.bsPrice / p2p
+            // Solo dieron el precio en divisas: la otra opción es el mismo
+            // monto pagado en bolívares al BCV (que sale más caro o más barato
+            // según el margen con el P2P).
+            else -> usdPrice * rates.bcvUsdBs / p2p
+        }
+        val usdCost = usdPrice * (1 - discount)
+        val cheaperUsd = usdCost <= otherUsd
+        val saving = kotlin.math.abs(otherUsd - usdCost)
+
+        val otherLabel = when {
+            intent.bcvUsdPrice != null -> "Bs. " + formatBs(intent.bcvUsdPrice * rates.bcvUsdBs) + " a BCV"
+            intent.bsPrice != null -> "Bs. " + formatBs(intent.bsPrice)
+            else -> "Bs. " + formatBs(usdPrice * rates.bcvUsdBs) + " a BCV"
+        }
 
         val text = buildString {
-            append(if (comparison.cheaperInUsd) "Te conviene pagar en divisas" else "Te conviene pagar en bolívares")
-            append(": $")
-            append(formatUsd(comparison.usdCostUsd))
-            append(" en divisas vs Bs. ")
-            append(formatBs(comparison.bsCostBs))
-            append(" (≈ $")
-            append(formatUsd(comparison.bsCostUsd))
-            append(" al P2P). Ahorras $")
-            append(formatUsd(comparison.savingUsd))
+            append(if (cheaperUsd) "Te conviene pagar en divisas" else "Te conviene pagar en bolívares")
+            append(". Divisas: $")
+            append(formatUsd(usdCost))
+            append(" · ")
+            append(otherLabel)
+            append(" ≈ $")
+            append(formatUsd(otherUsd))
+            append(" al P2P. Diferencia: $")
+            append(formatUsd(saving))
             append(".")
         }
         return AssistantAnswer(
             text = text,
             rows = listOf(
-                AnswerRow("Diferencia", "$" + formatUsd(comparison.savingUsd)),
-                AnswerRow("Equivale a BCV", "Bs. " + formatBs(rates.bcvUsdBs) + " / USD"),
+                AnswerRow("Pago en divisas", "$" + formatUsd(usdCost)),
+                AnswerRow("Pago en bolívares", otherLabel + " (≈ $" + formatUsd(otherUsd) + ")"),
+                AnswerRow("BCV hoy", "Bs. " + formatBs(rates.bcvUsdBs) + " / USD"),
                 AnswerRow("P2P hoy", "Bs. " + formatBs(p2p) + " / USD"),
             ),
         )

@@ -54,14 +54,24 @@ class AssistantViewModel(
     fun send(text: String) {
         val question = text.trim()
         if (question.isEmpty() || _busy.value) return
+        // La charla previa va al prompt: así "no, son 580 dólares" corrige la
+        // comparación anterior en vez de buscar un movimiento.
+        val history = _messages.value
+            .filterNot { it.text.startsWith("Hola.") }
+            .takeLast(4)
+            .joinToString("\n") { (if (it.fromUser) "Usuario: " else "Asistente: ") + it.text }
         _messages.value = _messages.value + ChatMessage(fromUser = true, text = question)
         viewModelScope.launch {
             _busy.value = true
             val categories = categoryRepository.categoriesState.value.map { it.name }
             val raw = runCatching {
-                analyzer.summarize(AiPrompts.assistant(question, todayIso(), categories))
+                analyzer.summarize(AiPrompts.assistant(question, todayIso(), categories, history))
             }.getOrNull()
-            val intent = AssistantIntentParser.parse(raw, categories)
+            val intent = chooseIntent(
+                model = AssistantIntentParser.parse(raw, categories),
+                text = question,
+                categories = categories,
+            )
             val answer = runCatching { engine.answer(intent) }
                 .getOrElse { AssistantAnswer("No pude consultar tus datos. Inténtalo otra vez.") }
             _messages.value = _messages.value + ChatMessage(
@@ -70,6 +80,32 @@ class AssistantViewModel(
                 rows = answer.rows,
             )
             _busy.value = false
+        }
+    }
+
+    /**
+     * El modelo a veces pierde un dato de la frase ("360 en divisas o 500 a
+     * BCV" → solo 360). Se combina con la lectura por reglas: lo que el modelo
+     * no trajo, lo aporta la heurística; y si el modelo no entendió, manda la
+     * heurística.
+     */
+    private fun chooseIntent(
+        model: dev.tubolsillo.app.domain.assistant.AssistantIntent,
+        text: String,
+        categories: List<String>,
+    ): dev.tubolsillo.app.domain.assistant.AssistantIntent {
+        val rule = AssistantIntentParser.heuristic(text)
+        return when {
+            model is dev.tubolsillo.app.domain.assistant.AssistantIntent.Compare &&
+                rule is dev.tubolsillo.app.domain.assistant.AssistantIntent.Compare -> model.copy(
+                usdPrice = model.usdPrice ?: rule.usdPrice,
+                bcvUsdPrice = model.bcvUsdPrice ?: rule.bcvUsdPrice,
+                bsPrice = model.bsPrice ?: rule.bsPrice,
+                discountPct = model.discountPct ?: rule.discountPct,
+            )
+
+            model is dev.tubolsillo.app.domain.assistant.AssistantIntent.Help -> rule
+            else -> model
         }
     }
 

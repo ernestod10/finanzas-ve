@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -103,17 +104,40 @@ private fun ChatContent(
         if (messages.isNotEmpty()) listState.animateScrollToItem(messages.lastIndex)
     }
 
-    Column(modifier = modifier.fillMaxWidth()) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .statusBarsPadding(),
+    ) {
+        // Cabecera con avatar, para que se sienta un asistente y no un formulario.
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(38.dp),
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        Icons.Filled.AutoAwesome,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+            }
+            Spacer(Modifier.size(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = "Asistente", style = MaterialTheme.typography.titleLarge)
                 Text(
-                    text = "Todo se calcula en el teléfono con tus datos.",
+                    text = "Asistente",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                )
+                Text(
+                    text = "Tus datos, en el teléfono",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -121,6 +145,9 @@ private fun ChatContent(
             IconButton(onClick = onClose) {
                 Icon(Icons.Filled.Close, contentDescription = "Cerrar")
             }
+        }
+        if (messages.size <= 1) {
+            SuggestionChips(onPick = { viewModel.send(it) })
         }
         LazyColumn(
             state = listState,
@@ -148,32 +175,82 @@ private fun ChatContent(
             }
             item { Spacer(Modifier.height(8.dp)) }
         }
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
+        Surface(
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+            modifier = Modifier.fillMaxWidth(),
         ) {
-            OutlinedTextField(
-                value = input,
-                onValueChange = { input = it },
-                placeholder = { Text("¿Cuánto gasté este mes en comida?") },
-                shape = RoundedCornerShape(24.dp),
-                modifier = Modifier.weight(1f),
-                singleLine = false,
-                maxLines = 3,
-            )
-            TextButton(
-                enabled = input.isNotBlank() && !busy,
-                onClick = {
-                    viewModel.send(input)
-                    input = ""
-                },
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 12.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Enviar")
+                OutlinedTextField(
+                    value = input,
+                    onValueChange = { input = it },
+                    placeholder = { Text("Escribe o elige una pregunta…") },
+                    shape = RoundedCornerShape(22.dp),
+                    modifier = Modifier.weight(1f),
+                    maxLines = 3,
+                )
+                Spacer(Modifier.size(6.dp))
+                FloatingActionButton(
+                    onClick = {
+                        viewModel.send(input)
+                        input = ""
+                    },
+                    containerColor = if (input.isNotBlank() && !busy) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.surfaceVariant
+                    },
+                    contentColor = if (input.isNotBlank() && !busy) {
+                        MaterialTheme.colorScheme.onPrimary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                    modifier = Modifier.size(44.dp),
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.Send,
+                        contentDescription = "Enviar",
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
             }
         }
     }
+}
+
+/** Preguntas de ejemplo: muestran qué sabe hacer sin obligar a adivinar. */
+@Composable
+private fun SuggestionChips(onPick: (String) -> Unit) {
+    val suggestions = listOf(
+        "¿Cuánto gasté este mes?",
+        "360 en divisas o 500 a BCV",
+        "El gasto de 20 de ayer fue un almuerzo",
+    )
+    androidx.compose.foundation.lazy.LazyRow(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        items(suggestions) { text ->
+            androidx.compose.material3.SuggestionChip(
+                onClick = { onPick(text) },
+                label = {
+                    Text(
+                        text = text,
+                        style = MaterialTheme.typography.labelMedium,
+                        maxLines = 1,
+                    )
+                },
+            )
+        }
+    }
+    Spacer(Modifier.height(4.dp))
 }
 
 @Composable

@@ -4,6 +4,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class AssistantTest {
@@ -64,6 +65,37 @@ class AssistantTest {
     // --- Matemática de tasas ---
 
     @Test
+    fun `580 a tasa BCV son dolares, no bolivares`() {
+        val intent = AssistantIntentParser.heuristic("si pago en divisas son 360 o 580 a tasa bcv")
+        assertIs<AssistantIntent.Compare>(intent)
+        assertEquals(360.0, intent.usdPrice)
+        assertEquals(580.0, intent.bcvUsdPrice)
+        assertNull(intent.bsPrice)
+    }
+
+    @Test
+    fun `el texto del chip se entiende sin modelo`() {
+        val intent = AssistantIntentParser.heuristic("360 en divisas o 500 a BCV")
+        assertIs<AssistantIntent.Compare>(intent)
+        assertEquals(360.0, intent.usdPrice)
+        assertEquals(500.0, intent.bcvUsdPrice)
+    }
+
+    @Test
+    fun `la comparacion que pide el usuario da 444 como equivalente`() {
+        // 500 * 889,58 / 1000,51 = 444,56 USD: los 360 en divisas ganan.
+        val comparison = compareOptions(
+            usdPrice = 360.0,
+            bsPrice = 500.0 * 889.58,
+            discountPct = 0.0,
+            p2pVes = 1000.51,
+        )
+        assertTrue(comparison.cheaperInUsd)
+        assertEquals(444.56, comparison.bsCostUsd, 0.02)
+        assertEquals(84.56, comparison.savingUsd, 0.05)
+    }
+
+    @Test
     fun `el caso real 360 en divisas contra 500 mil bolivares`() {
         // 500.000 Bs al P2P (1.000) son 500 USD: pagar en divisas sale mejor.
         val comparison = compareOptions(
@@ -108,6 +140,7 @@ class AssistantTest {
         )
         assertIs<AssistantIntent.Compare>(intent)
         assertEquals(360.0, intent.usdPrice)
-        assertEquals(500.0, intent.bsPrice)
+        // "500 a bcv" es un precio en DÓLARES que se paga en bolívares.
+        assertEquals(500.0, intent.bcvUsdPrice)
     }
 }
