@@ -12,6 +12,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -51,6 +57,7 @@ fun CreditsScreen(
     viewModel: CreditsViewModel = koinViewModel(),
 ) {
     val overview by viewModel.overview.collectAsState()
+    var editingLimit by remember { mutableStateOf<CreditItem?>(null) }
 
     IOSScreen(title = "Créditos", onBack = onBack) {
         item(key = "resumen") { CreditsSummary(overview) }
@@ -70,7 +77,7 @@ fun CreditsScreen(
             item(key = "cards") {
                 GroupedGroup {
                     overview.cards.forEach { item ->
-                        CreditRow(item, onOpenAccount)
+                        CreditRow(item, onOpenAccount, onSetLimit = { editingLimit = it })
                     }
                 }
             }
@@ -81,7 +88,7 @@ fun CreditsScreen(
             item(key = "cuotas") {
                 GroupedGroup {
                     overview.installments.forEach { item ->
-                        CreditRow(item, onOpenAccount)
+                        CreditRow(item, onOpenAccount, onSetLimit = { editingLimit = it })
                     }
                 }
             }
@@ -98,11 +105,46 @@ fun CreditsScreen(
             item(key = "otras") {
                 GroupedGroup {
                     overview.otherDebts.forEach { item ->
-                        CreditRow(item, onOpenAccount)
+                        CreditRow(item, onOpenAccount, onSetLimit = { editingLimit = it })
                     }
                 }
             }
         }
+    }
+
+    editingLimit?.let { item ->
+        var text by remember(item.accountId) { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { editingLimit = null },
+            title = { Text("Límite de " + item.name) },
+            text = {
+                Column {
+                    Text(
+                        text = "Con el límite, la deuda se calcula sola: límite − disponible.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    OutlinedTextField(
+                        value = text,
+                        onValueChange = { text = it },
+                        label = { Text("Límite (" + item.currency + ")") },
+                        singleLine = true,
+                        modifier = Modifier.padding(top = 8.dp),
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.setLimit(item.accountId, item.currency, text)
+                        editingLimit = null
+                    },
+                ) { Text("Guardar") }
+            },
+            dismissButton = {
+                TextButton(onClick = { editingLimit = null }) { Text("Cancelar") }
+            },
+        )
     }
 }
 
@@ -160,7 +202,7 @@ private fun CreditsSummary(overview: CreditsOverview) {
 }
 
 @Composable
-private fun CreditRow(item: CreditItem, onOpen: (Long) -> Unit) {
+private fun CreditRow(item: CreditItem, onOpen: (Long) -> Unit, onSetLimit: (CreditItem) -> Unit) {
     val accent = MaterialTheme.colorScheme.primary
     Row(
         modifier = Modifier
@@ -194,6 +236,12 @@ private fun CreditRow(item: CreditItem, onOpen: (Long) -> Unit) {
             if (item.pendingInstallments > 0) {
                 Spacer(Modifier.height(6.dp))
                 InstallmentProgress(item)
+            }
+            if (item.isCard && item.limitMinor == null) {
+                TextButton(
+                    onClick = { onSetLimit(item) },
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 0.dp),
+                ) { Text("Poner límite para calcular la deuda") }
             }
         }
         Spacer(Modifier.size(8.dp))

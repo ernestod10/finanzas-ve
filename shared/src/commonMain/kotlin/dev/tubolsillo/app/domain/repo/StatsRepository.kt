@@ -50,10 +50,12 @@ class StatsRepository(
         val previous = MonthBuckets.plusMonths(month, -1)
         val (previousStart, previousEnd) = MonthBuckets.bounds(previous)
 
-        // 30 días de serie; se piden 90 más atrás para poder arrastrar el último
-        // saldo conocido de cada cuenta al inicio del rango.
+        // La serie cubre el MES elegido: del día 1 a hoy (o al último día del
+        // mes si es un mes pasado). Se piden 90 días más atrás de snapshots
+        // para poder arrastrar el último saldo conocido al inicio del rango.
         val now = nowMillis()
-        val trendFrom = MonthBuckets.startOfDay(now) - 29L * DAY_MS
+        val trendFrom = start
+        val trendTo = minOf(end, now)
         val snapshotFrom = trendFrom - 90L * DAY_MS
 
         val monthSide = combine(
@@ -77,7 +79,7 @@ class StatsRepository(
                     snapshots = snapshots,
                     rates = rates,
                     fromEpochMs = trendFrom,
-                    nowEpochMs = now,
+                    nowEpochMs = trendTo,
                 ),
                 expenseByCategory = ExpenseBreakdown.compute(
                     transactions = transactions,

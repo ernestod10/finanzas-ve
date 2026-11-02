@@ -48,9 +48,15 @@ fun compareOptions(
 /** Una línea de la respuesta (categoría y monto, con su barra). */
 data class AnswerRow(val label: String, val value: String, val fraction: Float = 0f)
 
+/** Porción de un gráfico de composición (categoría → monto). */
+data class AnswerSlice(val label: String, val value: Double, val formatted: String)
+
 data class AssistantAnswer(
     val text: String,
     val rows: List<AnswerRow> = emptyList(),
+    /** Si viene, el chat dibuja una dona con la composición. */
+    val slices: List<AnswerSlice> = emptyList(),
+    val chartTitle: String? = null,
     /** true si además de responder, cambió un movimiento. */
     val applied: Boolean = false,
 )
@@ -123,7 +129,13 @@ class AssistantEngine(
         return AssistantAnswer(
             text = "Gastaste " + MoneyFormatter.formatMinor(total, currency) + " en " + what +
                 " " + period + ".",
-            rows = rows,
+            rows = rows.take(3),
+            slices = if (byCategory.size >= 2) {
+                byCategory.map { (name, amount) ->
+                    AnswerSlice(name, amount.toDouble(), MoneyFormatter.formatMinor(amount, currency))
+                }
+            } else emptyList(),
+            chartTitle = "Composición por categoría",
         )
     }
 

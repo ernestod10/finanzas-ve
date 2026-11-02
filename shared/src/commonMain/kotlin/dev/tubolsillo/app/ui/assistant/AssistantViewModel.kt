@@ -25,6 +25,8 @@ data class ChatMessage(
     val fromUser: Boolean,
     val text: String,
     val rows: List<AnswerRow> = emptyList(),
+    val slices: List<dev.tubolsillo.app.domain.assistant.AnswerSlice> = emptyList(),
+    val chartTitle: String? = null,
 )
 
 /**
@@ -64,8 +66,12 @@ class AssistantViewModel(
         viewModelScope.launch {
             _busy.value = true
             val categories = categoryRepository.categoriesState.value.map { it.name }
+            // Si el modelo tarda (AICore puede ir lento en frío), a los 8 s se
+            // usa la lectura por reglas: la conversación no se queda colgada.
             val raw = runCatching {
-                analyzer.summarize(AiPrompts.assistant(question, todayIso(), categories, history))
+                kotlinx.coroutines.withTimeoutOrNull(8_000) {
+                    analyzer.summarize(AiPrompts.assistant(question, todayIso(), categories, history))
+                }
             }.getOrNull()
             val intent = chooseIntent(
                 model = AssistantIntentParser.parse(raw, categories),
@@ -78,6 +84,8 @@ class AssistantViewModel(
                 fromUser = false,
                 text = answer.text,
                 rows = answer.rows,
+                slices = answer.slices,
+                chartTitle = answer.chartTitle,
             )
             _busy.value = false
         }

@@ -112,6 +112,7 @@ fun StatsScreen(viewModel: DashboardViewModel = koinViewModel()) {
             summary = summary,
             busy = summaryBusy,
             availability = analyzerAvailability,
+            monthKey = month,
             onGenerate = viewModel::generateSummary,
         )
         Spacer(Modifier.height(12.dp))
@@ -126,6 +127,7 @@ private fun MonthSummaryCard(
     summary: String?,
     busy: Boolean,
     availability: AnalyzerAvailability,
+    monthKey: String,
     onGenerate: () -> Unit,
 ) {
     TubolsilloCard {
@@ -160,7 +162,8 @@ private fun MonthSummaryCard(
 
             else -> {
                 Text(
-                    text = "Un párrafo con lo que pasó este mes, a partir de tus números.",
+                    text = "Un párrafo con lo que pasó en " +
+                    dev.tubolsillo.app.ui.components.monthLabel(monthKey) + ", a partir de tus números.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -183,7 +186,7 @@ private fun TrendCard(stats: StatsData?) {
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Text(
-                text = "La serie se arma con cada saldo que capturamos. " +
+                text = "La serie del mes se arma con cada saldo que capturamos. " +
                     "Con dos días distintos ya se dibuja.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -210,7 +213,7 @@ private fun TrendCard(stats: StatsData?) {
             }
             DeltaChip(
                 pct = trend.changePct,
-                caption = "vs. hace 30 días",
+                caption = "vs. inicio del mes",
                 higherIsBetter = true,
             )
         }
@@ -222,7 +225,7 @@ private fun TrendCard(stats: StatsData?) {
         )
         Spacer(Modifier.height(8.dp))
         Text(
-            text = "Serie según tus capturas de saldo. La conversión usa la tasa de hoy, no la histórica.",
+            text = "Serie del mes según tus capturas de saldo. La conversión usa la tasa de hoy, no la histórica.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

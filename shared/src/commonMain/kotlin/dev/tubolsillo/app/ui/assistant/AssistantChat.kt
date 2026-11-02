@@ -1,6 +1,7 @@
 package dev.tubolsillo.app.ui.assistant
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -43,6 +44,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -60,17 +64,37 @@ import org.koin.compose.viewmodel.koinViewModel
 fun AssistantOverlay(viewModel: AssistantViewModel = koinViewModel()) {
     var open by remember { mutableStateOf(false) }
 
-    // Pantalla completa en vez de hoja: la hoja se cortaba con el teclado y
-    // dejaba la caja de texto debajo. Así el input queda siempre visible.
+    // Ventana flotante sobre la app (no pantalla completa): se ve lo que hay
+    // detrás y la caja de texto queda arriba del teclado.
     if (open) {
-        Surface(color = MaterialTheme.colorScheme.background, modifier = Modifier.fillMaxSize()) {
-            ChatContent(
-                viewModel = viewModel,
-                onClose = { open = false },
+        // Velo y ventana como HERMANOS: si el velo envuelve a la tarjeta, sus
+        // toques también alcanzan a los chips y cierran el chat.
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .imePadding(),
+        ) {
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .imePadding(),
+                    .background(Color.Black.copy(alpha = 0.35f))
+                    .clickable(
+                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                        indication = null,
+                    ) { open = false },
             )
+            Surface(
+                shape = RoundedCornerShape(22.dp),
+                color = MaterialTheme.colorScheme.surface,
+                shadowElevation = 16.dp,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(horizontal = 10.dp, vertical = 12.dp)
+                    .fillMaxWidth()
+                    .fillMaxHeight(0.9f),
+            ) {
+                ChatContent(viewModel = viewModel, onClose = { open = false }, modifier = Modifier.fillMaxSize())
+            }
         }
         return
     }
@@ -104,11 +128,7 @@ private fun ChatContent(
         if (messages.isNotEmpty()) listState.animateScrollToItem(messages.lastIndex)
     }
 
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .statusBarsPadding(),
-    ) {
+    Column(modifier = modifier.fillMaxWidth()) {
         // Cabecera con avatar, para que se sienta un asistente y no un formulario.
         Row(
             modifier = Modifier
@@ -278,6 +298,45 @@ private fun MessageBubble(message: ChatMessage) {
                     color = if (isUser) MaterialTheme.colorScheme.onPrimary
                     else MaterialTheme.colorScheme.onSurface,
                 )
+                if (message.slices.isNotEmpty()) {
+                    Spacer(Modifier.height(10.dp))
+                    val total = message.slices.sumOf { it.value }
+                    dev.tubolsillo.app.ui.components.charts.DonutChart(
+                        slices = message.slices.mapIndexed { index, slice ->
+                            dev.tubolsillo.app.ui.components.charts.DonutSlice(
+                                label = slice.label,
+                                value = slice.value,
+                                color = CHAT_PALETTE[index % CHAT_PALETTE.size],
+                            )
+                        },
+                        centerTitle = message.chartTitle,
+                        centerValue = message.slices.firstOrNull()?.formatted,
+                        diameter = 150.dp,
+                        strokeWidth = 22.dp,
+                        modifier = Modifier.align(Alignment.CenterHorizontally),
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    message.slices.forEachIndexed { index, slice ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .background(CHAT_PALETTE[index % CHAT_PALETTE.size], CircleShape),
+                            )
+                            Spacer(Modifier.size(6.dp))
+                            Text(
+                                text = slice.label,
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.weight(1f),
+                            )
+                            Text(
+                                text = slice.formatted,
+                                style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
+                            )
+                        }
+                    }
+                    if (total > 0) Spacer(Modifier.height(2.dp))
+                }
                 if (message.rows.isNotEmpty()) {
                     Spacer(Modifier.height(8.dp))
                     message.rows.forEach { row -> AnswerRowView(row) }
@@ -322,3 +381,13 @@ private fun AnswerRowView(row: AnswerRow) {
         }
     }
 }
+
+/** Paleta categórica del chat (misma que la dona de Estadísticas). */
+private val CHAT_PALETTE = listOf(
+    androidx.compose.ui.graphics.Color(0xFFED494A),
+    androidx.compose.ui.graphics.Color(0xFF3D81F6),
+    androidx.compose.ui.graphics.Color(0xFF28C45F),
+    androidx.compose.ui.graphics.Color(0xFF7B3DEC),
+    androidx.compose.ui.graphics.Color(0xFFF59F19),
+    androidx.compose.ui.graphics.Color(0xFF16A599),
+)

@@ -50,8 +50,8 @@ class DashboardViewModel(
     private val _interpreting = kotlinx.coroutines.flow.MutableStateFlow(false)
     val interpreting: StateFlow<Boolean> = _interpreting
 
-    private val _summary = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
-    val summary: StateFlow<String?> = _summary
+    /** Resúmenes ya generados, por mes ("2026-11"). */
+    private val _summaries = kotlinx.coroutines.flow.MutableStateFlow<Map<String, String>>(emptyMap())
 
     private val _summaryBusy = kotlinx.coroutines.flow.MutableStateFlow(false)
     val summaryBusy: StateFlow<Boolean> = _summaryBusy
@@ -111,7 +111,10 @@ class DashboardViewModel(
                         }
                     }
                 }
-                _summary.value = analyzer.summarize(prompt)
+                val text = analyzer.summarize(prompt)
+                if (text != null) {
+                    _summaries.value = _summaries.value + (month.value to text)
+                }
             } finally {
                 _summaryBusy.value = false
                 _analyzerAvailability.value = analyzer.availability()
@@ -127,6 +130,10 @@ class DashboardViewModel(
 
     /** Mes compartido con Estadísticas: cambiar el período aquí lo cambia allá. */
     val month: StateFlow<String> = periodState.month
+
+    /** Resumen del mes seleccionado: cada mes tiene el suyo (o ninguno). */
+    val summary: StateFlow<String?> = kotlinx.coroutines.flow.combine(_summaries, month) { map, m -> map[m] }
+        .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000), null)
 
     /**
      * Plan del mes elegido. Sigue al período en vez de fijarse al crear el VM.
