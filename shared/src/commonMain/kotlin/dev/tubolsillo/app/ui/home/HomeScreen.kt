@@ -36,6 +36,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -195,7 +196,7 @@ fun HomeScreen(
         }
         item(key = "tabs") {
             SegmentedTabs(
-                items = listOf("Cuentas", "Presupuestos"),
+                items = listOf("Cuentas", "Presupuestos", "Deudas"),
                 selectedIndex = tab,
                 onSelect = { tab = it },
             )
@@ -234,6 +235,13 @@ fun HomeScreen(
                 )
             }
             item(key = "metrics") { MetricsGrid(stats = stats) }
+        } else if (tab == 2) {
+            item(key = "credits-tab") {
+                CreditsTabContent(
+                    onOpenAccount = onAccountClick,
+                    onOpenFull = onOpenCredits,
+                )
+            }
         } else {
             item(key = "period-b") {
                 PeriodSelector(
@@ -695,4 +703,68 @@ private fun signedDelta(current: Double?, previous: Double?): String {
     if (current == null || previous == null) return "—"
     val diff = (current - previous).roundToInt()
     return (if (diff >= 0) "+" else "−") + abs(diff)
+}
+
+/**
+ * Pestaña de deudas dentro de Inicio: el total, el próximo pago y cada tarjeta
+ * o cuota con su monto. El detalle completo vive en su pantalla.
+ */
+@Composable
+private fun CreditsTabContent(
+    onOpenAccount: (Long) -> Unit,
+    onOpenFull: () -> Unit,
+    viewModel: dev.tubolsillo.app.ui.credits.CreditsViewModel = koinViewModel(),
+) {
+    val overview by viewModel.overview.collectAsState()
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        HomeCreditsCard(onOpenCredits = onOpenFull)
+        if (overview.isEmpty) {
+            Text(
+                text = "Sin deudas registradas. Cuando agregues una tarjeta o una compra a cuotas, " +
+                    "aparecen aquí con su fecha de pago.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            return@Column
+        }
+        overview.items.forEach { item ->
+            Surface(
+                onClick = { onOpenAccount(item.accountId) },
+                shape = RoundedCornerShape(14.dp),
+                color = MaterialTheme.colorScheme.surface,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(text = item.name, style = MaterialTheme.typography.bodyLarge, maxLines = 1)
+                        Text(
+                            text = buildString {
+                                append(dev.tubolsillo.app.domain.model.Institution.fromKey(item.institutionKey).displayName)
+                                item.dueAt?.let { append(" · vence "); append(dev.tubolsillo.app.ui.components.formatDate(it)) }
+                                if (item.pendingInstallments > 0) {
+                                    append(" · "); append(item.paidInstallments); append(" de ")
+                                    append(item.paidInstallments + item.pendingInstallments); append(" cuotas")
+                                }
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                        )
+                    }
+                    Text(
+                        text = dev.tubolsillo.app.core.money.MoneyFormatter.formatMinor(item.debtMinor, item.currency),
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontFeatureSettings = dev.tubolsillo.app.ui.theme.TNUM,
+                        ),
+                        color = dev.tubolsillo.app.ui.theme.TubolsilloColors.negative,
+                    )
+                }
+            }
+        }
+        TextButton(onClick = onOpenFull) { Text("Ver créditos y cuotas") }
+    }
 }

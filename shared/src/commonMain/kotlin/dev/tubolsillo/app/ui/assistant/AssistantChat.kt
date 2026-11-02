@@ -167,7 +167,9 @@ private fun ChatContent(
             }
         }
         if (messages.size <= 1) {
-            SuggestionChips(onPick = { viewModel.send(it) })
+            // Las sugerencias rellenan la caja de texto: el usuario las ajusta
+            // (montos, fechas) antes de enviarlas.
+            SuggestionChips(onPick = { input = it })
         }
         LazyColumn(
             state = listState,
