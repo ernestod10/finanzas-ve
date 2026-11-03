@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.ksp)
 }
 
 // Versión: el workflow de release la inyecta desde el tag (`-PappVersionName=v0.2.0`);
@@ -30,7 +31,7 @@ val envKeystore = System.getenv("TUBOLSILLO_KEYSTORE")
 
 android {
     namespace = "dev.tubolsillo.app"
-    compileSdk = 35
+    compileSdk = 36
 
     signingConfigs {
         if (!envKeystore.isNullOrBlank()) {
@@ -115,4 +116,8 @@ dependencies {
 
     // LLM local (fallback sin AICore): MediaPipe LLM Inference.
     implementation("com.google.mediapipe:tasks-genai:0.10.27")
+
+    // App Functions: Gemini llama a funciones de la app desde el asistente.
+    implementation(libs.appfunctions)
+    ksp(libs.appfunctions.compiler)
 }

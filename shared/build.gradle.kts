@@ -112,7 +112,7 @@ room {
 
 android {
     namespace = "dev.tubolsillo.app.shared"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 26
