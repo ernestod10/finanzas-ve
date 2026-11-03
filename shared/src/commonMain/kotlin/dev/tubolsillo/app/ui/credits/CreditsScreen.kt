@@ -18,6 +18,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -58,6 +59,8 @@ fun CreditsScreen(
 ) {
     val overview by viewModel.overview.collectAsState()
     var editingLimit by remember { mutableStateOf<CreditItem?>(null) }
+    var showCashea by remember { mutableStateOf(false) }
+    val message by viewModel.message.collectAsState()
 
     IOSScreen(title = "Créditos", onBack = onBack) {
         item(key = "resumen") { CreditsSummary(overview) }
@@ -80,6 +83,18 @@ fun CreditsScreen(
                         CreditRow(item, onOpenAccount, onSetLimit = { editingLimit = it })
                     }
                 }
+            }
+        }
+
+        item(key = "cashea-add") {
+            TextButton(
+                onClick = { showCashea = true },
+                modifier = Modifier.padding(horizontal = 8.dp),
+            ) { Text("+ Compra de Cashea (inicial + cuotas)") }
+        }
+        message?.let { text ->
+            item(key = "cashea-msg") {
+                GroupFooter(text)
             }
         }
 
@@ -110,6 +125,78 @@ fun CreditsScreen(
                 }
             }
         }
+    }
+
+    if (showCashea) {
+        var description by remember { mutableStateOf("") }
+        var total by remember { mutableStateOf("") }
+        var initial by remember { mutableStateOf("") }
+        var cuotas by remember { mutableStateOf(3) }
+        AlertDialog(
+            onDismissRequest = { showCashea = false },
+            title = { Text("Compra en Cashea") },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = description,
+                        onValueChange = { description = it },
+                        label = { Text("Qué compraste (opcional)") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    OutlinedTextField(
+                        value = total,
+                        onValueChange = { total = it },
+                        label = { Text("Monto total (Bs.)") },
+                        singleLine = true,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp),
+                    )
+                    OutlinedTextField(
+                        value = initial,
+                        onValueChange = { initial = it },
+                        label = { Text("Inicial (Bs.)") },
+                        singleLine = true,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp),
+                    )
+                    Text(
+                        text = "Cuotas (cada 15 días)",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(3, 6, 9, 12).forEach { option ->
+                            FilterChip(
+                                selected = cuotas == option,
+                                onClick = { cuotas = option },
+                                label = { Text(option.toString()) },
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.addCasheaPurchase(
+                            description = description,
+                            totalText = total,
+                            initialText = initial,
+                            installments = cuotas,
+                            firstDueAt = dev.tubolsillo.app.core.time.nowMillis() + 15L * 86_400_000L,
+                        )
+                        showCashea = false
+                    },
+                ) { Text("Agregar") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCashea = false }) { Text("Cancelar") }
+            },
+        )
     }
 
     editingLimit?.let { item ->
