@@ -12,6 +12,7 @@ import dev.tubolsillo.app.domain.ai.CsvMappingParser
 import dev.tubolsillo.app.domain.ai.SearchFilter
 import dev.tubolsillo.app.domain.ai.SearchQueryParser
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -33,6 +34,10 @@ class LocalLlmAnalyzer(
     private var engine: LlmInference? = null
     private var loadedPath: String? = null
     private var lastError: String? = null
+    private var idleJob: kotlinx.coroutines.Job? = null
+    private val idleScope = kotlinx.coroutines.CoroutineScope(
+        kotlinx.coroutines.SupervisorJob() + Dispatchers.Default,
+    )
 
     override suspend fun availability(): AnalyzerAvailability =
         if (manager.modelFile() != null) AnalyzerAvailability.AVAILABLE else AnalyzerAvailability.UNAVAILABLE
@@ -72,8 +77,26 @@ class LocalLlmAnalyzer(
         return LlmInference.createFromOptions(context, options)
     }
 
+    /**
+     * Libera el modelo si pasa un rato sin usarse. Cargado ocupa entre 500 MB
+     * y 1,5 GB: en segundo plano no tiene por qué seguir residente.
+     */
+    private fun scheduleIdleRelease() {
+        idleJob?.cancel()
+        idleJob = idleScope.launch {
+            kotlinx.coroutines.delay(IDLE_RELEASE_MS)
+            lock.withLock {
+                engine?.let { runCatching { it.close() } }
+                engine = null
+                loadedPath = null
+                android.util.Log.d("LocalLlm", "modelo liberado por inactividad")
+            }
+        }
+    }
+
     private suspend fun generate(prompt: String): String? {
         val model = model() ?: return null
+        scheduleIdleRelease()
         return withContext(Dispatchers.IO) {
             runCatching { model.generateResponse(prompt) }
                 .onFailure { android.util.Log.w("LocalLlm", "generate falló", it) }
@@ -112,5 +135,8 @@ class LocalLlmAnalyzer(
     private companion object {
         /** Suficiente para un JSON de lectura; más alto ralentiza el modelo pequeño. */
         const val MAX_TOKENS = 1024
+
+        /** Tras este tiempo sin usarse, el modelo se descarga de la RAM. */
+        const val IDLE_RELEASE_MS = 5 * 60 * 1000L
     }
 }
