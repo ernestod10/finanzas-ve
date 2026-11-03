@@ -8,4 +8,7 @@ package dev.tubolsillo.app.core.platform
 interface BackgroundScheduler {
     fun schedulePeriodicSync()
     fun syncNow()
+
+    /** Recordatorio diario de pagos que se acercan (tarjetas y cuotas). */
+    fun scheduleDailyReminders() {}
 }

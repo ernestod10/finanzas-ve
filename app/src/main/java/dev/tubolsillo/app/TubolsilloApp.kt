@@ -61,6 +61,8 @@ class BinanceWorkerFactory : WorkerFactory() {
         workerParameters: WorkerParameters,
     ): ListenableWorker? = when (workerClassName) {
         BinanceWorker::class.java.name -> BinanceWorker(appContext, workerParameters)
+        dev.tubolsillo.app.data.source.reminders.DueReminderWorker::class.java.name ->
+            dev.tubolsillo.app.data.source.reminders.DueReminderWorker(appContext, workerParameters)
         else -> null
     }
 }

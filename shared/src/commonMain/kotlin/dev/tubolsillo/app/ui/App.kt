@@ -26,6 +26,7 @@ fun App() {
     val autoSync: dev.tubolsillo.app.data.source.portal.PortalAutoSync = koinInject()
     val ratesRefresher: dev.tubolsillo.app.domain.repo.RatesRefresher = koinInject()
     val updateRepository: dev.tubolsillo.app.domain.repo.UpdateRepository = koinInject()
+    val backgroundScheduler: dev.tubolsillo.app.core.platform.BackgroundScheduler = koinInject()
     androidx.compose.runtime.LaunchedEffect(Unit) {
         // El sync sigue siendo automático, pero espera a que la primera pantalla
         // esté pintada: abrir WebViews durante el arranque le robaba CPU al
@@ -36,9 +37,12 @@ fun App() {
                 ratesRefresher.refreshIfStale()
             }
         }
-        // Una consulta liviana a GitHub Releases al abrir: si hay versión nueva,
-        // la fila de Menú queda en verde esperando el toque.
+        // Recordatorio diario de vencimientos (tarjetas y cuotas): se programa
+        // una vez y WorkManager lo repite.
+        runCatching { backgroundScheduler.scheduleDailyReminders() }
         kotlinx.coroutines.delay(800)
+        // Consulta liviana a GitHub Releases al abrir: si hay versión nueva, la
+        // fila de Menú queda en verde esperando el toque.
         runCatching { updateRepository.check() }
         kotlinx.coroutines.delay(600)
         autoSync.runOnAppOpen()
