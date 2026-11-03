@@ -76,6 +76,22 @@ object AiPrompts {
         """.trimIndent()
     }
 
+    /** Clasifica un lote de movimientos en las categorías reales de la app. */
+    fun classify(descriptions: List<String>, categories: List<String>): String {
+        val cats = categories.joinToString(", ")
+        val list = descriptions.mapIndexed { index, d -> index.toString() + ". " + d.take(90) }
+            .joinToString("\n")
+        return """
+            Clasifica cada movimiento en UNA de estas categorías: $cats.
+            Responde SOLO con un arreglo JSON, sin texto extra:
+            [{"i":0,"category":"Comida"},{"i":1,"category":"Transporte"},{"i":2,"category":null}]
+            Usa null cuando ninguno encaje. No inventes categorías fuera de la lista.
+            Movimientos:
+            $list
+            Salida:
+        """.trimIndent()
+    }
+
     /** Traduce un pedido del chat a una acción ejecutable (con la charla previa). */
     fun assistant(
         question: String,

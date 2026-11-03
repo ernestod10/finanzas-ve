@@ -73,6 +73,7 @@ fun SettingsScreen(
     onReviewClick: () -> Unit = {},
     onAiModelClick: () -> Unit = {},
     onCreditsClick: () -> Unit = {},
+    onClassifierClick: () -> Unit = {},
     exportViewModel: ExportViewModel = koinViewModel(),
     updateViewModel: UpdateViewModel = koinViewModel(),
 ) {
@@ -259,6 +260,9 @@ fun SettingsScreen(
         item(key = "creditos-h") { GroupHeader("Créditos") }
         item(key = "creditos") {
             GroupedGroup {
+                LinkRow(Icons.Filled.AutoAwesome, Color(0xFF2E6E9E), "Clasificar historial",
+                    "Sugiere categoría para los movimientos sin ella", onClassifierClick)
+                Separator()
                 LinkRow(Icons.Filled.CreditCard, Color(0xFFB3413B), "Créditos y deudas",
                     "Tarjetas, Cashea y cuotas con su fecha de pago", onCreditsClick)
             }

@@ -50,6 +50,11 @@ class ChainedCaptureAnalyzer(
         sampleRows: List<String>,
     ): CsvColumnMapping? = active().mapCsvColumns(header, sampleRows)
 
+    override suspend fun classifyBatch(
+        descriptions: List<String>,
+        categories: List<String>,
+    ): List<String?> = active().classifyBatch(descriptions, categories)
+
     override suspend fun engine(): AiEngine = when {
         nano.availability() == AnalyzerAvailability.AVAILABLE -> AiEngine.NANO
         local.availability() == AnalyzerAvailability.AVAILABLE -> AiEngine.LOCAL

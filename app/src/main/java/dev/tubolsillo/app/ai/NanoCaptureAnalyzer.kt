@@ -111,6 +111,24 @@ class NanoCaptureAnalyzer : CaptureAnalyzer {
         null
     }
 
+    override suspend fun classifyBatch(
+        descriptions: List<String>,
+        categories: List<String>,
+    ): List<String?> = try {
+        if (descriptions.isEmpty()) {
+            emptyList()
+        } else {
+            val response = model().generateContent(AiPrompts.classify(descriptions, categories))
+            val raw = response.candidates.firstOrNull()?.text
+            android.util.Log.d("NanoAnalyzer", "clasificación: " + (raw ?: "null").take(400))
+            val map = dev.tubolsillo.app.domain.ai.ClassificationParser.parse(raw, descriptions.size, categories)
+            List(descriptions.size) { map[it] }
+        }
+    } catch (e: Exception) {
+        android.util.Log.w("NanoAnalyzer", "classifyBatch falló", e)
+        List(descriptions.size) { null }
+    }
+
     override suspend fun mapCsvColumns(
         header: List<String>,
         sampleRows: List<String>,

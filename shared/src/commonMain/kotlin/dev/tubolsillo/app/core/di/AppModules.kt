@@ -38,6 +38,7 @@ import dev.tubolsillo.app.ui.settings.RatesViewModel
 import dev.tubolsillo.app.ui.settings.UpdateViewModel
 import dev.tubolsillo.app.ui.settings.AiModelViewModel
 import dev.tubolsillo.app.ui.credits.CreditsViewModel
+import dev.tubolsillo.app.ui.classifier.ClassifierViewModel
 import dev.tubolsillo.app.ui.assistant.AssistantViewModel
 import dev.tubolsillo.app.ui.transactions.TransactionsViewModel
 import dev.tubolsillo.app.ui.portal.PortalViewModel
@@ -102,5 +103,6 @@ val viewModelModule = module {
     viewModelOf(::UpdateViewModel)
     viewModelOf(::AiModelViewModel)
     viewModelOf(::CreditsViewModel)
+    viewModelOf(::ClassifierViewModel)
     viewModelOf(::AssistantViewModel)
 }

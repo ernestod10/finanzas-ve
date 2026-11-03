@@ -70,6 +70,13 @@ interface CaptureAnalyzer {
 
     /** Qué motor responde ahora mismo (para Ajustes). */
     suspend fun engine(): AiEngine = AiEngine.NONE
+
+    /**
+     * Categoría sugerida para cada descripción, en el mismo orden. null donde
+     * el modelo no encontró una categoría válida.
+     */
+    suspend fun classifyBatch(descriptions: List<String>, categories: List<String>): List<String?> =
+        List(descriptions.size) { null }
 }
 
 /** Para plataformas sin modelo on-device (iOS hoy): la cola sigue funcionando a mano. */
@@ -85,4 +92,6 @@ class NoopCaptureAnalyzer : CaptureAnalyzer {
         header: List<String>,
         sampleRows: List<String>,
     ): CsvColumnMapping? = null
+    override suspend fun classifyBatch(descriptions: List<String>, categories: List<String>): List<String?> =
+        List(descriptions.size) { null }
 }

@@ -94,6 +94,16 @@ class LocalLlmAnalyzer(
     override suspend fun parseSearch(text: String, categories: List<String>): SearchFilter? =
         SearchQueryParser.parse(generate(AiPrompts.search(text, categories)), categories)
 
+    override suspend fun classifyBatch(
+        descriptions: List<String>,
+        categories: List<String>,
+    ): List<String?> {
+        if (descriptions.isEmpty()) return emptyList()
+        val raw = generate(AiPrompts.classify(descriptions, categories))
+        val map = dev.tubolsillo.app.domain.ai.ClassificationParser.parse(raw, descriptions.size, categories)
+        return List(descriptions.size) { map[it] }
+    }
+
     override suspend fun mapCsvColumns(
         header: List<String>,
         sampleRows: List<String>,
