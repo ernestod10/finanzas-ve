@@ -79,18 +79,15 @@ fun IOSScreen(
                 .fillMaxWidth()
                 .align(Alignment.TopCenter),
         ) {
-            GlassSurface(
-                modifier = Modifier
-                    .matchParentSize()
-                    .graphicsLayer {
-                        val collapse = if (listState.firstVisibleItemIndex > 1) 1f
-                        else if (listState.firstVisibleItemIndex == 0) 0f
-                        else (listState.firstVisibleItemScrollOffset / collapseHeightPx).coerceIn(0f, 1f)
-                        // La barra se vuelve opaca apenas empieza el scroll: antes
-                        // tardaba media pantalla y el título grande se veía a
-                        // través del cristal, encimado con los ítems.
-                        alpha = (collapse / 0.25f).coerceIn(0f, 1f)
-                    },
+            // Fondo SÓLIDO (no cristal): el vidrio al 78 % dejaba ver la lista
+            // por debajo y el título se veía sucio al hacer scroll.
+            androidx.compose.material3.Surface(
+                modifier = Modifier.matchParentSize(),
+                color = MaterialTheme.colorScheme.background,
+                border = androidx.compose.foundation.BorderStroke(
+                    0.5.dp,
+                    MaterialTheme.colorScheme.outline.copy(alpha = 0.35f),
+                ),
             ) {}
 
             Row(
@@ -132,10 +129,8 @@ fun IOSScreen(
                         val collapse = if (listState.firstVisibleItemIndex > 1) 1f
                         else if (listState.firstVisibleItemIndex == 0) 0f
                         else (listState.firstVisibleItemScrollOffset / collapseHeightPx).coerceIn(0f, 1f)
-                        // La barra se vuelve opaca apenas empieza el scroll: antes
-                        // tardaba media pantalla y el título grande se veía a
-                        // través del cristal, encimado con los ítems.
-                        alpha = (collapse / 0.25f).coerceIn(0f, 1f)
+                        // Aparece apenas empieza el scroll (sin transición larga).
+                        alpha = if (collapse > 0.02f) 1f else 0f
                     },
                 )
                 Row(
