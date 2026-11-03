@@ -31,8 +31,6 @@ import kotlinx.coroutines.withContext
 private var cachedPermissionState: PermissionState? = null
 
 private fun readPermissionState(context: Context): PermissionState = PermissionState(
-    smsRead = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_SMS) ==
-        PackageManager.PERMISSION_GRANTED,
     postNotifications = if (Build.VERSION.SDK_INT >= 33) {
         ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
             PackageManager.PERMISSION_GRANTED
@@ -50,7 +48,6 @@ actual fun rememberPermissionActions(): PermissionActions {
     var state by remember {
         mutableStateOf(
             cachedPermissionState ?: PermissionState(
-                smsRead = false,
                 postNotifications = false,
                 notificationListener = false,
             )
@@ -88,7 +85,6 @@ actual fun rememberPermissionActions(): PermissionActions {
 
     return PermissionActions(
         state = currentState,
-        requestSms = { smsLauncher.launch(Manifest.permission.READ_SMS) },
         requestPostNotifications = {
             if (Build.VERSION.SDK_INT >= 33) {
                 notifLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)

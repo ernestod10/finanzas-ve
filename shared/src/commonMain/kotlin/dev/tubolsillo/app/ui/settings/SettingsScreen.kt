@@ -195,37 +195,6 @@ fun SettingsScreen(
         item(key = "captura-h") { GroupHeader("Captura automática") }
         item(key = "captura") {
             GroupedGroup {
-                PermissionRow(
-                    title = "Leer SMS bancarios",
-                    subtitle = if (permissions.state.smsRead) "Activado" else "Para capturar compras por SMS",
-                    done = permissions.state.smsRead,
-                    onClick = permissions.requestSms,
-                )
-                HorizontalDivider(
-                    modifier = Modifier.padding(start = 16.dp),
-                    thickness = 0.5.dp,
-                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                )
-                PermissionRow(
-                    title = "Acceso a notificaciones",
-                    subtitle = if (permissions.state.notificationListener) "Activado"
-                    else "Lee los push de BDV, BNC, Cashea",
-                    done = permissions.state.notificationListener,
-                    onClick = permissions.openNotificationAccessSettings,
-                )
-                HorizontalDivider(
-                    modifier = Modifier.padding(start = 16.dp),
-                    thickness = 0.5.dp,
-                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                )
-                PermissionRow(
-                    title = "Notificaciones de la app",
-                    subtitle = if (permissions.state.postNotifications) "Activado"
-                    else "Para avisarte cuando se captura una compra",
-                    done = permissions.state.postNotifications,
-                    onClick = permissions.requestPostNotifications,
-                )
-                Separator()
                 LinkRow(
                     Icons.Filled.RateReview,
                     Color(0xFF7A3FA0),
@@ -268,7 +237,7 @@ fun SettingsScreen(
                 }
                 Separator()
                 LinkRow(Icons.Filled.NotificationsActive, Color(0xFF7A3FA0), "Capturas",
-                    "Registro crudo de SMS y push, con replay", onEventsClick)
+                    "Registro crudo de capturas y push, con replay", onEventsClick)
             }
         }
 
@@ -334,11 +303,11 @@ private fun UpdateRow(viewModel: UpdateViewModel) {
     val state by viewModel.state.collectAsState()
     val (subtitle, action, busy) = when (val s = state) {
         is UpdateState.Checking -> Triple("Buscando actualizaciones…", null, true)
-        is UpdateState.Installing -> Triple("Descargando la actualización…", null, true)
+        is UpdateState.Installing -> Triple("Abriendo la descarga…", null, true)
         is UpdateState.UpToDate -> Triple("Estás en la última versión", { viewModel.check() }, false)
         is UpdateState.Available -> Triple(
-            "Versión " + s.info.versionName + " disponible — toca para actualizar",
-            { viewModel.install(s.info) },
+            "Versión " + s.info.versionName + " disponible — toca para descargarla en el navegador",
+            { viewModel.download(s.info) },
             false,
         )
         is UpdateState.Failed -> Triple(s.message, { viewModel.check() }, false)

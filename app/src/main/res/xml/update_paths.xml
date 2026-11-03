@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Rutas que el FileProvider expone al instalador de paquetes. Solo el APK
-     de actualización, dentro de la caché privada de la app. -->
-<paths>
-    <cache-path name="updates" path="updates/" />
-</paths>

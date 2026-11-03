@@ -10,11 +10,9 @@ import androidx.compose.runtime.Composable
 @Composable
 actual fun rememberPermissionActions(): PermissionActions = PermissionActions(
     state = PermissionState(
-        smsRead = false,
         postNotifications = true,
         notificationListener = true,
     ),
-    requestSms = {},
     requestPostNotifications = {},
     openNotificationAccessSettings = {},
 )

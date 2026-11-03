@@ -2,14 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Captura de SMS bancarios (app sideloaded; READ_SMS la excluye de Play). -->
-    <uses-permission android:name="android.permission.RECEIVE_SMS" />
-    <uses-permission android:name="android.permission.READ_SMS" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.INTERNET" />
-    <!-- Actualizaciones fuera de la Play Store: la app descarga su propio APK
-         desde GitHub Releases y abre el instalador. -->
-    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <application
         android:name=".TubolsilloApp"
@@ -33,16 +27,6 @@
                 tools:node="remove" />
         </provider>
 
-        <!-- Sirve el APK descargado al instalador del sistema. -->
-        <provider
-            android:name="androidx.core.content.FileProvider"
-            android:authorities="${applicationId}.updates"
-            android:exported="false"
-            android:grantUriPermissions="true">
-            <meta-data
-                android:name="android.support.FILE_PROVIDER_PATHS"
-                android:resource="@xml/update_paths" />
-        </provider>
 
         <activity
             android:name=".MainActivity"
@@ -64,14 +48,6 @@
             android:windowSoftInputMode="adjustResize"
             android:configChanges="orientation|screenSize|keyboardHidden|uiMode|locale|smallestScreenSize|screenLayout|density" />
 
-        <!-- Captura de SMS bancarios (priority alta para no perder el broadcast). -->
-        <receiver
-            android:name=".data.source.sms.SmsReceiver"
-            android:exported="false">
-            <intent-filter android:priority="999">
-                <action android:name="android.provider.Telephony.SMS_RECEIVED" />
-            </intent-filter>
-        </receiver>
 
         <!-- Captura de push de apps de bancos y Cashea. El usuario la activa en
              Ajustes → Acceso a notificaciones. -->

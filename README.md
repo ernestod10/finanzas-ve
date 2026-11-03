@@ -7,8 +7,9 @@ dato financiero sale del dispositivo.
 
 ## Qué hace
 
-- **Captura automática**: lee SMS bancarios y notificaciones, y consulta los
-  portales de los bancos con las credenciales guardadas y cifradas.
+- **Captura automática**: lee las notificaciones bancarias y consulta los
+  portales de los bancos con las credenciales guardadas y cifradas. Sin
+  permisos de SMS: la app solo pide INTERNET y notificaciones.
 - **Binance**: saldos, depósitos, retiros, P2P y Binance Pay con llaves de solo
   lectura.
 - **Tasas**: BCV (dólar y euro) y USDT P2P, con snapshot para no perder el
@@ -24,7 +25,8 @@ dato financiero sale del dispositivo.
 - **Mapeo de CSV con IA**: un estado de cuenta de un banco desconocido se mapea
   solo (el usuario revisa antes de importar).
 - **Actualizaciones fuera de la Play Store**: la app lee la última release de
-  este repo y se descarga el APK.
+  este repo y abre el navegador para descargar el APK (no descarga ni instala
+  por su cuenta, para no parecer un dropper ante Play Protect).
 
 ## Estructura
 

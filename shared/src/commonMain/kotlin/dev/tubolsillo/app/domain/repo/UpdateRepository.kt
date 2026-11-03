@@ -1,7 +1,7 @@
 package dev.tubolsillo.app.domain.repo
 
 import dev.tubolsillo.app.core.platform.appVersion
-import dev.tubolsillo.app.core.platform.installApkFromUrl
+import dev.tubolsillo.app.core.platform.openUrl
 import dev.tubolsillo.app.data.source.github.GitHubReleasesApi
 import dev.tubolsillo.app.domain.update.UpdateInfo
 import dev.tubolsillo.app.domain.update.isNewerVersion
@@ -50,15 +50,15 @@ class UpdateRepository(
         return result
     }
 
-    /** Descarga e instala; el sistema toma el control cuando el APK está listo. */
-    suspend fun install(info: UpdateInfo): UpdateState {
-        _state.value = UpdateState.Installing
-        val next = installApkFromUrl(info.apkUrl).fold(
-            onSuccess = { UpdateState.Installing },
-            onFailure = { UpdateState.Failed(it.message ?: "No se pudo descargar la actualización.") },
-        )
-        _state.value = next
-        return next
+    /**
+     * Abre el navegador en la descarga del APK. La app no descarga ni instala
+     * nada: eso es lo que Play Protect castiga (patrón dropper), y además el
+     * usuario ve de dónde baja el archivo.
+     */
+    suspend fun download(info: UpdateInfo): UpdateState {
+        openUrl(info.apkUrl)
+        _state.value = UpdateState.Available(info)
+        return _state.value
     }
 
     fun reset() {

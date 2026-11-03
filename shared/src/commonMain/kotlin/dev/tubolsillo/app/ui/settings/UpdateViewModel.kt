@@ -20,7 +20,7 @@ class UpdateViewModel(
         viewModelScope.launch { repository.check() }
     }
 
-    fun install(info: UpdateInfo) {
-        viewModelScope.launch { repository.install(info) }
+    fun download(info: UpdateInfo) {
+        viewModelScope.launch { repository.download(info) }
     }
 }
