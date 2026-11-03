@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Calculadora cambiaria del widget: monto en dólares arriba y su equivalente
+     en bolívares a BCV y P2P. El teclado son botones (los widgets no admiten
+     campos de texto). -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="12dp"
+    android:background="@drawable/widget_background">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/widget_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="CAMBIO"
+            android:letterSpacing="0.12"
+            android:textColor="#FF6B6F6C"
+            android:textSize="10sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/widget_refresh"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingLeft="10dp"
+            android:paddingRight="4dp"
+            android:text="↻"
+            android:textColor="#FF0E7A54"
+            android:textSize="17sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/widget_input"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:background="@drawable/widget_pill"
+        android:gravity="end|center_vertical"
+        android:paddingLeft="12dp"
+        android:paddingRight="12dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
+        android:text="$ 0"
+        android:textColor="#FFFFFFFF"
+        android:textSize="20sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/widget_bcv"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingTop="8dp"
+        android:text="BCV · —"
+        android:textColor="#FF1B1B1F"
+        android:textSize="14sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/widget_p2p"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingTop="2dp"
+        android:paddingBottom="6dp"
+        android:text="P2P · —"
+        android:textColor="#FF6B6F6C"
+        android:textSize="14sp" />
+
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+        <TextView android:id="@+id/key_1" style="@style/WidgetKey" android:text="1" />
+        <TextView android:id="@+id/key_2" style="@style/WidgetKey" android:text="2" />
+        <TextView android:id="@+id/key_3" style="@style/WidgetKey" android:text="3" />
+    </LinearLayout>
+
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+        <TextView android:id="@+id/key_4" style="@style/WidgetKey" android:text="4" />
+        <TextView android:id="@+id/key_5" style="@style/WidgetKey" android:text="5" />
+        <TextView android:id="@+id/key_6" style="@style/WidgetKey" android:text="6" />
+    </LinearLayout>
+
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+        <TextView android:id="@+id/key_7" style="@style/WidgetKey" android:text="7" />
+        <TextView android:id="@+id/key_8" style="@style/WidgetKey" android:text="8" />
+        <TextView android:id="@+id/key_9" style="@style/WidgetKey" android:text="9" />
+    </LinearLayout>
+
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+        <TextView android:id="@+id/key_comma" style="@style/WidgetKey" android:text="," />
+        <TextView android:id="@+id/key_0" style="@style/WidgetKey" android:text="0" />
+        <TextView android:id="@+id/key_del" style="@style/WidgetKey" android:text="⌫" />
+    </LinearLayout>
+</LinearLayout>
