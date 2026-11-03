@@ -12,9 +12,11 @@ import dev.tubolsillo.app.core.di.sharedKoin
 import dev.tubolsillo.app.core.money.MoneyFormatter
 import dev.tubolsillo.app.domain.repo.RatesRefresher
 import dev.tubolsillo.app.domain.repo.SettingsRepository
+import dev.tubolsillo.app.ui.theme.AppAccent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import androidx.compose.ui.graphics.toArgb
 import kotlinx.coroutines.launch
 import kotlin.math.roundToLong
 
@@ -93,14 +95,49 @@ class RatesWidgetProvider : AppWidgetProvider() {
         val amount = raw.replace(',', '.').toDoubleOrNull() ?: 0.0
 
         val views = RemoteViews(context.packageName, R.layout.widget_rates)
+
+        // El widget sigue el tema de la app: modo oscuro y color de acento.
+        val dark = settings?.let { repo ->
+            when (repo.darkMode.value) {
+                "DARK" -> true
+                "LIGHT" -> false
+                else -> isSystemDark(context)
+            }
+        } ?: isSystemDark(context)
+        val accent = settings?.let { AppAccent.fromKey(it.accentColor.value) }
+            ?.let { if (dark) it.primaryDark else it.primaryLight }
+            ?.toArgb() ?: (if (dark) 0xFF5FD6A6.toInt() else 0xFF0E7A54.toInt())
+        val ink = if (dark) 0xFFE9ECEA.toInt() else 0xFF101312.toInt()
+        val muted = if (dark) 0xFF9AA09B.toInt() else 0xFF7A7F7B.toInt()
+
+        views.setInt(
+            R.id.widget_root, "setBackgroundResource",
+            if (dark) R.drawable.widget_background_dark else R.drawable.widget_background,
+        )
+        listOf(
+            R.id.key_0, R.id.key_1, R.id.key_2, R.id.key_3, R.id.key_4,
+            R.id.key_5, R.id.key_6, R.id.key_7, R.id.key_8, R.id.key_9,
+            R.id.key_comma, R.id.key_del,
+        ).forEach { id ->
+            views.setInt(
+                id, "setBackgroundResource",
+                if (dark) R.drawable.widget_key_dark else R.drawable.widget_key,
+            )
+            views.setTextColor(id, ink)
+        }
+        views.setTextColor(R.id.widget_input, ink)
+        views.setTextColor(R.id.widget_title, muted)
+        views.setTextColor(R.id.widget_bcv, ink)
+        views.setTextColor(R.id.widget_p2p, accent)
+        views.setTextColor(R.id.widget_refresh, accent)
         views.setTextViewText(R.id.widget_input, "$ " + if (raw.isBlank()) "0" else raw)
         views.setTextViewText(
             R.id.widget_bcv,
-            "BCV · " + if (bcv > 0) "Bs. " + bs(amount * bcv) else "—",
+            if (bcv > 0) "Bs. " + bs(amount * bcv) else "—",
         )
         views.setTextViewText(
             R.id.widget_p2p,
-            "P2P · " + if (p2p > 0) "Bs. " + bs(amount * p2p) else "—",
+            if (p2p > 0) "Bs. " + bs(amount * p2p) else "—",
         )
 
         // Teclado: cada tecla manda su acción; el estado vive en preferencias.
@@ -154,6 +191,10 @@ class RatesWidgetProvider : AppWidgetProvider() {
     /** Bolívares con dos decimales y separador de miles local. */
     private fun bs(value: Double): String =
         MoneyFormatter.formatMinor((value * 100).roundToLong(), "VES", withSymbol = false)
+
+    private fun isSystemDark(context: Context): Boolean =
+        (context.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
+            android.content.res.Configuration.UI_MODE_NIGHT_YES
 
     private fun prefs(context: Context) = context.getSharedPreferences("rates_widget", Context.MODE_PRIVATE)
 
