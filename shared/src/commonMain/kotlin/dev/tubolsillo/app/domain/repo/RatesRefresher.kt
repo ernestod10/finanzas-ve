@@ -27,6 +27,14 @@ class RatesRefresher(
 
         settings.setRatesSnapshot(dto.bcv_usd_bs, dto.bcv_eur_bs, dto.p2p_usdt_ves)
 
+        // Histórico del día (USD por unidad), para que la serie de saldo de ese
+        // día use la tasa de ese día y no la de hoy.
+        val historyRates = buildMap {
+            dto.bcv_usd_bs?.takeIf { it > 0 }?.let { put("VES", 1.0 / it) }
+            dto.p2p_usdt_ves?.takeIf { it > 0 }?.let { put("USDT", 1.0 / it) }
+        }
+        if (historyRates.isNotEmpty()) settings.recordRatesHistory(historyRates)
+
         // Cruce EUR→USD (usd/eur del BCV), que es lo que guarda RateProvider.
         val usd = dto.bcv_usd_bs
         val eur = dto.bcv_eur_bs

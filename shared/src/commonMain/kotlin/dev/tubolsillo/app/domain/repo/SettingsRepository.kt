@@ -1,3 +1,5 @@
+@file:OptIn(kotlin.time.ExperimentalTime::class)
+
 package dev.tubolsillo.app.domain.repo
 
 import androidx.datastore.core.DataStore
@@ -18,6 +20,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.datetime.toLocalDateTime
 import kotlinx.coroutines.flow.stateIn
 
 /**
@@ -57,6 +60,7 @@ class SettingsRepository() {
         val BCV_USD_BS = doublePreferencesKey("rates_bcv_usd_bs")
         val BCV_EUR_BS = doublePreferencesKey("rates_bcv_eur_bs")
         val P2P_USDT_VES = doublePreferencesKey("rates_p2p_usdt_ves")
+        val RATES_HISTORY = stringPreferencesKey("rates_history") // {"2026-11-03": {"VES":0.00112,"USD":1.0}}
         val RATES_FETCHED_AT = longPreferencesKey("rates_fetched_at")
     }
 
@@ -80,6 +84,27 @@ class SettingsRepository() {
                 fetchedAt = prefs[Keys.RATES_FETCHED_AT] ?: 0L,
             )
         }.stateIn(scope, SharingStarted.Eagerly, null)
+
+    /**
+     * Tasa (USD por unidad) aplicada cada día: {"2026-11-03": {"VES": 0.001124, "USD": 1.0}}.
+     * Sirve para que las series históricas no se muevan cuando la tasa cambia.
+     */
+    val ratesHistory: StateFlow<Map<String, Map<String, Double>>> =
+        dataStore.data.map { prefs -> parseRatesHistory(prefs[Keys.RATES_HISTORY]) }
+            .stateIn(scope, SharingStarted.Eagerly, emptyMap())
+
+    /** Guarda la tasa del día (una entrada por día; se queda el último valor). */
+    suspend fun recordRatesHistory(rates: Map<String, Double>, epochMs: Long = nowMillis()) {
+        if (rates.isEmpty()) return
+        val day = dayKey(epochMs)
+        dataStore.edit { prefs ->
+            val current = parseRatesHistory(prefs[Keys.RATES_HISTORY]).toMutableMap()
+            current[day] = rates
+            // Se conserva un año para que el JSON no crezca sin control.
+            val trimmed = current.entries.sortedBy { it.key }.takeLast(366).associate { it.key to it.value }
+            prefs[Keys.RATES_HISTORY] = encodeRatesHistory(trimmed)
+        }
+    }
 
     suspend fun setRatesSnapshot(bcvUsdBs: Double?, bcvEurBs: Double?, p2pUsdtVes: Double?) {
         if (bcvUsdBs == null || bcvUsdBs <= 0.0) return
@@ -128,5 +153,36 @@ class SettingsRepository() {
 
     suspend fun setAutoSyncPortals(enabled: Boolean) {
         dataStore.edit { it[Keys.AUTO_SYNC_PORTALS] = enabled }
+    }
+
+    private fun dayKey(epochMs: Long): String {
+        val date = kotlin.time.Instant.fromEpochMilliseconds(epochMs)
+            .toLocalDateTime(kotlinx.datetime.TimeZone.currentSystemDefault()).date
+        return date.toString()
+    }
+
+    private fun parseRatesHistory(raw: String?): Map<String, Map<String, Double>> {
+        if (raw.isNullOrBlank()) return emptyMap()
+        return runCatching {
+            kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+                .parseToJsonElement(raw)
+                .let { it as kotlinx.serialization.json.JsonObject }
+                .mapValues { (_, value) ->
+                    (value as kotlinx.serialization.json.JsonObject).mapValues { (_, v) ->
+                        (v as kotlinx.serialization.json.JsonPrimitive).content.toDoubleOrNull() ?: 0.0
+                    }.filterValues { it > 0.0 }
+                }
+        }.getOrDefault(emptyMap())
+    }
+
+    private fun encodeRatesHistory(history: Map<String, Map<String, Double>>): String {
+        val obj = kotlinx.serialization.json.JsonObject(
+            history.mapValues { (_, rates) ->
+                kotlinx.serialization.json.JsonObject(
+                    rates.mapValues { (code, value) -> kotlinx.serialization.json.JsonPrimitive(value) }
+                )
+            }
+        )
+        return obj.toString()
     }
 }

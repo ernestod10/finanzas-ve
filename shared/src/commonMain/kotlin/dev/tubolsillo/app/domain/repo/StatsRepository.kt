@@ -1,3 +1,5 @@
+@file:OptIn(kotlin.time.ExperimentalTime::class)
+
 package dev.tubolsillo.app.domain.repo
 
 import dev.tubolsillo.app.core.db.dao.AccountDao
@@ -15,6 +17,7 @@ import dev.tubolsillo.app.domain.usecase.RateProvider
 import dev.tubolsillo.app.domain.usecase.TotalsCalculator
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.datetime.toLocalDateTime
 
 /** Todo lo que alimenta Inicio › métricas y la pantalla de Estadísticas. */
 @androidx.compose.runtime.Immutable
@@ -43,6 +46,7 @@ class StatsRepository(
     private val metricsCalculator: PeriodMetricsCalculator,
     private val trendBuilder: BalanceTrendBuilder,
     private val totalsCalculator: TotalsCalculator,
+    private val settingsRepository: SettingsRepository,
 ) {
 
     fun observeMonth(month: String): Flow<StatsData> {
@@ -69,7 +73,8 @@ class StatsRepository(
             transactionDao.observeBetween(previousStart, previousEnd),
             balanceSnapshotDao.observeSince(snapshotFrom),
             categoryRepository.observeAll(),
-        ) { (accounts, transactions, rates), previousTransactions, snapshots, categories ->
+            settingsRepository.ratesHistory,
+        ) { (accounts, transactions, rates), previousTransactions, snapshots, categories, ratesHistory ->
             StatsData(
                 month = month,
                 metrics = metricsCalculator.compute(transactions, rates),
@@ -80,6 +85,7 @@ class StatsRepository(
                     rates = rates,
                     fromEpochMs = trendFrom,
                     nowEpochMs = trendTo,
+                    ratesAt = { day -> ratesForDay(day, ratesHistory, rates) },
                 ),
                 expenseByCategory = ExpenseBreakdown.compute(
                     transactions = transactions,
@@ -89,6 +95,23 @@ class StatsRepository(
                 ),
             )
         }
+    }
+
+    /**
+     * Tasa del día: la guardada para esa fecha, o la más reciente anterior; si
+     * no hay histórico todavía, la de hoy.
+     */
+    private fun ratesForDay(
+        dayMs: Long,
+        history: Map<String, Map<String, Double>>,
+        today: Map<String, Double>,
+    ): Map<String, Double> {
+        if (history.isEmpty()) return today
+        val key = kotlin.time.Instant.fromEpochMilliseconds(dayMs)
+            .toLocalDateTime(kotlinx.datetime.TimeZone.currentSystemDefault()).date.toString()
+        return history[key]
+            ?: history.entries.filter { it.key <= key }.maxByOrNull { it.key }?.value
+            ?: today
     }
 
     private companion object {

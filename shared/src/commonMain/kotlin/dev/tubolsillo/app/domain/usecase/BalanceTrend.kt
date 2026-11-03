@@ -40,8 +40,8 @@ data class BalanceTrend(
  *  - La serie empieza en el primer día con algún dato (no rellena con ceros).
  *  - El saldo es la suma con signo de los snapshots: activos menos deudas, es
  *    decir el patrimonio neto.
- *  - La conversión usa la tasa de HOY: no hay tasas históricas, así que el
- *    resultado es una aproximación y la UI lo dice.
+ *  - La conversión usa la tasa del día cuando existe histórico de tasas
+ *    ([ratesAt]); si no, la de hoy.
  */
 class BalanceTrendBuilder(
     private val totalsCalculator: TotalsCalculator,
@@ -54,6 +54,8 @@ class BalanceTrendBuilder(
         fromEpochMs: Long,
         nowEpochMs: Long,
         zone: TimeZone = TimeZone.currentSystemDefault(),
+        /** Tasa aplicable a cada día; si falta, se usa [rates] (la de hoy). */
+        ratesAt: ((epochMs: Long) -> Map<String, Double>)? = null,
     ): BalanceTrend {
         if (accounts.isEmpty() || snapshots.isEmpty()) return BalanceTrend.Empty
 
@@ -83,8 +85,9 @@ class BalanceTrendBuilder(
                 cursor++
             }
             if (sawData) {
+                val dayRates = ratesAt?.invoke(day) ?: rates
                 val total = lastByAccount.values.sumOf {
-                    totalsCalculator.usdEquivalent(it.amountMinor, it.currency, rates)
+                    totalsCalculator.usdEquivalent(it.amountMinor, it.currency, dayRates)
                 }
                 points += TrendPoint(epochMs = day, valueUsd = total)
             }
