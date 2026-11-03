@@ -756,7 +756,8 @@ private fun CreditsTabContent(
                         )
                     }
                     Text(
-                        text = dev.tubolsillo.app.core.money.MoneyFormatter.formatMinor(item.debtMinor, item.currency),
+                        text = if (item.debtUnknown) "—" else
+                            dev.tubolsillo.app.core.money.MoneyFormatter.formatMinor(item.debtMinor, item.currency),
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
                             fontFeatureSettings = dev.tubolsillo.app.ui.theme.TNUM,

@@ -247,7 +247,7 @@ private fun CreditRow(item: CreditItem, onOpen: (Long) -> Unit, onSetLimit: (Cre
         Spacer(Modifier.size(8.dp))
         Column(horizontalAlignment = Alignment.End) {
             Text(
-                text = MoneyFormatter.formatMinor(item.debtMinor, item.currency),
+                text = if (item.debtUnknown) "—" else MoneyFormatter.formatMinor(item.debtMinor, item.currency),
                 style = MaterialTheme.typography.titleMedium.copy(
                     fontWeight = FontWeight.Bold,
                     fontFeatureSettings = TNUM,

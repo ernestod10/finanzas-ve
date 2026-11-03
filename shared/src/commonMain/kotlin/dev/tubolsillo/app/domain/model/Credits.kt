@@ -26,6 +26,8 @@ data class CreditItem(
     val pendingInstallments: Int = 0,
     val paidInstallments: Int = 0,
     val nextInstallmentMinor: Long? = null,
+    /** true cuando el banco no publica la deuda ni se puede deducir del límite. */
+    val debtUnknown: Boolean = false,
 ) {
     val isCard: Boolean get() = kind == AccountKind.CREDIT_CARD
 
@@ -97,11 +99,20 @@ object CreditsBuilder {
             account.currency.isBlank() -> null
             pending.isNotEmpty() -> pending.sumOf { it.amountMinor }
             else -> balanceDebt ?: derivedDebt
-        } ?: return null
+        }
+        // BNC publica solo el disponible: la tarjeta se muestra igual en Deudas,
+        // con la deuda en blanco y el botón para poner el límite.
+        val debtUnknown = debt == null
+        val shownDebt = debt ?: 0L
+        if (debtUnknown) {
+            val hasAvailable = account.creditAvailableMinor != null ||
+                account.creditLimitMinor != null
+            if (kind != AccountKind.CREDIT_CARD || !hasAvailable) return null
+        }
         if (debt == 0L && next == null) return null
 
         val available = account.creditAvailableMinor
-            ?: account.creditLimitMinor?.let { limit -> (limit - debt).coerceAtLeast(0L) }
+            ?: account.creditLimitMinor?.let { limit -> (limit - shownDebt).coerceAtLeast(0L) }
 
         return CreditItem(
             accountId = account.id,
@@ -109,7 +120,8 @@ object CreditsBuilder {
             name = account.name,
             kind = kind,
             currency = account.currency,
-            debtMinor = debt,
+            debtMinor = shownDebt,
+            debtUnknown = debtUnknown,
             limitMinor = account.creditLimitMinor,
             availableMinor = available,
             minPaymentMinor = account.minPaymentMinor,
