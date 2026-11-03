@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -64,6 +65,7 @@ fun PlanScreen(
     val categories by viewModel.categories.collectAsState()
     val editing by viewModel.editing.collectAsState()
     val message by viewModel.message.collectAsState()
+    val subscriptions by viewModel.subscriptions.collectAsState()
 
     var adding by remember { mutableStateOf(false) }
     var selected by remember { mutableStateOf<PlanLineView?>(null) }
@@ -83,6 +85,55 @@ fun PlanScreen(
         val plan = data ?: return@IOSScreen
 
         item(key = "hero") { PlanHero(plan) }
+
+        // Cobros que se repiten todos los meses: con un toque pasan a ser
+        // gasto fijo del plan (así el "estimado" del mes deja de ser un número
+        // inventado).
+        if (subscriptions.isNotEmpty()) {
+            item(key = "subs-h") {
+                GroupHeader("Suscripciones detectadas")
+            }
+            item(key = "subs") {
+                GroupedGroup {
+                    subscriptions.take(4).forEachIndexed { index, suggestion ->
+                        if (index > 0) {
+                            HorizontalDivider(
+                                modifier = Modifier.padding(start = 16.dp),
+                                thickness = 0.5.dp,
+                                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                            )
+                        }
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(suggestion.merchant, style = MaterialTheme.typography.bodyLarge)
+                                Text(
+                                    text = suggestion.occurrences.toString() + " cobros cada " +
+                                        suggestion.periodDays + " días · día " + suggestion.dayOfMonth,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            Text(
+                                text = dev.tubolsillo.app.core.money.MoneyFormatter
+                                    .formatMinor(suggestion.amountMinor, suggestion.currency),
+                                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
+                            )
+                            TextButton(onClick = { viewModel.addSubscription(suggestion) }) {
+                                Text("Al plan")
+                            }
+                        }
+                    }
+                }
+            }
+            item(key = "subs-f") {
+                GroupFooter("Se detectan por comercio, monto y periodicidad de tus movimientos.")
+            }
+        }
 
         item(key = "compare-h") { GroupHeader("Estimado vs. real") }
         item(key = "compare") {

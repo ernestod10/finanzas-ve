@@ -13,6 +13,10 @@ import dev.tubolsillo.app.domain.model.PlanStatus
 import dev.tubolsillo.app.domain.repo.CategoryRepository
 import dev.tubolsillo.app.domain.repo.LinkResult
 import dev.tubolsillo.app.domain.repo.PlanRepository
+import dev.tubolsillo.app.domain.repo.TransactionRepository
+import dev.tubolsillo.app.domain.usecase.SubscriptionDetector
+import dev.tubolsillo.app.domain.usecase.SubscriptionSuggestion
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -31,6 +35,7 @@ import kotlin.math.abs
 class PlanViewModel(
     private val planRepository: PlanRepository,
     categoryRepository: CategoryRepository,
+    transactionRepository: TransactionRepository,
 ) : ViewModel() {
 
     private val _month = MutableStateFlow(MonthBuckets.monthKeyNow())
@@ -38,6 +43,19 @@ class PlanViewModel(
 
     /** Sugerencias que el usuario descartó a mano; se olvidan al cambiar de mes. */
     private val _dismissed = MutableStateFlow<Set<Long>>(emptySet())
+
+    /**
+     * Cobros que se repiten todos los meses (mismo comercio y monto). Se
+     * calculan con aritmética sobre el historial, no con el modelo.
+     */
+    val subscriptions: StateFlow<List<SubscriptionSuggestion>> =
+        transactionRepository.observeAll()
+            .map { txs ->
+                runCatching { SubscriptionDetector.detect(txs, dev.tubolsillo.app.core.time.nowMillis()) }
+                    .getOrDefault(emptyList())
+            }
+            .flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     private val _message = MutableStateFlow<String?>(null)
 
@@ -81,6 +99,24 @@ class PlanViewModel(
      * Crea una línea. El monto se guarda como magnitud positiva: la dirección
      * la lleva [PlanKind], no el signo (ver PlanCalculator).
      */
+    /** Convierte una suscripción detectada en gasto fijo mensual del plan. */
+    fun addSubscription(suggestion: SubscriptionSuggestion) {
+        viewModelScope.launch {
+            planRepository.addItem(
+                kind = PlanKind.EXPENSE,
+                label = suggestion.merchant,
+                amountMinor = suggestion.amountMinor,
+                currencyCode = suggestion.currency,
+                recurrence = PlanRecurrence.MONTHLY,
+                dueAt = null,
+                dayOfMonth = suggestion.dayOfMonth,
+                categoryId = null,
+                month = _month.value,
+            )
+            _message.value = "«" + suggestion.merchant + "» agregado al plan"
+        }
+    }
+
     fun addItem(
         kind: PlanKind,
         label: String,
