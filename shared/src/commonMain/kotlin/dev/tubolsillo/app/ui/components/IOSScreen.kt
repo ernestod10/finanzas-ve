@@ -86,7 +86,10 @@ fun IOSScreen(
                         val collapse = if (listState.firstVisibleItemIndex > 1) 1f
                         else if (listState.firstVisibleItemIndex == 0) 0f
                         else (listState.firstVisibleItemScrollOffset / collapseHeightPx).coerceIn(0f, 1f)
-                        alpha = ((collapse - 0.55f) / 0.45f).coerceIn(0f, 1f)
+                        // La barra se vuelve opaca apenas empieza el scroll: antes
+                        // tardaba media pantalla y el título grande se veía a
+                        // través del cristal, encimado con los ítems.
+                        alpha = (collapse / 0.25f).coerceIn(0f, 1f)
                     },
             ) {}
 
@@ -129,7 +132,10 @@ fun IOSScreen(
                         val collapse = if (listState.firstVisibleItemIndex > 1) 1f
                         else if (listState.firstVisibleItemIndex == 0) 0f
                         else (listState.firstVisibleItemScrollOffset / collapseHeightPx).coerceIn(0f, 1f)
-                        alpha = ((collapse - 0.55f) / 0.45f).coerceIn(0f, 1f)
+                        // La barra se vuelve opaca apenas empieza el scroll: antes
+                        // tardaba media pantalla y el título grande se veía a
+                        // través del cristal, encimado con los ítems.
+                        alpha = (collapse / 0.25f).coerceIn(0f, 1f)
                     },
                 )
                 Row(

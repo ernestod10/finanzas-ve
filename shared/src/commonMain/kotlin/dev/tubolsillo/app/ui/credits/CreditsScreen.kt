@@ -51,6 +51,7 @@ import kotlin.math.roundToInt
  * Cashea entra como "cuotas": su deuda y su próxima fecha salen de las cuotas
  * pendientes (cada 14 días), no del saldo de la cuenta.
  */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun CreditsScreen(
     onBack: () -> Unit,
@@ -132,6 +133,9 @@ fun CreditsScreen(
         var total by remember { mutableStateOf("") }
         var initial by remember { mutableStateOf("") }
         var cuotas by remember { mutableStateOf(3) }
+        // Fecha de la compra: de ella salen las 15 días de cada cuota y los avisos.
+        var purchaseAt by remember { mutableStateOf(dev.tubolsillo.app.core.time.nowMillis()) }
+        var showDate by remember { mutableStateOf(false) }
         AlertDialog(
             onDismissRequest = { showCashea = false },
             title = { Text("Compra en Cashea") },
@@ -168,6 +172,40 @@ fun CreditsScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
                     )
+                    Text(
+                        text = "Fecha de la compra",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        val today = dev.tubolsillo.app.core.time.MonthBuckets.startOfDay(
+                            dev.tubolsillo.app.core.time.nowMillis()
+                        )
+                        val day = dev.tubolsillo.app.core.time.MonthBuckets.startOfDay(purchaseAt)
+                        FilterChip(
+                            selected = day == today,
+                            onClick = { purchaseAt = dev.tubolsillo.app.core.time.nowMillis() },
+                            label = { Text("Hoy") },
+                        )
+                        FilterChip(
+                            selected = day == today - 86_400_000L,
+                            onClick = { purchaseAt = dev.tubolsillo.app.core.time.nowMillis() - 86_400_000L },
+                            label = { Text("Ayer") },
+                        )
+                        FilterChip(
+                            selected = day != today && day != today - 86_400_000L,
+                            onClick = { showDate = true },
+                            label = {
+                                Text(
+                                    if (day != today && day != today - 86_400_000L)
+                                        dev.tubolsillo.app.ui.components.dayLabel(purchaseAt)
+                                    else "Otra fecha"
+                                )
+                            },
+                        )
+                    }
+
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf(3, 6, 9, 12).forEach { option ->
                             FilterChip(
@@ -187,7 +225,7 @@ fun CreditsScreen(
                             totalText = total,
                             initialText = initial,
                             installments = cuotas,
-                            firstDueAt = dev.tubolsillo.app.core.time.nowMillis() + 15L * 86_400_000L,
+                            firstDueAt = purchaseAt + 15L * 86_400_000L,
                         )
                         showCashea = false
                     },
@@ -197,6 +235,30 @@ fun CreditsScreen(
                 TextButton(onClick = { showCashea = false }) { Text("Cancelar") }
             },
         )
+
+        if (showDate) {
+            val picker = androidx.compose.material3.rememberDatePickerState(
+                initialSelectedDateMillis = dev.tubolsillo.app.core.time.MonthBuckets.toPickerMillis(purchaseAt),
+            )
+            androidx.compose.material3.DatePickerDialog(
+                onDismissRequest = { showDate = false },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            picker.selectedDateMillis?.let { picked ->
+                                purchaseAt = dev.tubolsillo.app.core.time.MonthBuckets.fromPickerMillis(picked)
+                            }
+                            showDate = false
+                        },
+                    ) { Text("Listo") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDate = false }) { Text("Cancelar") }
+                },
+            ) {
+                androidx.compose.material3.DatePicker(state = picker)
+            }
+        }
     }
 
     editingLimit?.let { item ->
