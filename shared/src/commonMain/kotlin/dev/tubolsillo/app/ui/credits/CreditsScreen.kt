@@ -110,7 +110,7 @@ fun CreditsScreen(
             }
             item(key = "cuotas-foot") {
                 GroupFooter(
-                    "Cashea se paga cada 14 días: la deuda es la suma de las cuotas pendientes " +
+                    "Cashea se paga cada 15 días: la deuda es la suma de las cuotas pendientes " +
                         "y la fecha es la de la próxima."
                 )
             }
@@ -403,7 +403,7 @@ private fun CreditRow(item: CreditItem, onOpen: (Long) -> Unit, onSetLimit: (Cre
                 ),
                 color = TubolsilloColors.negative,
             )
-            item.availableMinor?.let { available ->
+            item.availableMinor?.takeIf { item.kind != AccountKind.BNPL }?.let { available ->
                 Text(
                     text = "Disp. " + MoneyFormatter.formatMinor(available, item.currency),
                     style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = TNUM),
