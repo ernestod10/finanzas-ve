@@ -1,5 +1,9 @@
 package dev.tubolsillo.app.ui
 
+import androidx.compose.foundation.background
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
@@ -16,6 +20,7 @@ import org.koin.compose.koinInject
 @Composable
 fun App() {
     val settings: SettingsRepository = koinInject()
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
     val darkMode by settings.darkMode.collectAsState(initial = "SYSTEM")
     val accentKey by settings.accentColor.collectAsState(initial = "JADE")
     val darkTheme = when (darkMode) {
@@ -25,7 +30,6 @@ fun App() {
     }
     val autoSync: dev.tubolsillo.app.data.source.portal.PortalAutoSync = koinInject()
     val ratesRefresher: dev.tubolsillo.app.domain.repo.RatesRefresher = koinInject()
-    val updateRepository: dev.tubolsillo.app.domain.repo.UpdateRepository = koinInject()
     val backgroundScheduler: dev.tubolsillo.app.core.platform.BackgroundScheduler = koinInject()
     val usdBackfill: dev.tubolsillo.app.domain.usecase.UsdBackfill = koinInject()
     androidx.compose.runtime.LaunchedEffect(Unit) {
@@ -45,9 +49,6 @@ fun App() {
         runCatching { usdBackfill.run() }
         runCatching { backgroundScheduler.scheduleDailyReminders() }
         kotlinx.coroutines.delay(800)
-        // Consulta liviana a GitHub Releases al abrir: si hay versión nueva, la
-        // fila de Menú queda en verde esperando el toque.
-        runCatching { updateRepository.check() }
         kotlinx.coroutines.delay(600)
         autoSync.runOnAppOpen()
     }
@@ -55,8 +56,32 @@ fun App() {
         darkTheme = darkTheme,
         accent = AppAccent.fromKey(accentKey),
     ) {
-        // El asistente flota sobre las pestañas, no sobre las pantallas que se
-        // empujan (alta de registro, revisión, ajustes): ahí estorba al teclado.
-        TubolsilloNavHost()
+        // Primer arranque: onboarding antes de todo. Se lee en un efecto para
+        // no mostrar el onboarding un instante a quien ya lo completó.
+        var onboardingDone by androidx.compose.runtime.remember {
+            androidx.compose.runtime.mutableStateOf<Boolean?>(null)
+        }
+        androidx.compose.runtime.LaunchedEffect(Unit) {
+            onboardingDone = settings.isOnboardingDone()
+        }
+        when (onboardingDone) {
+            null -> androidx.compose.foundation.layout.Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background),
+            )
+            false -> dev.tubolsillo.app.ui.onboarding.OnboardingScreen(
+                onDone = {
+                    onboardingDone = true
+                    scope.launch { settings.setOnboardingDone(true) }
+                },
+            )
+            else -> {
+                // El asistente flota sobre las pestañas, no sobre las pantallas
+                // que se empujan (alta de registro, revisión, ajustes): ahí
+                // estorba al teclado.
+                TubolsilloNavHost()
+            }
+        }
     }
 }

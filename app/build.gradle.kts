@@ -109,6 +109,8 @@ dependencies {
     debugImplementation(libs.compose.ui.tooling)
 
     implementation(libs.androidx.core.ktx)
+    // Bloqueo de la app con huella/PIN del sistema.
+    implementation("androidx.biometric:biometric:1.1.0")
     implementation(libs.androidx.activity.compose)
     implementation(libs.koin.android)
     implementation(libs.work.runtime.ktx)
