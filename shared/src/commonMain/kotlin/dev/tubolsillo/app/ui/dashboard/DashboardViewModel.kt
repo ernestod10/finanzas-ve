@@ -74,6 +74,27 @@ class DashboardViewModel(
         }
     }
 
+    /**
+     * Texto de una factura (OCR): lo interpreta el modelo con las categorías
+     * reales y deja la lectura en el mismo flujo que el alta en lenguaje
+     * natural, así el formulario se precarga igual.
+     */
+    fun analyzeReceipt(ocrText: String) {
+        if (ocrText.isBlank()) return
+        viewModelScope.launch {
+            _interpreting.value = true
+            try {
+                _interpreted.value = analyzer.analyze(
+                    rawText = ocrText.take(4000),
+                    categories = categories.value.map { it.name },
+                )
+            } finally {
+                _interpreting.value = false
+                _analyzerAvailability.value = analyzer.availability()
+            }
+        }
+    }
+
     fun clearInterpreted() {
         _interpreted.value = null
     }

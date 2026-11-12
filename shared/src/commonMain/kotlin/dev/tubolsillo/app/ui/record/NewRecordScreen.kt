@@ -99,6 +99,8 @@ fun NewRecordScreen(
     var showDate by remember { mutableStateOf(false) }
     var describeText by rememberSaveable { mutableStateOf("") }
 
+    var scanError by remember { mutableStateOf<String?>(null) }
+
     val interpreted by viewModel.interpreted.collectAsState()
     val interpreting by viewModel.interpreting.collectAsState()
     val analyzerAvailability by viewModel.analyzerAvailability.collectAsState()
@@ -129,6 +131,22 @@ fun NewRecordScreen(
     val account = accounts.firstOrNull { it.id == (accountId ?: accounts.firstOrNull()?.id) }
     val currency = account?.currency ?: "USD"
     val amountMinor = AmountNormalizer.parseMinor(amountText, currency)
+    // Escaneo de factura: OCR en el teléfono. Primero se precarga con las
+    // reglas (funciona sin IA) y después el modelo refina si está disponible.
+    val scanReceipt = dev.tubolsillo.app.core.platform.rememberReceiptScanner { text, error ->
+        scanError = error
+        if (!text.isNullOrBlank()) {
+            val parsed = dev.tubolsillo.app.domain.receipts.ReceiptParser.parse(text, currency)
+            parsed.totalMinor?.let { minor ->
+                val value = minor / 100.0
+                amountText = if (value == value.toLong().toDouble()) value.toLong().toString() else value.toString()
+            }
+            parsed.merchant?.let { description = it }
+            parsed.occurredAt?.let { occurredAt = it }
+            viewModel.analyzeReceipt(text)
+        }
+    }
+
     val canSave = account != null && amountMinor != null && description.isNotBlank()
     val isCashea = account?.let { Institution.fromKey(it.institution) == Institution.CASHEA } == true
 
@@ -207,6 +225,14 @@ fun NewRecordScreen(
                 onClick = { viewModel.interpretEntry(describeText) },
                 enabled = describeText.isNotBlank() && !interpreting,
             ) { Text("Interpretar") }
+            TextButton(onClick = scanReceipt) { Text("Escanear factura") }
+        }
+        scanError?.let { message ->
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
         }
 
         Spacer(Modifier.height(8.dp))

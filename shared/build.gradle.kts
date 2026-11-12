@@ -79,6 +79,8 @@ kotlin {
             implementation(libs.androidx.core.ktx)
             implementation(libs.koin.android)
             implementation(libs.androidx.activity.compose)
+            // OCR de facturas, 100% en el teléfono (modelo incluido en el APK).
+            implementation(libs.mlkit.text.recognition)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
