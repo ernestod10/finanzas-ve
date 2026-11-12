@@ -16,6 +16,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -28,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import dev.tubolsillo.app.core.money.AmountNormalizer
 import dev.tubolsillo.app.core.money.Currency
 import dev.tubolsillo.app.core.money.MoneyFormatter
 import dev.tubolsillo.app.core.platform.rememberReceiptScanner
@@ -59,6 +61,17 @@ fun InvoiceScreen(
     var parsed by remember { mutableStateOf<ParsedReceipt?>(null) }
     var rawText by remember { mutableStateOf<String?>(null) }
     var showRaw by remember { mutableStateOf(false) }
+    // El total se puede corregir aquí mismo: el OCR acierta casi siempre, pero
+    // cuando falla no obliga a pasar al formulario y volver.
+    var totalText by remember { mutableStateOf("") }
+
+    androidx.compose.runtime.LaunchedEffect(parsed, currencyCode) {
+        parsed?.totalMinor?.let { minor ->
+            val whole = minor / 100
+            val cents = (minor % 100).toString().padStart(2, '0')
+            totalText = "$whole,$cents"
+        }
+    }
 
     val scan = rememberReceiptScanner { text, scanError ->
         reading = false
@@ -185,11 +198,16 @@ fun InvoiceScreen(
                             ReceiptRow("Comercio", merchant)
                             GroupSeparator()
                         }
-                        receipt.totalMinor?.let { total ->
-                            ReceiptRow(
-                                label = "Total",
-                                value = MoneyFormatter.formatMinor(total, currencyCode),
-                            )
+                        receipt.totalMinor?.let {
+                            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                                OutlinedTextField(
+                                    value = totalText,
+                                    onValueChange = { totalText = it },
+                                    label = { Text("Total (" + currencyCode + ")") },
+                                    singleLine = true,
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
+                            }
                             GroupSeparator()
                         }
                         receipt.occurredAt?.let { date ->
@@ -209,19 +227,15 @@ fun InvoiceScreen(
                     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                         Button(
                             onClick = {
-                                val total = receipt.totalMinor ?: 0L
-                                val whole = total / 100
-                                val cents = (total % 100).toString().padStart(2, '0')
                                 onUse(
                                     EntryDraft(
-                                        amount = if (whole == 0L && total == 0L) ""
-                                        else "$whole,$cents",
+                                        amount = totalText.trim(),
                                         description = receipt.merchant ?: "Factura",
                                         income = false,
                                     )
                                 )
                             },
-                            enabled = receipt.totalMinor != null,
+                            enabled = AmountNormalizer.parseMinor(totalText, currencyCode) != null,
                             modifier = Modifier.fillMaxWidth(),
                         ) { Text("Usar estos datos") }
                         if (rawText != null) {

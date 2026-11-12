@@ -405,7 +405,7 @@ class PortalWebActivity : ComponentActivity() {
                                 ) {
                                     androidx.compose.foundation.layout.Box(
                                         modifier = androidx.compose.ui.Modifier
-                                            .padding(top = 64.dp, start = 16.dp, end = 16.dp),
+                                            .padding(top = 6.dp, start = 12.dp, end = 12.dp),
                                     ) {
                                         CompactSyncCard(
                                             institution = institution,
@@ -953,21 +953,24 @@ private fun CompactSyncCard(
     onCancel: () -> Unit,
 ) {
     Surface(
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 10.dp,
+        shadowElevation = 8.dp,
     ) {
         Row(
-            modifier = Modifier.padding(14.dp),
+            modifier = Modifier
+                .padding(start = 10.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            InstitutionBadge(institution, size = 36)
-            Spacer(Modifier.width(12.dp))
+            InstitutionBadge(institution, size = 28)
+            Spacer(Modifier.width(10.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = "Consultando " + institution.displayName,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                 )
                 Text(
                     text = message,
@@ -976,8 +979,6 @@ private fun CompactSyncCard(
                     maxLines = 1,
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                 )
-                Spacer(Modifier.height(6.dp))
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
             }
             TextButton(onClick = onCancel) { Text("Cerrar") }
         }

@@ -61,6 +61,13 @@ class SettingsRepository() {
         val BCV_EUR_BS = doublePreferencesKey("rates_bcv_eur_bs")
         val P2P_USDT_VES = doublePreferencesKey("rates_p2p_usdt_ves")
         val HIDE_BALANCE = booleanPreferencesKey("hide_balance")
+        // Última cuenta usada en cada dirección, para que el alta no arranque
+        // siempre en la misma (o en Cashea, que es la primera por orden).
+        val LAST_ACCOUNT_EXPENSE = longPreferencesKey("last_account_expense")
+        val LAST_ACCOUNT_INCOME = longPreferencesKey("last_account_income")
+        // Versión de la que el usuario dijo "no avisar": no se vuelve a
+        // preguntar por ella hasta que salga otra.
+        val SKIPPED_UPDATE = stringPreferencesKey("skipped_update_version")
         val RATES_HISTORY = stringPreferencesKey("rates_history") // {"2026-11-03": {"VES":0.00112,"USD":1.0}}
         val RATES_FETCHED_AT = longPreferencesKey("rates_fetched_at")
     }
@@ -163,6 +170,28 @@ class SettingsRepository() {
 
     suspend fun setAutoSyncPortals(enabled: Boolean) {
         dataStore.edit { it[Keys.AUTO_SYNC_PORTALS] = enabled }
+    }
+
+    /** Última cuenta usada al registrar un gasto (o un ingreso). */
+    suspend fun lastAccountId(expense: Boolean): Long? =
+        dataStore.data.first()[if (expense) Keys.LAST_ACCOUNT_EXPENSE else Keys.LAST_ACCOUNT_INCOME]
+
+    suspend fun setLastAccountId(expense: Boolean, accountId: Long) {
+        dataStore.edit {
+            it[if (expense) Keys.LAST_ACCOUNT_EXPENSE else Keys.LAST_ACCOUNT_INCOME] = accountId
+        }
+    }
+
+    /** Versión que el usuario pidió no volver a ver en el aviso de Inicio. */
+    val skippedUpdateVersion: StateFlow<String?> =
+        dataStore.data.map { it[Keys.SKIPPED_UPDATE] }
+            .stateIn(scope, SharingStarted.Eagerly, null)
+
+    suspend fun setSkippedUpdateVersion(version: String?) {
+        dataStore.edit { prefs ->
+            if (version == null) prefs.remove(Keys.SKIPPED_UPDATE)
+            else prefs[Keys.SKIPPED_UPDATE] = version
+        }
     }
 
     private fun dayKey(epochMs: Long): String {

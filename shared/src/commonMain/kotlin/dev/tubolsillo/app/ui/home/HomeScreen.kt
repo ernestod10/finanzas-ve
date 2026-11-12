@@ -20,6 +20,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.CalendarMonth
@@ -175,10 +176,29 @@ fun HomeScreen(
 
     var tab by rememberSaveable { mutableIntStateOf(0) }
     var showAddAccount by remember { mutableStateOf(false) }
+    // Long-press en una cuenta: acciones rápidas sin entrar al detalle.
+    var accountActions by remember { mutableStateOf<dev.tubolsillo.app.domain.model.AccountBalanceView?>(null) }
+    var archiving by remember { mutableStateOf<dev.tubolsillo.app.domain.model.AccountBalanceView?>(null) }
 
     val vesPerDollar = rates["VES"]?.let { if (it > 0) 1.0 / it else 1.0 } ?: 1.0
     val accounts = dashboard?.accountViews ?: emptyList()
 
+    // Arrastrar hacia abajo consulta los portales vinculados sin esperar a que
+    // pasen los 10 minutos del sync automático.
+    val autoSync: dev.tubolsillo.app.data.source.portal.PortalAutoSync = org.koin.compose.koinInject()
+    var refreshing by remember { mutableStateOf(false) }
+
+    androidx.compose.material3.pulltorefresh.PullToRefreshBox(
+        isRefreshing = refreshing,
+        onRefresh = {
+            refreshing = true
+            scope.launch {
+                runCatching { autoSync.refreshNow() }
+                refreshing = false
+            }
+        },
+        modifier = Modifier.fillMaxSize(),
+    ) {
     // Lista perezosa: cada tarjeta es un ítem, así solo se compone lo visible.
     LazyColumn(
         modifier = Modifier
@@ -233,6 +253,7 @@ fun HomeScreen(
                     views = accounts,
                     onAccountClick = onAccountClick,
                     onAddAccount = { showAddAccount = true },
+                    onAccountLongClick = { accountActions = it },
                 )
             }
             item(key = "credits") { HomeCreditsCard(onOpenCredits = onOpenCredits) }
@@ -270,6 +291,7 @@ fun HomeScreen(
             item(key = "budget") { BudgetCard(budget = budget) }
         }
     }
+    }
 
     if (showAddAccount) {
         AddAccountDialog(
@@ -286,6 +308,74 @@ fun HomeScreen(
                 )
                 showAddAccount = false
             },
+        )
+    }
+
+    accountActions?.let { acc ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { accountActions = null },
+            title = { Text(acc.name) },
+            text = {
+                Column {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                accountActions = null
+                                onAccountClick(acc.accountId)
+                            }
+                            .padding(vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.ReceiptLong,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        Text("Ver movimientos", style = MaterialTheme.typography.bodyLarge)
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                accountActions = null
+                                archiving = acc
+                            }
+                            .padding(vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Archive,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        Text(
+                            text = "Archivar cuenta",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { accountActions = null }) { Text("Cerrar") }
+            },
+        )
+    }
+
+    archiving?.let { acc ->
+        dev.tubolsillo.app.ui.components.ConfirmDeleteDialog(
+            title = "¿Archivar «" + acc.name + "»?",
+            message = "Deja de mostrarse en Inicio. Sus movimientos se conservan.",
+            onConfirm = {
+                viewModel.archiveAccount(acc.accountId)
+                archiving = null
+            },
+            onDismiss = { archiving = null },
         )
     }
 }
@@ -476,27 +566,18 @@ private fun BalanceCard(
     }
 }
 
-/** Alta rápida: dos acciones sobre el acento, como en la referencia. */
+/**
+ * Alta rápida compacta: dos acciones en un solo renglón. Antes era una tarjeta
+ * verde grande con dos filas que ocupaba media pantalla y se confundía con un
+ * botón de la app; el FAB ya ofrece el resto de las altas.
+ */
 @Composable
 private fun NewRecordCard(onNewRecord: (Boolean) -> Unit) {
     val primary = MaterialTheme.colorScheme.primary
     val ink = MaterialTheme.colorScheme.onPrimary
-    Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = primary,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "Nuevo registro",
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                color = ink,
-            )
-            Spacer(Modifier.height(12.dp))
-            QuickAction("Ingreso", Icons.Filled.ArrowDownward, ink) { onNewRecord(true) }
-            Spacer(Modifier.height(8.dp))
-            QuickAction("Gasto", Icons.Filled.ArrowUpward, ink) { onNewRecord(false) }
-        }
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        QuickAction("Gasto", Icons.Filled.ArrowUpward, ink, Modifier.weight(1f)) { onNewRecord(false) }
+        QuickAction("Ingreso", Icons.Filled.ArrowDownward, ink, Modifier.weight(1f)) { onNewRecord(true) }
     }
 }
 
@@ -505,26 +586,28 @@ private fun QuickAction(
     label: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     ink: Color,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
     Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = ink.copy(alpha = 0.14f),
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.primary,
+        modifier = modifier,
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 11.dp),
+            modifier = Modifier
+                .clip(RoundedCornerShape(14.dp))
+                .clickable(onClick = onClick)
+                .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalArrangement = Arrangement.Center,
         ) {
-            Icon(icon, contentDescription = null, tint = ink, modifier = Modifier.size(18.dp))
+            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
             Text(
                 text = label,
                 style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
-                color = ink,
+                color = MaterialTheme.colorScheme.onPrimary,
             )
         }
     }

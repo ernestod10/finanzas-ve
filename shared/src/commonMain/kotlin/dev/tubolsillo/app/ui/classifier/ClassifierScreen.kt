@@ -54,6 +54,7 @@ fun ClassifierScreen(
     val busy by viewModel.busy.collectAsState()
     val progress by viewModel.progress.collectAsState()
     val message by viewModel.message.collectAsState()
+    val canUndo by viewModel.canUndo.collectAsState()
     val categories by viewModel.categories.collectAsState()
     var editing by remember { mutableStateOf<ClassProposal?>(null) }
 
@@ -84,12 +85,17 @@ fun ClassifierScreen(
                         ) { Text("Proponer categorías") }
                     }
                     message?.let { text ->
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            text = text,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = text,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.weight(1f),
+                            )
+                            if (canUndo) {
+                                TextButton(onClick = { viewModel.undoApply() }) { Text("Deshacer") }
+                            }
+                        }
                     }
                 }
             }

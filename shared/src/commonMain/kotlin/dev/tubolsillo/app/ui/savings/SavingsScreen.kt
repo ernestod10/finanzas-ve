@@ -15,6 +15,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -28,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.tubolsillo.app.core.db.entity.AccountEntity
+import dev.tubolsillo.app.core.money.AmountNormalizer
 import dev.tubolsillo.app.core.money.MoneyFormatter
 import dev.tubolsillo.app.domain.model.SavingsGoalView
 import dev.tubolsillo.app.ui.components.ConfirmDeleteDialog
@@ -248,6 +250,26 @@ private fun ContributeDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                 )
+                // Montos redondos: casi todos los aportes son 10/25/50.
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.padding(top = 8.dp),
+                ) {
+                    listOf(10, 25, 50, 100).forEach { quick ->
+                        Surface(
+                            onClick = { amount = quick.toString() },
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp),
+                            color = dev.tubolsillo.app.ui.theme.TubolsilloColors.tileFill,
+                        ) {
+                            Text(
+                                text = quick.toString(),
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp),
+                            )
+                        }
+                    }
+                }
                 if (accounts.isNotEmpty()) {
                     Text(
                         text = "Sale de",
@@ -260,6 +282,22 @@ private fun ContributeDialog(
                             name = account.name,
                             selected = accountId == account.id,
                             onClick = { accountId = account.id },
+                        )
+                    }
+                    // Cuánto quedaría en la cuenta elegida tras apartar.
+                    val chosen = accounts.firstOrNull { it.id == accountId }
+                    val parsedAmount = AmountNormalizer.parseMinor(amount, goal.currency)
+                    val balance = chosen?.lastBalanceMinor
+                    if (chosen != null && balance != null && parsedAmount != null) {
+                        Text(
+                            text = "Quedarían " +
+                                MoneyFormatter.formatMinor(
+                                    (kotlin.math.abs(balance) - parsedAmount).coerceAtLeast(0L),
+                                    chosen.currency,
+                                ) + " en " + chosen.name,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 4.dp),
                         )
                     }
                     AccountChoice(
