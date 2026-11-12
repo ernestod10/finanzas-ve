@@ -39,13 +39,27 @@ class PortalAutoSync(
         }
     }
 
-    private fun candidates(): List<Institution> {
+    /**
+     * Consulta manual (arrastrar hacia abajo en Inicio): no espera el intervalo
+     * mínimo ni respeta el "una vez por proceso", porque el usuario lo pidió.
+     * Sigue sin tocar portales sin credenciales guardadas.
+     */
+    suspend fun refreshNow() {
+        mutex.withLock {
+            for (institution in candidates(ignoreInterval = true)) {
+                runCatching { syncOne(institution) }
+            }
+        }
+    }
+
+    private fun candidates(ignoreInterval: Boolean = false): List<Institution> {
         val now = nowMillis()
         return Institution.entries.filter { inst ->
             if (inst.portalStartUrl == null || inst == Institution.OTHER) return@filter false
             val link = secretStore.portalLink(inst.key) ?: return@filter false
             if (secretStore.portalCredentials(inst.key) == null) return@filter false
             if (PortalRecipes.forInstitution(inst) == null) return@filter false
+            if (ignoreInterval) return@filter true
             val last = link.lastSyncAtMs ?: 0L
             now - last >= MIN_INTERVAL_MS
         }

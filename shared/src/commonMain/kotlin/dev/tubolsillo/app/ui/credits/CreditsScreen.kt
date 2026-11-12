@@ -57,6 +57,7 @@ import kotlin.math.roundToInt
 fun CreditsScreen(
     onBack: () -> Unit,
     onOpenAccount: (Long) -> Unit,
+    onPay: (CreditItem) -> Unit = {},
     viewModel: CreditsViewModel = koinViewModel(),
 ) {
     val overview by viewModel.overview.collectAsState()
@@ -82,7 +83,7 @@ fun CreditsScreen(
             item(key = "cards") {
                 GroupedGroup {
                     overview.cards.forEach { item ->
-                        CreditRow(item, onOpenAccount, onSetLimit = { editingLimit = it })
+                        CreditRow(item, onOpenAccount, onPay = onPay, onSetLimit = { editingLimit = it })
                     }
                 }
             }
@@ -105,7 +106,7 @@ fun CreditsScreen(
             item(key = "cuotas") {
                 GroupedGroup {
                     overview.installments.forEach { item ->
-                        CreditRow(item, onOpenAccount, onSetLimit = { editingLimit = it })
+                        CreditRow(item, onOpenAccount, onPay = onPay, onSetLimit = { editingLimit = it })
                     }
                 }
             }
@@ -122,7 +123,7 @@ fun CreditsScreen(
             item(key = "otras") {
                 GroupedGroup {
                     overview.otherDebts.forEach { item ->
-                        CreditRow(item, onOpenAccount, onSetLimit = { editingLimit = it })
+                        CreditRow(item, onOpenAccount, onPay = onPay, onSetLimit = { editingLimit = it })
                     }
                 }
             }
@@ -352,7 +353,12 @@ private fun CreditsSummary(overview: CreditsOverview) {
 }
 
 @Composable
-private fun CreditRow(item: CreditItem, onOpen: (Long) -> Unit, onSetLimit: (CreditItem) -> Unit) {
+private fun CreditRow(
+    item: CreditItem,
+    onOpen: (Long) -> Unit,
+    onPay: (CreditItem) -> Unit,
+    onSetLimit: (CreditItem) -> Unit,
+) {
     val accent = MaterialTheme.colorScheme.primary
     Row(
         modifier = Modifier
@@ -386,6 +392,13 @@ private fun CreditRow(item: CreditItem, onOpen: (Long) -> Unit, onSetLimit: (Cre
             if (item.pendingInstallments > 0) {
                 Spacer(Modifier.height(6.dp))
                 InstallmentProgress(item)
+            }
+            // Pagar sin salir: precarga el monto del próximo pago en el alta.
+            item.dueAmountMinor?.takeIf { !item.debtUnknown }?.let {
+                TextButton(
+                    onClick = { onPay(item) },
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 0.dp),
+                ) { Text("Registrar pago") }
             }
             if (item.isCard && item.limitMinor == null) {
                 TextButton(

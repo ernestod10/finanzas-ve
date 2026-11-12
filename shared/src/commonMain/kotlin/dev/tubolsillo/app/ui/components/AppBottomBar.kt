@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -36,6 +37,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -106,8 +114,12 @@ fun AppBottomBar(
             }
         }
 
+        val haptics = LocalHapticFeedback.current
         Surface(
-            onClick = onAdd,
+            onClick = {
+                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                onAdd()
+            },
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .offset(y = (-18).dp)
@@ -179,7 +191,12 @@ private fun QuickActionBubble(action: QuickActionItem) {
             shape = CircleShape,
             color = TubolsilloColors.card,
             shadowElevation = 4.dp,
-            modifier = Modifier.size(44.dp),
+            modifier = Modifier
+                .size(44.dp)
+                .semantics {
+                    role = Role.Button
+                    contentDescription = action.label
+                },
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
@@ -192,11 +209,12 @@ private fun QuickActionBubble(action: QuickActionItem) {
         }
         Text(
             text = action.label,
-            fontSize = 10.sp,
+            style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Medium,
             color = MaterialTheme.colorScheme.onSurface,
             maxLines = 1,
             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            modifier = Modifier.clearAndSetSemantics {},
         )
     }
 }
@@ -214,7 +232,11 @@ private fun BottomBarTab(
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(14.dp))
-            .clickable(onClick = onClick)
+            .selectable(
+                selected = selected,
+                onClick = onClick,
+                role = Role.Tab,
+            )
             .padding(vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(3.dp),
@@ -240,7 +262,7 @@ private fun BottomBarTab(
         }
         Text(
             text = item.label,
-            fontSize = 11.sp,
+            style = MaterialTheme.typography.labelSmall,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
             color = tint,
             maxLines = 1,

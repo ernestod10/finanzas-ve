@@ -59,6 +59,14 @@ class ClassifierViewModel(
     private val _message = MutableStateFlow<String?>(null)
     val message: StateFlow<String?> = _message.asStateFlow()
 
+    /** Propuestas del último "Aplicar", para poder deshacerlas. */
+    private val _lastApplied = MutableStateFlow<List<ClassProposal>>(emptyList())
+    val canUndo: StateFlow<Boolean> = kotlinx.coroutines.flow.combine(
+        _lastApplied,
+        _busy,
+    ) { applied, busy -> applied.isNotEmpty() && !busy }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
     fun scan() {
         if (_busy.value) return
         viewModelScope.launch {
@@ -129,7 +137,30 @@ class ClassifierViewModel(
                 }.onSuccess { applied++ }
             }
             _proposals.value = emptyList()
+            _lastApplied.value = toApply
             _message.value = applied.toString() + " movimientos clasificados."
+        }
+    }
+
+    /**
+     * Deshace el último lote: los movimientos vuelven a quedar sin categoría.
+     * No borra las reglas que el motor aprendió (son del comercio, no del lote).
+     */
+    fun undoApply() {
+        val applied = _lastApplied.value
+        if (applied.isEmpty()) return
+        viewModelScope.launch {
+            applied.forEach { proposal ->
+                runCatching {
+                    transactionRepository.setUserCategory(
+                        proposal.txId,
+                        null,
+                        learnMerchant = false,
+                    )
+                }
+            }
+            _lastApplied.value = emptyList()
+            _message.value = "Se deshicieron " + applied.size + " cambios."
         }
     }
 

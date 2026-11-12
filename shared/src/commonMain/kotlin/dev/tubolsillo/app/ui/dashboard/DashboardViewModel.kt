@@ -220,6 +220,11 @@ class DashboardViewModel(
         }
     }
 
+    /** Saca la cuenta de Inicio sin borrar sus movimientos (long-press en Inicio). */
+    fun archiveAccount(accountId: Long) {
+        viewModelScope.launch { accountRepository.archive(accountId) }
+    }
+
     fun addManualTransaction(
         accountId: Long,
         amountMinor: Long,

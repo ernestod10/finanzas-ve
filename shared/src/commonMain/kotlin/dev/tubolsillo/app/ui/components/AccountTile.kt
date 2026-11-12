@@ -1,7 +1,10 @@
 package dev.tubolsillo.app.ui.components
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -50,19 +53,31 @@ private val TileHeight = 96.dp
  * crédito el número grande es el DISPONIBLE (lo que el usuario ve en su banco)
  * y el tipo lo dice un rótulo, no un color de alarma.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun AccountTile(
     view: AccountBalanceView,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    onLongClick: (() -> Unit)? = null,
 ) {
     val accent = accountAccent(view)
     val ink = onAccent(accent)
     val kind = AccountKind.fromKey(view.kindKey)
 
     Surface(
-        onClick = onClick,
-        modifier = modifier.height(TileHeight),
+        modifier = modifier
+            .height(TileHeight)
+            .then(
+                if (onLongClick != null) {
+                    Modifier.combinedClickable(
+                        onClick = onClick,
+                        onLongClick = onLongClick,
+                    )
+                } else {
+                    Modifier.clickable(onClick = onClick)
+                }
+            ),
         shape = TileShape,
         color = accent,
     ) {
@@ -160,6 +175,7 @@ fun AccountTileGrid(
     onAccountClick: (Long) -> Unit,
     onAddAccount: () -> Unit,
     modifier: Modifier = Modifier,
+    onAccountLongClick: (AccountBalanceView) -> Unit = {},
 ) {
     val cells = views.size + 1 // + la celda de alta
     val rows = (cells + 2) / 3
@@ -176,6 +192,7 @@ fun AccountTileGrid(
                         index < views.size -> AccountTile(
                             view = views[index],
                             onClick = { onAccountClick(views[index].accountId) },
+                            onLongClick = { onAccountLongClick(views[index]) },
                             modifier = Modifier.weight(1f),
                         )
 

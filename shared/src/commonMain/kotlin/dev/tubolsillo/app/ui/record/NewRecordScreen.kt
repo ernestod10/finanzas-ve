@@ -45,6 +45,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.tubolsillo.app.core.money.AmountNormalizer
@@ -87,6 +89,7 @@ fun NewRecordScreen(
     // modelo leyó; el usuario lo corrige y confirma.
     val draftHolder: EntryDraftHolder = koinInject()
     val draft = remember { draftHolder.take() }
+    val settings: dev.tubolsillo.app.domain.repo.SettingsRepository = koinInject()
 
     var isExpense by rememberSaveable {
         mutableStateOf(draft?.let { !it.income } ?: !initialIncome)
@@ -112,6 +115,7 @@ fun NewRecordScreen(
     var saving by remember { mutableStateOf(false) }
     var saveError by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+    val haptics = LocalHapticFeedback.current
 
     val interpreted by viewModel.interpreted.collectAsState()
     val interpreting by viewModel.interpreting.collectAsState()
@@ -167,6 +171,26 @@ fun NewRecordScreen(
     val canSave = account != null && amountMinor != null && description.isNotBlank()
     val isCashea = account?.let { Institution.fromKey(it.institution) == Institution.CASHEA } == true
 
+    // Cuenta inicial: la última usada para esta dirección; si no hay, la
+    // primera que no sea de deuda (antes abría en Cashea por orden de lista).
+    androidx.compose.runtime.LaunchedEffect(accounts, isExpense) {
+        if (accountId == null && accounts.isNotEmpty()) {
+            val saved = settings.lastAccountId(isExpense)
+            accountId = accounts.firstOrNull { it.id == saved }?.id
+                ?: accounts.firstOrNull {
+                    !dev.tubolsillo.app.domain.model.AccountKind.fromKey(it.kind).isDebt
+                }?.id
+                ?: accounts.first().id
+        }
+    }
+
+    // Por qué no se puede guardar todavía: sin esto el botón apagado no dice nada.
+    val missing = when {
+        account == null -> "Elige la cuenta para guardar"
+        amountMinor == null -> "Escribe el monto"
+        else -> "Escribe una descripción"
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -211,12 +235,28 @@ fun NewRecordScreen(
                                 casheaInstallmentMinor = if (isExpense && isCashea && casheaEnabled) abs(minor) else null,
                                 occurredAt = occurredAt,
                             )
-                        }.onSuccess { onDone() }
+                        }.onSuccess {
+                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                            settings.setLastAccountId(isExpense, acc.id)
+                            onDone()
+                        }
                             .onFailure { saveError = "No se pudo guardar. Inténtalo otra vez." }
                         saving = false
                     }
                 },
             ) { Text(if (saving) "Guardando…" else "Guardar", fontWeight = FontWeight.SemiBold) }
+        }
+
+        if (!canSave) {
+            Text(
+                text = missing,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = androidx.compose.ui.text.style.TextAlign.End,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 4.dp),
+            )
         }
 
         Spacer(Modifier.height(8.dp))

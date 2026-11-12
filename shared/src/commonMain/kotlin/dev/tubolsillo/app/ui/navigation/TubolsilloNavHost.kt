@@ -58,6 +58,7 @@ import dev.tubolsillo.app.ui.plan.PlanScreen
 import dev.tubolsillo.app.ui.portal.PortalScreen
 import dev.tubolsillo.app.ui.record.InvoiceScreen
 import dev.tubolsillo.app.ui.record.NewRecordScreen
+import dev.tubolsillo.app.ui.review.EntryDraft
 import dev.tubolsillo.app.ui.review.EntryDraftHolder
 import dev.tubolsillo.app.ui.review.ReviewScreen
 import dev.tubolsillo.app.ui.classifier.ClassifierScreen
@@ -321,9 +322,23 @@ fun TubolsilloNavHost() {
                 ClassifierScreen(onBack = { navController.popBackStack() })
             }
             composable(Routes.CREDITS) {
+                val draftHolder: EntryDraftHolder = koinInject()
                 CreditsScreen(
                     onBack = { navController.popBackStack() },
                     onOpenAccount = { id -> navController.navigate(Routes.account(id)) },
+                    onPay = { item ->
+                        val minor = item.dueAmountMinor ?: item.debtMinor
+                        val whole = minor / 100
+                        val cents = (minor % 100).toString().padStart(2, '0')
+                        draftHolder.put(
+                            EntryDraft(
+                                amount = "$whole,$cents",
+                                description = "Pago " + item.name,
+                                income = false,
+                            )
+                        )
+                        navController.navigate(Routes.record(false))
+                    },
                 )
             }
             composable(
