@@ -87,7 +87,8 @@ interface TransactionDao {
     @Query("UPDATE transactions SET usdEquivalentMinor = :usd WHERE id = :id")
     suspend fun updateUsdEquivalent(id: Long, usd: Long?)
 
-    @Insert
+    /** Con `dedupKey` único, un duplicado devuelve -1 en vez de crear fila. */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insert(transaction: TransactionEntity): Long
 
     @Insert

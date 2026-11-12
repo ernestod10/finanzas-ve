@@ -31,6 +31,7 @@ class DashboardViewModel(
     private val rateProvider: RateProvider,
     private val categoryRepository: dev.tubolsillo.app.domain.repo.CategoryRepository,
     private val planRepository: PlanRepository,
+    private val installmentDao: dev.tubolsillo.app.core.db.dao.InstallmentDao,
     statsRepository: dev.tubolsillo.app.domain.repo.StatsRepository,
     private val periodState: dev.tubolsillo.app.ui.period.PeriodState,
     settings: dev.tubolsillo.app.domain.repo.SettingsRepository,
@@ -268,21 +269,22 @@ class DashboardViewModel(
             if (userCategoryId != null) {
                 transactionRepository.setUserCategory(txId, userCategoryId, learnMerchant = true)
             }
+            // Compra de Cashea: el monto recibido es el TOTAL. Se reparte en 3
+            // cuotas de total/3 cada 15 días y se guardan como cuotas pendientes
+            // (antes se creaban 3 líneas del plan por el total: 3× el gasto).
             if (casheaInstallmentMinor != null && casheaInstallmentMinor > 0L) {
                 val dayMs = 86_400_000L
+                val perInstallment = casheaInstallmentMinor / 3
+                val remainder = casheaInstallmentMinor - perInstallment * 3
                 for (i in 1..3) {
-                    val dueAt = now + (i * 14L * dayMs)
-                    val dueMonth = MonthBuckets.monthKey(dueAt)
-                    planRepository.addItem(
-                        kind = dev.tubolsillo.app.domain.model.PlanKind.EXPENSE,
-                        label = "Cuota $i/3 Cashea · $description",
-                        amountMinor = casheaInstallmentMinor,
-                        currencyCode = currencyCode,
-                        recurrence = dev.tubolsillo.app.domain.model.PlanRecurrence.ONCE,
-                        dueAt = dueAt,
-                        dayOfMonth = null,
-                        categoryId = userCategoryId,
-                        month = dueMonth,
+                    installmentDao.insert(
+                        dev.tubolsillo.app.core.db.entity.InstallmentEntity(
+                            accountId = accountId,
+                            dueAt = now + (i * 15L * dayMs),
+                            amountMinor = perInstallment + if (i == 3) remainder else 0L,
+                            currency = currencyCode,
+                            status = "PENDING",
+                        )
                     )
                 }
             }

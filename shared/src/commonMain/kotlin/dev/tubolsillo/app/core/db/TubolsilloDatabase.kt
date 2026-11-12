@@ -48,7 +48,7 @@ import dev.tubolsillo.app.core.db.entity.TransferPairEntity
         PlanItemEntity::class,
         PlanItemStateEntity::class,
     ],
-    version = 6,
+    version = 7,
     exportSchema = true,
 )
 abstract class TubolsilloDatabase : RoomDatabase() {
@@ -145,6 +145,28 @@ abstract class TubolsilloDatabase : RoomDatabase() {
                     "CREATE UNIQUE INDEX IF NOT EXISTS `index_plan_item_states_itemId_month` " +
                         "ON `plan_item_states` (`itemId`, `month`)"
                 ).use { it.step() }
+            }
+        }
+
+        /**
+         * v6→v7: `dedupKey` pasa a ser ÚNICO (la ingesta ya no puede insertar la
+         * misma operación dos veces) e icono por categoría.
+         *
+         * Antes de crear el índice se borran los duplicados que hayan quedado:
+         * se conserva el registro más viejo de cada clave.
+         */
+        val MIGRATION_6_7 = object : androidx.room.migration.Migration(6, 7) {
+            override fun migrate(connection: androidx.sqlite.SQLiteConnection) {
+                connection.prepare(
+                    "DELETE FROM transactions WHERE dedupKey IS NOT NULL AND id NOT IN (" +
+                        "SELECT MIN(id) FROM transactions WHERE dedupKey IS NOT NULL GROUP BY dedupKey)"
+                ).use { it.step() }
+                connection.prepare("DROP INDEX IF EXISTS `index_transactions_dedupKey`").use { it.step() }
+                connection.prepare(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS `index_transactions_dedupKey` " +
+                        "ON `transactions` (`dedupKey`)"
+                ).use { it.step() }
+                connection.prepare("ALTER TABLE categories ADD COLUMN iconKey TEXT").use { it.step() }
             }
         }
 

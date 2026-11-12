@@ -3,6 +3,7 @@ package dev.tubolsillo.app.ui.events
 import org.koin.compose.viewmodel.koinViewModel
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -43,7 +44,7 @@ fun EventsScreen(
 ) {
     val events by viewModel.events.collectAsState()
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         TopAppBar(
             title = { Text("Capturas") },
             navigationIcon = {

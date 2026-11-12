@@ -87,4 +87,45 @@ class MigrationTest {
             assertTrue(st.isNull(5))
         }
     }
+
+    @Test
+    fun `v6 a v7 deja dedupKey unico y borra duplicados`() {
+        val conn = connection()
+        conn.exec(
+            "CREATE TABLE `transactions` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "`accountId` INTEGER NOT NULL, `occurredAt` INTEGER NOT NULL, `postedAt` INTEGER, " +
+                "`amountMinor` INTEGER NOT NULL, `currency` TEXT NOT NULL, `description` TEXT NOT NULL, " +
+                "`rawDescription` TEXT, `category` TEXT NOT NULL, `status` TEXT NOT NULL, " +
+                "`dedupKey` TEXT, `source` TEXT NOT NULL, `rawJson` TEXT, `transferPairId` INTEGER, " +
+                "`isReconciled` INTEGER NOT NULL, `usdEquivalentMinor` INTEGER)"
+        )
+        conn.exec("CREATE INDEX `index_transactions_dedupKey` ON `transactions` (`dedupKey`)")
+        conn.exec(
+            "INSERT INTO transactions (accountId, occurredAt, amountMinor, currency, description, category, status, dedupKey, source, isReconciled) " +
+                "VALUES (1, 100, -500, 'VES', 'A', 'OTHER', 'CONFIRMED', 'K1', 'SMS', 0)"
+        )
+        conn.exec(
+            "INSERT INTO transactions (accountId, occurredAt, amountMinor, currency, description, category, status, dedupKey, source, isReconciled) " +
+                "VALUES (1, 100, -500, 'VES', 'A', 'OTHER', 'CONFIRMED', 'K1', 'PUSH', 0)"
+        )
+        conn.exec("CREATE TABLE `categories` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `colorHex` TEXT, `sortOrder` INTEGER NOT NULL)")
+        conn.exec("CREATE UNIQUE INDEX `index_categories_name` ON `categories` (`name`)")
+
+        TubolsilloDatabase.MIGRATION_6_7.migrate(conn)
+
+        // Quedó una sola fila con la clave duplicada.
+        conn.prepare("SELECT COUNT(*) FROM transactions WHERE dedupKey = 'K1'").use { st ->
+            assertTrue(st.step())
+            assertEquals(1L, st.getLong(0))
+        }
+        assertTrue(conn.columns("categories").contains("iconKey"))
+        // El índice único rechaza insertar otra con la misma clave.
+        val failed = runCatching {
+            conn.exec(
+                "INSERT INTO transactions (accountId, occurredAt, amountMinor, currency, description, category, status, dedupKey, source, isReconciled) " +
+                    "VALUES (1, 100, -500, 'VES', 'A', 'OTHER', 'CONFIRMED', 'K1', 'SMS', 0)"
+            )
+        }.isFailure
+        assertTrue(failed)
+    }
 }

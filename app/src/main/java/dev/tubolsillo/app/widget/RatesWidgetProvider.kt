@@ -132,6 +132,11 @@ class RatesWidgetProvider : AppWidgetProvider() {
         views.setTextColor(R.id.widget_refresh, accent)
         views.setTextViewText(R.id.widget_input, "$ " + if (raw.isBlank()) "0" else raw)
         views.setTextViewText(
+            R.id.widget_rates,
+            "BCV " + (if (bcv > 0) number(bcv) else "—") +
+                " · P2P " + (if (p2p > 0) number(p2p) else "—"),
+        )
+        views.setTextViewText(
             R.id.widget_bcv,
             if (bcv > 0) "Bs. " + bs(amount * bcv) else "—",
         )
@@ -187,6 +192,11 @@ class RatesWidgetProvider : AppWidgetProvider() {
             }
         return views
     }
+
+    /** Tasa sin símbolo, para la línea explicativa del encabezado. */
+    private fun number(value: Double): String = MoneyFormatter.formatMinor(
+        (value * 100).roundToLong(), "VES", withSymbol = false,
+    )
 
     /** Bolívares con dos decimales y separador de miles local. */
     private fun bs(value: Double): String =

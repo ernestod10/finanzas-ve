@@ -17,7 +17,7 @@ import androidx.room.PrimaryKey
  */
 @Entity(
     tableName = "transactions",
-    indices = [Index("accountId"), Index("dedupKey"), Index("occurredAt")],
+    indices = [Index("accountId"), Index(value = ["dedupKey"], unique = true), Index("occurredAt")],
 )
 @Serializable
 data class TransactionEntity(

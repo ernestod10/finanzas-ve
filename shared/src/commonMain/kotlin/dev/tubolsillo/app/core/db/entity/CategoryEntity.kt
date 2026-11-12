@@ -20,4 +20,6 @@ data class CategoryEntity(
     val name: String,
     val colorHex: String? = null,
     val sortOrder: Int = 0,
+    /** Clave del icono que muestra la app ("food", "car"…); null = genérico. */
+    val iconKey: String? = null,
 )

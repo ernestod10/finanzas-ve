@@ -2,6 +2,7 @@ package dev.tubolsillo.app.ui.events
 
 import org.koin.compose.viewmodel.koinViewModel
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -39,7 +40,7 @@ fun ReplayScreen(
     var text by remember { mutableStateOf("") }
     var outcome by remember { mutableStateOf<CaptureOutcome?>(null) }
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         TopAppBar(
             title = { Text("Replay") },
             navigationIcon = {

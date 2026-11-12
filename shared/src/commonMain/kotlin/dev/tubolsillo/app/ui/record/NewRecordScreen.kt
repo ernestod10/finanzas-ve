@@ -164,6 +164,7 @@ fun NewRecordScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
             .statusBarsPadding()
             .imePadding()
             .verticalScroll(rememberScrollState())
@@ -308,7 +309,7 @@ fun NewRecordScreen(
             ) {
                 Checkbox(checked = casheaEnabled, onCheckedChange = { casheaEnabled = it })
                 Text(
-                    text = "Agendar 3 cuotas cada 14 días en el Plan",
+                    text = "Agendar 3 cuotas cada 15 días (se ven en Créditos)",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

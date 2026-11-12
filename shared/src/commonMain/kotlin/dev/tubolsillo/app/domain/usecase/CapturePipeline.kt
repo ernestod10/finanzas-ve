@@ -136,6 +136,19 @@ class CapturePipeline(
                 )
             )
 
+            // La clave única decide la carrera: si otra entrega (portal + push)
+            // insertó primero, este insert devuelve -1 y no se toca el saldo.
+            if (transactionId == -1L) {
+                captureEventDao.update(
+                    captureEventDao.getById(eventId)!!.copy(
+                        institution = institution.key,
+                        parseStatus = ParseStatus.DUPLICATE.key,
+                        parserVersion = parsed.parserVersion,
+                    )
+                )
+                return@withContext CaptureOutcome.Duplicate
+            }
+
             // 6) Saldo: si el texto lo trae ("Saldo disponible Bs. X", "disp. Y")
             // se usa tal cual; si no, se DERIVA = último saldo + monto (el total
             // siempre refleja el movimiento aunque el banco no mande el saldo).

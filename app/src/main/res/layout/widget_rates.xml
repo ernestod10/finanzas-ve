@@ -1,18 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Calculadora de cambio: monto en dólares arriba y equivalencia en bolívares
-     a BCV y a Binance P2P. Jerarquía: número grande, tasas en filas sobrias y
-     teclado discreto (los widgets no admiten campos de texto). -->
+<!--
+  Calculadora cambiaria (RemoteViews).
+  Jerarquía: 1) dónde estoy y con qué tasas, 2) el monto, 3) el resultado de
+  cada tasa, 4) el teclado. Todo dato mostrado es explicable: arriba va la tasa
+  con la que se calculó, así el número no aparece de la nada.
+-->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:paddingLeft="14dp"
-    android:paddingRight="14dp"
+    android:paddingStart="14dp"
+    android:paddingEnd="14dp"
     android:paddingTop="12dp"
     android:paddingBottom="10dp"
     android:background="@drawable/widget_background">
 
+    <!-- 1. Encabezado -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -26,34 +30,42 @@
             android:layout_weight="1"
             android:text="CAMBIO · USD → Bs."
             android:letterSpacing="0.10"
-            android:textColor="#FF7A7F7B"
+            android:textColor="#7A7F7B"
             android:textSize="10sp"
             android:textStyle="bold" />
 
         <TextView
             android:id="@+id/widget_refresh"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:paddingLeft="12dp"
-            android:paddingRight="2dp"
+            android:layout_width="44dp"
+            android:layout_height="32dp"
+            android:gravity="center"
             android:text="↻"
-            android:textColor="#FF0E7A54"
-            android:textSize="16sp"
+            android:textColor="#0E7A54"
+            android:textSize="17sp"
             android:textStyle="bold" />
     </LinearLayout>
 
+    <!-- Tasas usadas (hacen explicable el resultado) -->
+    <TextView
+        android:id="@+id/widget_rates"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="BCV — · P2P —"
+        android:textColor="#7A7F7B"
+        android:textSize="10sp" />
+
+    <!-- 2. Monto -->
     <TextView
         android:id="@+id/widget_input"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="2dp"
+        android:layout_marginTop="4dp"
         android:gravity="end"
         android:text="$ 0"
-        android:textColor="#FF101312"
-        android:textSize="26sp"
+        android:textColor="#101312"
+        android:textSize="28sp"
         android:textStyle="bold" />
 
-    <!-- Separador: un TextView, porque RemoteViews no admite la clase View. -->
     <TextView
         android:layout_width="match_parent"
         android:layout_height="1dp"
@@ -62,14 +74,33 @@
         android:background="#14000000"
         android:includeFontPadding="false" />
 
+    <!-- 3. Resultado por tasa -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical">
 
-        <TextView style="@style/WidgetRateLabel" android:text="BCV" />
-        <TextView android:id="@+id/widget_bcv" style="@style/WidgetRateValue" android:text="—" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:letterSpacing="0.08"
+            android:text="BCV"
+            android:textColor="#7A7F7B"
+            android:textSize="11sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/widget_bcv"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="end"
+            android:text="—"
+            android:textColor="#101312"
+            android:textSize="16sp"
+            android:textStyle="bold" />
     </LinearLayout>
 
     <LinearLayout
@@ -77,14 +108,32 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:paddingTop="3dp"
+        android:paddingTop="2dp"
         android:paddingBottom="2dp">
 
-        <TextView style="@style/WidgetRateLabel" android:text="P2P" />
-        <TextView android:id="@+id/widget_p2p" style="@style/WidgetRateValue" android:text="—" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:letterSpacing="0.08"
+            android:text="P2P"
+            android:textColor="#7A7F7B"
+            android:textSize="11sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/widget_p2p"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="end"
+            android:text="—"
+            android:textColor="#0E7A54"
+            android:textSize="16sp"
+            android:textStyle="bold" />
     </LinearLayout>
 
-    <!-- Teclado 3×4 -->
+    <!-- 4. Teclado -->
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
         <TextView android:id="@+id/key_1" style="@style/WidgetKey" android:text="1" />
         <TextView android:id="@+id/key_2" style="@style/WidgetKey" android:text="2" />
