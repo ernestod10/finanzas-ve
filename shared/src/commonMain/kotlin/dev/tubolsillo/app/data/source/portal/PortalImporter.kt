@@ -41,6 +41,7 @@ class PortalImporter(
     private val ruleEngine: RuleEngine,
     private val transferMatcher: TransferMatcher,
     private val accountRepository: AccountRepository,
+    private val usdEquivalence: dev.tubolsillo.app.domain.usecase.UsdEquivalence,
 ) {
 
     suspend fun import(
@@ -74,6 +75,10 @@ class PortalImporter(
                     reconciled++
                     continue
                 }
+                // Congelado con la tasa BCV del día del movimiento.
+                val usdFrozen = usdEquivalence.usdMinor(
+                    parsed.amountMinor, parsed.currency, parsed.occurredAt,
+                )
                 val txId = transactionDao.insert(
                     TransactionEntity(
                         accountId = account.id,
@@ -88,6 +93,7 @@ class PortalImporter(
                         source = SourceType.PORTAL.key,
                         rawJson = parsed.raw,
                         isReconciled = true,
+                        usdEquivalentMinor = usdFrozen,
                     )
                 )
                 ruleEngine.match(MerchantNormalizer.normalize(parsed.merchant))?.let { rule ->

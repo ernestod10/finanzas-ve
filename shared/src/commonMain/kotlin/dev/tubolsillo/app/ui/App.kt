@@ -27,6 +27,7 @@ fun App() {
     val ratesRefresher: dev.tubolsillo.app.domain.repo.RatesRefresher = koinInject()
     val updateRepository: dev.tubolsillo.app.domain.repo.UpdateRepository = koinInject()
     val backgroundScheduler: dev.tubolsillo.app.core.platform.BackgroundScheduler = koinInject()
+    val usdBackfill: dev.tubolsillo.app.domain.usecase.UsdBackfill = koinInject()
     androidx.compose.runtime.LaunchedEffect(Unit) {
         // El sync sigue siendo automático, pero espera a que la primera pantalla
         // esté pintada: abrir WebViews durante el arranque le robaba CPU al
@@ -39,6 +40,9 @@ fun App() {
         }
         // Recordatorio diario de vencimientos (tarjetas y cuotas): se programa
         // una vez y WorkManager lo repite.
+        // Rellena el USD congelado que falte (portal/notificaciones/CSV) y
+        // corrige las monedas de 8 decimales. Idempotente.
+        runCatching { usdBackfill.run() }
         runCatching { backgroundScheduler.scheduleDailyReminders() }
         kotlinx.coroutines.delay(800)
         // Consulta liviana a GitHub Releases al abrir: si hay versión nueva, la

@@ -38,6 +38,7 @@ class CapturePipeline(
     private val ruleEngine: RuleEngine,
     private val notifier: CaptureNotifier,
     private val rateProvider: RateProvider,
+    private val usdEquivalence: UsdEquivalence,
 ) {
 
     suspend fun ingest(
@@ -128,6 +129,10 @@ class CapturePipeline(
                     dedupKey = dedupKey,
                     source = source.key,
                     rawJson = rawText,
+                    // Congelado con la tasa BCV del día del movimiento.
+                    usdEquivalentMinor = usdEquivalence.usdMinor(
+                        converted, account.currency, parsed.occurredAt,
+                    ),
                 )
             )
 

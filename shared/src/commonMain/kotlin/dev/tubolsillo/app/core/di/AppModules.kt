@@ -24,6 +24,8 @@ import dev.tubolsillo.app.domain.usecase.BalanceTrendBuilder
 import dev.tubolsillo.app.domain.usecase.PeriodMetricsCalculator
 import dev.tubolsillo.app.domain.usecase.PlanCalculator
 import dev.tubolsillo.app.domain.usecase.RateProvider
+import dev.tubolsillo.app.domain.usecase.UsdEquivalence
+import dev.tubolsillo.app.domain.usecase.UsdBackfill
 import dev.tubolsillo.app.domain.usecase.RuleEngine
 import dev.tubolsillo.app.domain.usecase.TotalsCalculator
 import dev.tubolsillo.app.domain.usecase.TransferMatcher
@@ -66,7 +68,7 @@ val domainModule = module {
     singleOf(::AssistantEngine)
     singleOf(::BackupExporter)
     singleOf(::BudgetCalculator)
-    single { PortalImporter(get(), get(), get(), get(), get()) }
+    single { PortalImporter(get(), get(), get(), get(), get(), get()) }
     single { dev.tubolsillo.app.data.source.portal.PortalAutoSync(get(), get(), get(), get()) }
     singleOf(::CapturePipeline)
     singleOf(::DedupGate)
@@ -75,6 +77,8 @@ val domainModule = module {
     singleOf(::RuleEngine)
     singleOf(::TotalsCalculator)
     singleOf(::TransferMatcher)
+    singleOf(::UsdEquivalence)
+    singleOf(::UsdBackfill)
     singleOf(::PlanCalculator)
     singleOf(::PlanRepository)
     singleOf(::PeriodMetricsCalculator)

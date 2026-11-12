@@ -73,6 +73,20 @@ interface TransactionDao {
         sign: Long,
     ): List<TransactionEntity>
 
+    /** Filas sin equivalente USD (para el backfill al arrancar). */
+    @Query("SELECT * FROM transactions WHERE usdEquivalentMinor IS NULL LIMIT :limit")
+    suspend fun getMissingUsd(limit: Int): List<TransactionEntity>
+
+    /** Filas en monedas que no son fiat: su USD pudo quedar mal por decimales. */
+    @Query(
+        "SELECT * FROM transactions WHERE usdEquivalentMinor IS NOT NULL " +
+            "AND currency NOT IN ('USD','USDT','VES','EUR') LIMIT :limit"
+    )
+    suspend fun getNonFiatWithUsd(limit: Int): List<TransactionEntity>
+
+    @Query("UPDATE transactions SET usdEquivalentMinor = :usd WHERE id = :id")
+    suspend fun updateUsdEquivalent(id: Long, usd: Long?)
+
     @Insert
     suspend fun insert(transaction: TransactionEntity): Long
 

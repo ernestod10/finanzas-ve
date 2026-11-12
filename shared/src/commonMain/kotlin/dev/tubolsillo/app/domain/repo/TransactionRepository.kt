@@ -20,6 +20,7 @@ class TransactionRepository(
     private val ruleEngine: RuleEngine,
     private val rateProvider: RateProvider,
     private val accountRepository: AccountRepository,
+    private val usdEquivalence: dev.tubolsillo.app.domain.usecase.UsdEquivalence,
 ) {
 
     fun observeAll(): Flow<List<TransactionEntity>> = transactionDao.observeAll()
@@ -78,11 +79,15 @@ class TransactionRepository(
      * Equivalente en USD congelado al momento de la transacción, con la tasa
      * vigente. Para monedas ya en USD es el mismo monto.
      */
-    private suspend fun usdEquivalent(amountMinor: Long, currencyCode: String): Long? =
-        if (currencyCode == "USD") amountMinor
-        else runCatching {
-            Math.round(amountMinor * rateProvider.getRate(currencyCode))
-        }.getOrDefault(null)
+    /**
+     * Congelado con la tasa BCV del día del movimiento (ver [UsdEquivalence]).
+     * Los saldos, en cambio, se valoran siempre a la tasa vigente.
+     */
+    private suspend fun usdEquivalent(
+        amountMinor: Long,
+        currencyCode: String,
+        occurredAt: Long = nowMillis(),
+    ): Long? = usdEquivalence.usdMinor(amountMinor, currencyCode, occurredAt)
 
     /** Aplica las reglas de auto-etiquetado existentes a una transacción. */
     suspend fun applyRules(transactionId: Long, rawDescription: String, defaultCategory: TransactionCategory) {
