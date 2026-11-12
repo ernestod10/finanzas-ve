@@ -34,10 +34,14 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -81,15 +85,25 @@ fun SettingsScreen(
 ) {
     val permissions = rememberPermissionActions()
     val exportStatus by exportViewModel.status.collectAsState()
-    val exportPicker = rememberJsonExportPicker("tubolsillo-backup.json")
+    // Dos pickers porque el nombre del archivo cambia si va cifrado.
+    val exportPlain = rememberJsonExportPicker("tubolsillo-backup.json")
+    val exportEncrypted = rememberJsonExportPicker("tubolsillo-backup.tub")
+    var showExportPassword by remember { mutableStateOf(false) }
+    // Contenido cifrado pendiente de contraseña para restaurar.
+    var lockedImport by remember { mutableStateOf<Pair<String, String?>?>(null) }
     val importPicker = rememberJsonImportPicker { content, name ->
-        exportViewModel.importBackup(content, name)
+        if (content != null && dev.tubolsillo.app.core.crypto.isEncryptedBackup(content)) {
+            lockedImport = content to name
+        } else {
+            exportViewModel.importBackup(content, name)
+        }
     }
     val settings: SettingsRepository = koinInject()
     val scope = rememberCoroutineScope()
     val darkMode by settings.darkMode.collectAsState(initial = "SYSTEM")
     val accentKey by settings.accentColor.collectAsState(initial = "EMERALD")
     val autoSyncPortals by settings.autoSyncPortals.collectAsState()
+    val appLock by settings.appLockEnabled.collectAsState()
     val currentAccent = AppAccent.fromKey(accentKey)
     val themeAction: (String) -> Unit = { mode -> scope.launch { settings.setDarkMode(mode) } }
     val accentAction: (AppAccent) -> Unit = { accent -> scope.launch { settings.setAccentColor(accent.key) } }
@@ -249,11 +263,11 @@ fun SettingsScreen(
             GroupedGroup {
                 LinkRow(Icons.Filled.SaveAlt, Color(0xFF3E7C74), "Exportar respaldo",
                     "Toda tu data a un JSON, incluye capturas crudas") {
-                    exportViewModel.exportWithPicker(exportPicker)
+                    showExportPassword = true
                 }
                 Separator()
                 LinkRow(Icons.Filled.Restore, Color(0xFF2E5E43), "Restaurar respaldo",
-                    "Importar un archivo JSON de copia de seguridad") {
+                    "Importar un JSON o un respaldo cifrado") {
                     importPicker()
                 }
             }
@@ -287,6 +301,33 @@ fun SettingsScreen(
             }
         }
 
+        item(key = "privacidad-h") { GroupHeader("Privacidad") }
+        item(key = "privacidad") {
+            GroupedGroup {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { scope.launch { settings.setAppLock(!appLock) } }
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Bloqueo con huella o PIN", style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            "Al volver a la app pide la huella o el PIN del teléfono",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    androidx.compose.material3.Switch(
+                        checked = appLock,
+                        onCheckedChange = { checked -> scope.launch { settings.setAppLock(checked) } },
+                    )
+                }
+            }
+        }
+
         item(key = "app-h") { GroupHeader("Aplicación") }
         item(key = "app") {
             GroupedGroup {
@@ -301,6 +342,88 @@ fun SettingsScreen(
             GroupFooter("TuBolsillo — tu información financiera nunca sale del teléfono.")
         }
     }
+
+    if (showExportPassword) {
+        BackupPasswordDialog(
+            title = "Exportar respaldo",
+            message = "Con contraseña el archivo queda cifrado (AES-256). Sin ella es un JSON legible.",
+            confirmLabel = "Cifrar y exportar",
+            allowPlain = true,
+            onDismiss = { showExportPassword = false },
+            onConfirm = { password ->
+                showExportPassword = false
+                if (password == null) {
+                    exportViewModel.exportWithPicker(exportPlain)
+                } else {
+                    exportViewModel.exportWithPicker(exportEncrypted, password)
+                }
+            },
+        )
+    }
+
+    lockedImport?.let { pending ->
+        BackupPasswordDialog(
+            title = "Respaldo cifrado",
+            message = "Escribe la contraseña con la que se generó este respaldo.",
+            confirmLabel = "Restaurar",
+            allowPlain = false,
+            onDismiss = { lockedImport = null },
+            onConfirm = { password ->
+                lockedImport = null
+                exportViewModel.importBackup(pending.first, pending.second, password)
+            },
+        )
+    }
+}
+
+/**
+ * Pide la contraseña del respaldo. Con [allowPlain] se puede elegir exportar
+ * sin cifrar (el JSON de siempre).
+ */
+@Composable
+private fun BackupPasswordDialog(
+    title: String,
+    message: String,
+    confirmLabel: String,
+    allowPlain: Boolean,
+    onDismiss: () -> Unit,
+    onConfirm: (String?) -> Unit,
+) {
+    var password by remember { mutableStateOf("") }
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                androidx.compose.material3.OutlinedTextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    label = { Text("Contraseña") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = password.isNotBlank(),
+                onClick = { onConfirm(password) },
+            ) { Text(confirmLabel) }
+        },
+        dismissButton = {
+            Row {
+                if (allowPlain) {
+                    TextButton(onClick = { onConfirm(null) }) { Text("Sin contraseña") }
+                }
+                TextButton(onClick = onDismiss) { Text("Cancelar") }
+            }
+        },
+    )
 }
 
 /**

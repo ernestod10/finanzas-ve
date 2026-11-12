@@ -68,6 +68,8 @@ class SettingsRepository() {
         // Versión de la que el usuario dijo "no avisar": no se vuelve a
         // preguntar por ella hasta que salga otra.
         val SKIPPED_UPDATE = stringPreferencesKey("skipped_update_version")
+        // Bloqueo de la app con huella o PIN del sistema.
+        val APP_LOCK = booleanPreferencesKey("app_lock")
         val RATES_HISTORY = stringPreferencesKey("rates_history") // {"2026-11-03": {"VES":0.00112,"USD":1.0}}
         val RATES_FETCHED_AT = longPreferencesKey("rates_fetched_at")
     }
@@ -180,6 +182,14 @@ class SettingsRepository() {
         dataStore.edit {
             it[if (expense) Keys.LAST_ACCOUNT_EXPENSE else Keys.LAST_ACCOUNT_INCOME] = accountId
         }
+    }
+
+    val appLockEnabled: StateFlow<Boolean> =
+        dataStore.data.map { it[Keys.APP_LOCK] ?: false }
+            .stateIn(scope, SharingStarted.Eagerly, false)
+
+    suspend fun setAppLock(enabled: Boolean) {
+        dataStore.edit { it[Keys.APP_LOCK] = enabled }
     }
 
     /** Versión que el usuario pidió no volver a ver en el aviso de Inicio. */
