@@ -128,4 +128,18 @@ class MigrationTest {
         }.isFailure
         assertTrue(failed)
     }
+
+    @Test
+    fun `v7 a v8 crea objetivos de ahorro y aportes`() {
+        val conn = connection()
+        TubolsilloDatabase.MIGRATION_7_8.migrate(conn)
+        assertEquals(
+            listOf("id", "name", "targetMinor", "currency", "deadlineAt", "colorHex", "isActive", "createdAt"),
+            conn.columns("savings_goals"),
+        )
+        assertEquals(
+            listOf("id", "goalId", "amountMinor", "contributedAt", "txId"),
+            conn.columns("savings_contributions"),
+        )
+    }
 }

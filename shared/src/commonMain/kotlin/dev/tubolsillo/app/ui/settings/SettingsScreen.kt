@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.CurrencyExchange
 import androidx.compose.material.icons.filled.Link
@@ -74,6 +75,7 @@ fun SettingsScreen(
     onAiModelClick: () -> Unit = {},
     onCreditsClick: () -> Unit = {},
     onClassifierClick: () -> Unit = {},
+    onSavingsClick: () -> Unit = {},
     exportViewModel: ExportViewModel = koinViewModel(),
     updateViewModel: UpdateViewModel = koinViewModel(),
 ) {
@@ -260,6 +262,9 @@ fun SettingsScreen(
         item(key = "creditos-h") { GroupHeader("Créditos") }
         item(key = "creditos") {
             GroupedGroup {
+                LinkRow(Icons.Filled.Savings, Color(0xFF1F7A3D), "Objetivos de ahorro",
+                    "Metas con monto y cuánto apartar por mes", onSavingsClick)
+                Separator()
                 LinkRow(Icons.Filled.AutoAwesome, Color(0xFF2E6E9E), "Clasificar historial",
                     "Sugiere categoría para los movimientos sin ella", onClassifierClick)
                 Separator()

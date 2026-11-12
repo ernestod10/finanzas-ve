@@ -13,5 +13,6 @@ actual fun getDatabaseBuilder(): RoomDatabase.Builder<TubolsilloDatabase> =
             TubolsilloDatabase.MIGRATION_4_5,
             TubolsilloDatabase.MIGRATION_5_6,
             TubolsilloDatabase.MIGRATION_6_7,
+            TubolsilloDatabase.MIGRATION_7_8,
         )
         .setDriver(BundledSQLiteDriver())

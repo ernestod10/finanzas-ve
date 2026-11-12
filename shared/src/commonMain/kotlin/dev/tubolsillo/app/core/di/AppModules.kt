@@ -11,6 +11,7 @@ import dev.tubolsillo.app.domain.repo.PlanRepository
 import dev.tubolsillo.app.domain.repo.RatesRefresher
 import dev.tubolsillo.app.domain.repo.SettingsRepository
 import dev.tubolsillo.app.domain.repo.StatsRepository
+import dev.tubolsillo.app.domain.repo.SavingsRepository
 import dev.tubolsillo.app.domain.repo.UpdateRepository
 import dev.tubolsillo.app.domain.repo.CreditsRepository
 import dev.tubolsillo.app.domain.assistant.AssistantEngine
@@ -40,6 +41,7 @@ import dev.tubolsillo.app.ui.settings.RatesViewModel
 import dev.tubolsillo.app.ui.settings.UpdateViewModel
 import dev.tubolsillo.app.ui.settings.AiModelViewModel
 import dev.tubolsillo.app.ui.credits.CreditsViewModel
+import dev.tubolsillo.app.ui.savings.SavingsViewModel
 import dev.tubolsillo.app.ui.classifier.ClassifierViewModel
 import dev.tubolsillo.app.ui.assistant.AssistantViewModel
 import dev.tubolsillo.app.ui.transactions.TransactionsViewModel
@@ -84,6 +86,7 @@ val domainModule = module {
     singleOf(::PeriodMetricsCalculator)
     singleOf(::BalanceTrendBuilder)
     singleOf(::StatsRepository)
+    singleOf(::SavingsRepository)
     singleOf(::PeriodState)
     singleOf(::EntryDraftHolder)
     singleOf(::ReviewReadingCache)
@@ -107,6 +110,7 @@ val viewModelModule = module {
     viewModelOf(::UpdateViewModel)
     viewModelOf(::AiModelViewModel)
     viewModelOf(::CreditsViewModel)
+    viewModelOf(::SavingsViewModel)
     viewModelOf(::ClassifierViewModel)
     viewModelOf(::AssistantViewModel)
 }

@@ -44,6 +44,7 @@ import dev.tubolsillo.app.ui.record.NewRecordScreen
 import dev.tubolsillo.app.ui.review.EntryDraftHolder
 import dev.tubolsillo.app.ui.review.ReviewScreen
 import dev.tubolsillo.app.ui.classifier.ClassifierScreen
+import dev.tubolsillo.app.ui.savings.SavingsScreen
 import dev.tubolsillo.app.ui.credits.CreditsScreen
 import dev.tubolsillo.app.ui.settings.AiModelScreen
 import dev.tubolsillo.app.ui.settings.BinanceSettingsScreen
@@ -84,6 +85,7 @@ object Routes {
     const val AI_MODEL = "ai_model"
     const val CREDITS = "credits"
     const val CLASSIFIER = "classifier"
+    const val SAVINGS = "savings"
     const val PLAN = "plan"
     const val RECORD = "record/{income}"
     const val REVIEW = "review"
@@ -244,6 +246,9 @@ fun TubolsilloNavHost() {
             composable(Routes.AI_MODEL) {
                 AiModelScreen(onBack = { navController.popBackStack() })
             }
+            composable(Routes.SAVINGS) {
+                SavingsScreen(onBack = { navController.popBackStack() })
+            }
             composable(Routes.CLASSIFIER) {
                 ClassifierScreen(onBack = { navController.popBackStack() })
             }
@@ -306,6 +311,7 @@ private fun TabPager(
                 onAiModelClick = { navController.navigate(Routes.AI_MODEL) },
                 onCreditsClick = { navController.navigate(Routes.CREDITS) },
                 onClassifierClick = { navController.navigate(Routes.CLASSIFIER) },
+                onSavingsClick = { navController.navigate(Routes.SAVINGS) },
                 onRatesClick = { navController.navigate(Routes.RATES) },
                 onBinanceClick = { navController.navigate(Routes.BINANCE) },
                 onEventsClick = { navController.navigate(Routes.EVENTS) },

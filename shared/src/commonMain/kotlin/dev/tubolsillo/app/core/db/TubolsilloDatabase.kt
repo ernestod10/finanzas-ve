@@ -25,6 +25,9 @@ import dev.tubolsillo.app.core.db.entity.CurrencyRateEntity
 import dev.tubolsillo.app.core.db.entity.InstallmentEntity
 import dev.tubolsillo.app.core.db.entity.PlanItemEntity
 import dev.tubolsillo.app.core.db.entity.PlanItemStateEntity
+import dev.tubolsillo.app.core.db.entity.SavingsGoalEntity
+import dev.tubolsillo.app.core.db.entity.SavingsContributionEntity
+import dev.tubolsillo.app.core.db.dao.SavingsGoalDao
 import dev.tubolsillo.app.core.db.entity.TagEntity
 import dev.tubolsillo.app.core.db.entity.TransactionEntity
 import dev.tubolsillo.app.core.db.entity.TransactionTagCrossRef
@@ -47,8 +50,10 @@ import dev.tubolsillo.app.core.db.entity.TransferPairEntity
         CategoryEntity::class,
         PlanItemEntity::class,
         PlanItemStateEntity::class,
+        SavingsGoalEntity::class,
+        SavingsContributionEntity::class,
     ],
-    version = 7,
+    version = 8,
     exportSchema = true,
 )
 abstract class TubolsilloDatabase : RoomDatabase() {
@@ -148,6 +153,35 @@ abstract class TubolsilloDatabase : RoomDatabase() {
             }
         }
 
+        /** v7→v8: objetivos de ahorro y sus aportes. */
+        val MIGRATION_7_8 = object : androidx.room.migration.Migration(7, 8) {
+            override fun migrate(connection: androidx.sqlite.SQLiteConnection) {
+                connection.prepare(
+                    "CREATE TABLE IF NOT EXISTS `savings_goals` (" +
+                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`name` TEXT NOT NULL, " +
+                        "`targetMinor` INTEGER NOT NULL, " +
+                        "`currency` TEXT NOT NULL, " +
+                        "`deadlineAt` INTEGER, " +
+                        "`colorHex` TEXT, " +
+                        "`isActive` INTEGER NOT NULL, " +
+                        "`createdAt` INTEGER NOT NULL)"
+                ).use { it.step() }
+                connection.prepare(
+                    "CREATE TABLE IF NOT EXISTS `savings_contributions` (" +
+                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`goalId` INTEGER NOT NULL, " +
+                        "`amountMinor` INTEGER NOT NULL, " +
+                        "`contributedAt` INTEGER NOT NULL, " +
+                        "`txId` INTEGER)"
+                ).use { it.step() }
+                connection.prepare(
+                    "CREATE INDEX IF NOT EXISTS `index_savings_contributions_goalId` " +
+                        "ON `savings_contributions` (`goalId`)"
+                ).use { it.step() }
+            }
+        }
+
         /**
          * v6→v7: `dedupKey` pasa a ser ÚNICO (la ingesta ya no puede insertar la
          * misma operación dos veces) e icono por categoría.
@@ -197,4 +231,5 @@ abstract class TubolsilloDatabase : RoomDatabase() {
     abstract fun categoryRuleDao(): CategoryRuleDao
     abstract fun planItemDao(): PlanItemDao
     abstract fun planItemStateDao(): PlanItemStateDao
+    abstract fun savingsGoalDao(): SavingsGoalDao
 }
