@@ -25,8 +25,8 @@ interface CategoryDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(categories: List<CategoryEntity>)
 
-    @Query("UPDATE categories SET name = :name, colorHex = :colorHex WHERE id = :id")
-    suspend fun update(id: Long, name: String, colorHex: String?)
+    @Query("UPDATE categories SET name = :name, colorHex = :colorHex, iconKey = :iconKey WHERE id = :id")
+    suspend fun update(id: Long, name: String, colorHex: String?, iconKey: String?)
 
     @Query("DELETE FROM categories WHERE id = :id")
     suspend fun delete(id: Long)

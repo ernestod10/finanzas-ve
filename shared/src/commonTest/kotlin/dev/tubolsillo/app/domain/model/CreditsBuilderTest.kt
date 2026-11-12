@@ -106,6 +106,22 @@ class CreditsBuilderTest {
     }
 
     @Test
+    fun `con saldo en cero pero disponible menor al limite la deuda sale igual`() {
+        // Caso real de BNC: el portal guardó saldo 0 y sí publicó el disponible.
+        // Antes la tarjeta desaparecía de Deudas porque 0 se tomaba como deuda.
+        val card = account(
+            id = 10,
+            kind = AccountKind.CREDIT_CARD,
+            balance = 0,
+            limit = 16_000_000,
+            available = 2_006_134,
+        )
+        val item = CreditsBuilder.build(listOf(card), emptyMap()).cards.single()
+        assertEquals(13_993_866, item.debtMinor)
+        assertEquals(2_006_134, item.availableMinor)
+    }
+
+    @Test
     fun `las cuentas sin deuda no entran`() {
         val checking = account(id = 4, kind = AccountKind.CHECKING, balance = 1_000_000)
         val emptyCard = account(id = 5, kind = AccountKind.CREDIT_CARD, balance = 0)

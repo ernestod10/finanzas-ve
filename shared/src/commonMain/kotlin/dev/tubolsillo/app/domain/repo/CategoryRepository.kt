@@ -25,16 +25,21 @@ class CategoryRepository(
 
     suspend fun getAll(): List<CategoryEntity> = categoryDao.getAll()
 
-    suspend fun add(name: String, colorHex: String?): Long {
+    suspend fun add(name: String, colorHex: String?, iconKey: String? = null): Long {
         val all = categoryDao.getAll()
         val nextOrder = (all.maxOfOrNull { it.sortOrder } ?: -1) + 1
         return categoryDao.insert(
-            CategoryEntity(name = name.trim(), colorHex = colorHex, sortOrder = nextOrder)
+            CategoryEntity(
+                name = name.trim(),
+                colorHex = colorHex,
+                sortOrder = nextOrder,
+                iconKey = iconKey,
+            )
         )
     }
 
-    suspend fun rename(id: Long, name: String, colorHex: String?) =
-        categoryDao.update(id, name.trim(), colorHex)
+    suspend fun rename(id: Long, name: String, colorHex: String?, iconKey: String? = null) =
+        categoryDao.update(id, name.trim(), colorHex, iconKey)
 
     suspend fun delete(id: Long) = categoryDao.delete(id)
 }

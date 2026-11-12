@@ -143,4 +143,23 @@ class AssistantTest {
         // "500 a bcv" es un precio en DÓLARES que se paga en bolívares.
         assertEquals(500.0, intent.bcvUsdPrice)
     }
+
+    @Test
+    fun `200 dolares en bolivares contra 150 en efectivo`() {
+        // La pregunta principal: el comercio cobra 200 dólares si pagas en
+        // bolívares, o 150 en efectivo. El precio en divisas es 150 y los
+        // 200 son el precio en dólares cobrado en Bs (a BCV).
+        val intent = AssistantIntentParser.heuristic(
+            "me dicen que cuesta 200 dólares en bolívares o 150 en efectivo, cuál me sale mejor"
+        )
+        assertIs<AssistantIntent.Compare>(intent)
+        assertEquals(200.0, intent.bcvUsdPrice)
+        assertEquals(150.0, intent.usdPrice)
+        assertNull(intent.bsPrice)
+    }
+
+    @Test
+    fun `gastos en bolivares no se confunden con una comparacion`() {
+        assertIs<AssistantIntent.Stats>(AssistantIntentParser.heuristic("¿cuánto gasté en bolívares este mes?"))
+    }
 }

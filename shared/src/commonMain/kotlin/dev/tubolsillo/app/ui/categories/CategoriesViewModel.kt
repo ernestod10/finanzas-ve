@@ -16,14 +16,14 @@ class CategoriesViewModel(
 
     val categories: StateFlow<List<CategoryEntity>> = repository.categoriesState
 
-    fun add(name: String, colorHex: String?) {
+    fun add(name: String, colorHex: String?, iconKey: String? = null) {
         if (name.isBlank()) return
-        viewModelScope.launch { repository.add(name, colorHex) }
+        viewModelScope.launch { repository.add(name, colorHex, iconKey) }
     }
 
-    fun update(id: Long, name: String, colorHex: String?) {
+    fun update(id: Long, name: String, colorHex: String?, iconKey: String? = null) {
         if (name.isBlank()) return
-        viewModelScope.launch { repository.rename(id, name, colorHex) }
+        viewModelScope.launch { repository.rename(id, name, colorHex, iconKey) }
     }
 
     fun delete(id: Long) {

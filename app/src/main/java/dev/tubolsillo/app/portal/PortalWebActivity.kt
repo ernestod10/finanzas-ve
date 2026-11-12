@@ -163,8 +163,18 @@ class PortalWebActivity : ComponentActivity() {
 
                 // Consulta automática: la ventana es translúcida y el contenido
                 // (WebView incluido) queda invisible; el aviso se pinta en un
-                // diálogo aparte. Con showWeb (login/2FA) vuelve todo a la vista.
+                // popup aparte. Con showWeb (login/2FA) vuelve todo a la vista.
                 val compact = !showWeb
+                // Mientras corre escondida, esta ventana no debe tragarse los
+                // toques: el popup del aviso tiene su propia ventana y sigue
+                // funcionando, y el resto va a la app de abajo.
+                androidx.compose.runtime.LaunchedEffect(busy, showWeb) {
+                    if (busy && !showWeb) {
+                        window.addFlags(android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE)
+                    } else {
+                        window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE)
+                    }
+                }
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = if (compact) Color.Transparent else MaterialTheme.colorScheme.background,
@@ -382,14 +392,27 @@ class PortalWebActivity : ComponentActivity() {
                                 },
                             )
                             if (busy && !showWeb) {
-                                // Diálogo con ventana propia: se ve aunque la
-                                // columna esté atenuada.
-                                androidx.compose.ui.window.Dialog(onDismissRequest = { }) {
-                                    CompactSyncCard(
-                                        institution = institution,
-                                        message = steps.lastOrNull() ?: "Abriendo el portal…",
-                                        onCancel = { finish() },
-                                    )
+                                // La consulta corre escondida: el aviso va en
+                                // una ventana que solo ocupa el tamaño de la
+                                // tarjeta, para que el resto de la app siga
+                                // recibiendo toques (antes un Dialog a pantalla
+                                // completa se los comía).
+                                androidx.compose.ui.window.Popup(
+                                    alignment = Alignment.TopCenter,
+                                    properties = androidx.compose.ui.window.PopupProperties(
+                                        focusable = false,
+                                    ),
+                                ) {
+                                    androidx.compose.foundation.layout.Box(
+                                        modifier = androidx.compose.ui.Modifier
+                                            .padding(top = 64.dp, start = 16.dp, end = 16.dp),
+                                    ) {
+                                        CompactSyncCard(
+                                            institution = institution,
+                                            message = steps.lastOrNull() ?: "Abriendo el portal…",
+                                            onCancel = { finish() },
+                                        )
+                                    }
                                 }
                             }
                         }

@@ -1,5 +1,11 @@
 package dev.tubolsillo.app.ui.components
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -13,9 +19,12 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -35,10 +44,21 @@ import dev.tubolsillo.app.ui.theme.TubolsilloColors
 /** Un destino de la barra inferior. */
 data class BottomBarItem(val label: String, val icon: ImageVector)
 
+/** Acción del speed dial del FAB: icono, etiqueta corta y qué abre. */
+data class QuickActionItem(
+    val label: String,
+    val icon: ImageVector,
+    val onClick: () -> Unit,
+)
+
 /**
  * Barra inferior con cuatro destinos y el FAB central de alta, como la
  * referencia. El FAB se superpone hacia arriba: no es un destino más, es la
  * acción principal de la app.
+ *
+ * Al tocarlo no abre una hoja: despliega un speed dial horizontal sobre el
+ * botón con las altas posibles. Se cierra tocando el mismo botón (que pasa a
+ * ×), tocando fuera (el scrim lo dibuja el llamador) o eligiendo una acción.
  */
 @Composable
 fun AppBottomBar(
@@ -48,6 +68,8 @@ fun AppBottomBar(
     onAdd: () -> Unit,
     modifier: Modifier = Modifier,
     fabIndex: Int = items.size / 2,
+    quickActions: List<QuickActionItem> = emptyList(),
+    quickActionsOpen: Boolean = false,
 ) {
     Box(
         modifier = modifier
@@ -96,13 +118,86 @@ fun AppBottomBar(
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
-                    imageVector = Icons.Filled.Add,
-                    contentDescription = "Nuevo registro",
+                    imageVector = if (quickActionsOpen) Icons.Filled.Close else Icons.Filled.Add,
+                    contentDescription = if (quickActionsOpen) "Cerrar" else "Nuevo",
                     tint = MaterialTheme.colorScheme.onPrimary,
                     modifier = Modifier.size(26.dp),
                 )
             }
         }
+
+        if (quickActions.isNotEmpty()) {
+            // Un renglón por encima del FAB: cada acción es un círculo con su
+            // etiqueta debajo. Se dibuja fuera del Box de la barra (no lo
+            // recorta) y entra con un deslizamiento corto desde el botón.
+            AnimatedVisibility(
+                visible = quickActionsOpen,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .offset(y = (-104).dp),
+                enter = fadeIn(tween(110)) + slideInVertically(
+                    animationSpec = tween(160),
+                    initialOffsetY = { it / 2 },
+                ),
+                exit = fadeOut(tween(80)) + slideOutVertically(
+                    animationSpec = tween(110),
+                    targetOffsetY = { it / 2 },
+                ),
+            ) {
+                // Panel detrás de los círculos: sobre una tarjeta verde de la
+                // pantalla las etiquetas quedaban ilegibles.
+                Surface(
+                    shape = RoundedCornerShape(22.dp),
+                    color = TubolsilloColors.card,
+                    shadowElevation = 12.dp,
+                ) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.Bottom,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 9.dp),
+                    ) {
+                        quickActions.forEach { action ->
+                            QuickActionBubble(action)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** Círculo del speed dial con su etiqueta corta debajo. */
+@Composable
+private fun QuickActionBubble(action: QuickActionItem) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(3.dp),
+        modifier = Modifier.width(46.dp),
+    ) {
+        Surface(
+            onClick = action.onClick,
+            shape = CircleShape,
+            color = TubolsilloColors.card,
+            shadowElevation = 4.dp,
+            modifier = Modifier.size(44.dp),
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = action.icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(21.dp),
+                )
+            }
+        }
+        Text(
+            text = action.label,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+        )
     }
 }
 

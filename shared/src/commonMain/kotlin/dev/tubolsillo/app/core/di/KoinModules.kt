@@ -29,6 +29,7 @@ val dbModule = module {
     single { get<TubolsilloDatabase>().categoryDao() }
     single { get<TubolsilloDatabase>().planItemDao() }
     single { get<TubolsilloDatabase>().planItemStateDao() }
+    single { get<TubolsilloDatabase>().savingsGoalDao() }
 }
 
 /** Parsers por institución (el equivalente Koin del @IntoSet de Hilt). */

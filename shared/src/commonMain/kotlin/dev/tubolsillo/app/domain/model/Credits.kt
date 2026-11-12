@@ -98,7 +98,11 @@ object CreditsBuilder {
         val debt = when {
             account.currency.isBlank() -> null
             pending.isNotEmpty() -> pending.sumOf { it.amountMinor }
-            else -> balanceDebt ?: derivedDebt
+            // Si el saldo guardado es cero pero el banco publica disponible y
+            // límite, la deuda real es la diferencia: con el saldo en 0 la
+            // tarjeta de BNC (y cualquier portal que solo reporte disponible)
+            // desaparecía de Deudas.
+            else -> balanceDebt?.takeIf { it > 0L } ?: derivedDebt
         }
         // BNC publica solo el disponible: la tarjeta se muestra igual en Deudas,
         // con la deuda en blanco y el botón para poner el límite.

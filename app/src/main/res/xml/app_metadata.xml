@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AppFunctionAppMetadata
+    xmlns:appfn="http://schemas.android.com/apk/androidx.appfunctions"
+    appfn:instructions="TuBolsillo es la app de finanzas personales del usuario: cuentas de bancos venezolanos, Binance y Cashea, con las tasas BCV y Binance P2P del día.
+Patrones de uso:
+- Si el usuario pregunta si le conviene pagar en dólares en efectivo o en bolívares (por ejemplo 'me cobran 200 dólares en bolívares o 150 en efectivo'), usa compararPago con precioEnDivisasUsd = precio en efectivo y precioEnDolaresPagadoABcvUsd = precio en dólares cobrado en bolívares, y responde con explicacion y ahorroUsd.
+- Para saber en qué se fue la plata usa gastosDelMes; para deudas usa proximoPago.
+Restricciones:
+- Solo lectura: estas funciones no crean, modifican ni borran movimientos.
+- Usa los números que devuelve la app; no estimes tasas ni montos." />

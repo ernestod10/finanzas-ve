@@ -112,9 +112,11 @@ object AiPrompts {
             Reglas:
             - months_back: 0 este mes, 1 dos meses atrás, 2 tres meses.
             - days_ago: 0 hoy, 1 ayer, 2 anteayer.
-            - compare: "X en divisas" o "X dólares" → price_usd (dólares en efectivo).
+            - compare: "X en divisas", "X en efectivo" o "X dólares" → price_usd (dólares en efectivo).
               "Y a tasa BCV" o "Y a bcv" → price_bcv_usd (Y dólares que se pagan
-              en bolívares al cambio oficial). "Y bolívares" o "Y Bs" → price_bs.
+              en bolívares al cambio oficial). "Y dólares en bolívares" también es
+              price_bcv_usd: el precio está en dólares pero se cobra en Bs.
+              "Y bolívares" o "Y Bs" (el número seguido de Bs) → price_bs.
               discount_pct solo si mencionan un porcentaje.
             - category: una de [$cats] o null.
             - Usa SOLO los números que aparecen en el pedido; no inventes montos.

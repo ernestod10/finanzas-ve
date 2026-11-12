@@ -1,5 +1,6 @@
 package dev.tubolsillo.app.ui.savings
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -7,7 +8,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -22,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import dev.tubolsillo.app.core.db.entity.AccountEntity
 import dev.tubolsillo.app.core.money.MoneyFormatter
 import dev.tubolsillo.app.domain.model.SavingsGoalView
 import dev.tubolsillo.app.ui.components.ConfirmDeleteDialog
@@ -43,6 +49,7 @@ fun SavingsScreen(
     viewModel: SavingsViewModel = koinViewModel(),
 ) {
     val goals by viewModel.goals.collectAsState()
+    val accounts by viewModel.accounts.collectAsState()
     val message by viewModel.message.collectAsState()
     var adding by remember { mutableStateOf(false) }
     var contributing by remember { mutableStateOf<SavingsGoalView?>(null) }
@@ -93,9 +100,10 @@ fun SavingsScreen(
     contributing?.let { goal ->
         ContributeDialog(
             goal = goal,
+            accounts = accounts.filter { it.currency == goal.currency },
             onDismiss = { contributing = null },
-            onSave = { amount ->
-                viewModel.contribute(goal, amount)
+            onSave = { amount, accountId ->
+                viewModel.contribute(goal, amount, accountId)
                 contributing = null
             },
         )
@@ -215,10 +223,14 @@ private fun AddGoalDialog(
 @Composable
 private fun ContributeDialog(
     goal: SavingsGoalView,
+    accounts: List<AccountEntity>,
     onDismiss: () -> Unit,
-    onSave: (amount: String) -> Unit,
+    onSave: (amount: String, accountId: Long?) -> Unit,
 ) {
     var amount by remember { mutableStateOf("") }
+    // Por defecto sale de la primera cuenta en la moneda de la meta: es lo que
+    // la gente espera al tocar "Apartar" y así el saldo queda al día.
+    var accountId by remember { mutableStateOf(accounts.firstOrNull()?.id) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Apartar para «${goal.name}»") },
@@ -236,11 +248,74 @@ private fun ContributeDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                 )
+                if (accounts.isNotEmpty()) {
+                    Text(
+                        text = "Sale de",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 8.dp),
+                    )
+                    accounts.forEach { account ->
+                        AccountChoice(
+                            name = account.name,
+                            selected = accountId == account.id,
+                            onClick = { accountId = account.id },
+                        )
+                    }
+                    AccountChoice(
+                        name = "No descontar de ninguna cuenta",
+                        selected = accountId == null,
+                        onClick = { accountId = null },
+                    )
+                } else {
+                    Text(
+                        text = "No tienes cuentas en " + goal.currency +
+                            ": el aporte se registra sin tocar saldos.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 8.dp),
+                    )
+                }
             }
         },
         confirmButton = {
-            TextButton(enabled = amount.isNotBlank(), onClick = { onSave(amount) }) { Text("Apartar") }
+            TextButton(
+                enabled = amount.isNotBlank(),
+                onClick = { onSave(amount, accountId) },
+            ) { Text("Apartar") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } },
     )
+}
+
+@Composable
+private fun AccountChoice(
+    name: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = name,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+            color = if (selected) MaterialTheme.colorScheme.primary
+            else MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.weight(1f),
+        )
+        if (selected) {
+            Icon(
+                imageVector = Icons.Filled.Check,
+                contentDescription = "Elegida",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(18.dp),
+            )
+        }
+    }
 }

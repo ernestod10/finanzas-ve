@@ -7,6 +7,9 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
@@ -14,12 +17,25 @@ import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.NorthEast
 import androidx.compose.material.icons.filled.ReceiptLong
+import androidx.compose.material.icons.filled.Savings
+import androidx.compose.material.icons.filled.SouthWest
+import androidx.compose.material.icons.filled.Wallet
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.Color
+import dev.tubolsillo.app.ui.components.QuickActionItem
+import dev.tubolsillo.app.ui.dashboard.AddAccountDialog
+import dev.tubolsillo.app.domain.model.AccountKind
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
@@ -40,6 +56,7 @@ import dev.tubolsillo.app.ui.events.ReplayScreen
 import dev.tubolsillo.app.ui.home.HomeScreen
 import dev.tubolsillo.app.ui.plan.PlanScreen
 import dev.tubolsillo.app.ui.portal.PortalScreen
+import dev.tubolsillo.app.ui.record.InvoiceScreen
 import dev.tubolsillo.app.ui.record.NewRecordScreen
 import dev.tubolsillo.app.ui.review.EntryDraftHolder
 import dev.tubolsillo.app.ui.review.ReviewScreen
@@ -87,13 +104,18 @@ object Routes {
     const val CLASSIFIER = "classifier"
     const val SAVINGS = "savings"
     const val PLAN = "plan"
-    const val RECORD = "record/{income}"
+    const val RECORD = "record/{income}?scan={scan}"
     const val REVIEW = "review"
+    const val INVOICE = "invoice"
 
     fun account(accountId: Long) = "account/$accountId"
 
-    /** Alta manual: [income] preselecciona Ingreso en vez de Gasto. */
-    fun record(income: Boolean) = "record/" + if (income) 1 else 0
+    /**
+     * Alta manual: [income] preselecciona Ingreso en vez de Gasto y [scan]
+     * abre el escáner de factura apenas entra (lo usa el menú del "+").
+     */
+    fun record(income: Boolean, scan: Boolean = false) =
+        "record/" + (if (income) 1 else 0) + "?scan=" + (if (scan) 1 else 0)
 }
 
 /** Empuje al estilo iOS: 260ms ágil a 120Hz, la anterior se corre un tercio sin recrear objetos. */
@@ -140,6 +162,9 @@ private data class TopLevelDestination(
 fun TubolsilloNavHost() {
     val navController = rememberNavController()
     val scope = rememberCoroutineScope()
+    var showQuickActions by remember { mutableStateOf(false) }
+    var addAccountKind by remember { mutableStateOf<AccountKind?>(null) }
+    val dashboardViewModel: DashboardViewModel = koinViewModel()
 
     // El estado del pager se iza aquí para que la barra y el contenido miren lo
     // mismo: la barra lo lee para resaltar y él lo mueve al tocar un destino.
@@ -172,7 +197,35 @@ fun TubolsilloNavHost() {
                 items = TabDestinations.map { BottomBarItem(it.label, it.icon) },
                 selectedIndex = if (onTabs) pagerState.currentPage else -1,
                 onSelect = ::selectTab,
-                onAdd = { navController.navigate(Routes.record(false)) },
+                onAdd = { showQuickActions = !showQuickActions },
+                quickActionsOpen = showQuickActions,
+                quickActions = listOf(
+                    QuickActionItem("Gasto", Icons.Filled.SouthWest) {
+                        showQuickActions = false
+                        navController.navigate(Routes.record(false))
+                    },
+                    QuickActionItem("Ingreso", Icons.Filled.NorthEast) {
+                        showQuickActions = false
+                        navController.navigate(Routes.record(true))
+                    },
+                    // La factura tiene su propia vista: foto, lectura y confirmar.
+                    QuickActionItem("Factura", Icons.Filled.CameraAlt) {
+                        showQuickActions = false
+                        navController.navigate(Routes.INVOICE)
+                    },
+                    QuickActionItem("Cuenta", Icons.Filled.Wallet) {
+                        showQuickActions = false
+                        addAccountKind = AccountKind.CHECKING
+                    },
+                    QuickActionItem("Tarjeta", Icons.Filled.CreditCard) {
+                        showQuickActions = false
+                        addAccountKind = AccountKind.CREDIT_CARD
+                    },
+                    QuickActionItem("Ahorro", Icons.Filled.Savings) {
+                        showQuickActions = false
+                        navController.navigate(Routes.SAVINGS)
+                    },
+                ),
             )
         },
     ) { innerPadding ->
@@ -213,15 +266,30 @@ fun TubolsilloNavHost() {
                     },
                 )
             }
+            composable(Routes.INVOICE) {
+                val draftHolder: EntryDraftHolder = koinInject()
+                InvoiceScreen(
+                    onBack = { navController.popBackStack() },
+                    onUse = { draft ->
+                        draftHolder.put(draft)
+                        navController.navigate(Routes.record(false))
+                    },
+                    onManual = { navController.navigate(Routes.record(false)) },
+                )
+            }
             composable(Routes.PLAN) {
                 PlanScreen(onBack = { navController.popBackStack() })
             }
             composable(
                 route = Routes.RECORD,
-                arguments = listOf(navArgument("income") { type = NavType.IntType }),
+                arguments = listOf(
+                    navArgument("income") { type = NavType.IntType },
+                    navArgument("scan") { type = NavType.IntType; defaultValue = 0 },
+                ),
             ) { entry ->
                 NewRecordScreen(
                     initialIncome = (entry.arguments?.getInt("income") ?: 0) == 1,
+                    initialScan = (entry.arguments?.getInt("scan") ?: 0) == 1,
                     onDone = { navController.popBackStack() },
                 )
             }
@@ -268,6 +336,39 @@ fun TubolsilloNavHost() {
                     onBack = { navController.popBackStack() },
                 )
             }
+        }
+
+        // Scrim del speed dial: oscurece el contenido y cierra al tocar fuera.
+        // La barra y sus acciones se dibujan por encima, así que siguen activas.
+        if (showQuickActions) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.32f))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                    ) { showQuickActions = false },
+            )
+        }
+
+        addAccountKind?.let { kind ->
+            AddAccountDialog(
+                initialKind = kind,
+                onDismiss = { addAccountKind = null },
+                onSave = { institution, name, accountKind, currency, initialMinor, limitMinor, colorHex ->
+                    dashboardViewModel.addAccount(
+                        institution = institution,
+                        name = name,
+                        kind = accountKind,
+                        currencyCode = currency,
+                        initialBalanceMinor = initialMinor,
+                        creditLimitMinor = limitMinor,
+                        colorHex = colorHex,
+                    )
+                    addAccountKind = null
+                },
+            )
         }
     }
 }
