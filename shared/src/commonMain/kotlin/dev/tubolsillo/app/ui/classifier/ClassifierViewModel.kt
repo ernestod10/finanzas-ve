@@ -2,6 +2,8 @@ package dev.tubolsillo.app.ui.classifier
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dev.tubolsillo.app.core.db.entity.CategoryEntity
+import dev.tubolsillo.app.core.text.MerchantType
 import dev.tubolsillo.app.domain.ai.CaptureAnalyzer
 import dev.tubolsillo.app.domain.repo.CategoryRepository
 import dev.tubolsillo.app.domain.repo.TransactionRepository
@@ -18,9 +20,14 @@ import kotlinx.coroutines.launch
 data class ClassProposal(
     val txId: Long,
     val description: String,
+    val amountMinor: Long,
+    val currency: String,
     val categoryName: String,
     val categoryId: Long,
-)
+) {
+    /** Rubro ("Farmacia", "Restaurante"…) para no mostrar el nombre del comercio. */
+    val merchantType: String? get() = MerchantType.of(description)
+}
 
 /**
  * Clasifica en lote los movimientos que quedaron sin categoría. El modelo
@@ -39,6 +46,9 @@ class ClassifierViewModel(
 
     private val _proposals = MutableStateFlow<List<ClassProposal>>(emptyList())
     val proposals: StateFlow<List<ClassProposal>> = _proposals.asStateFlow()
+
+    /** Categorías disponibles para corregir una propuesta antes de aplicarla. */
+    val categories: StateFlow<List<CategoryEntity>> = categoryRepository.categoriesState
 
     private val _busy = MutableStateFlow(false)
     val busy: StateFlow<Boolean> = _busy.asStateFlow()
@@ -82,7 +92,16 @@ class ClassifierViewModel(
                     batch.forEachIndexed { i, tx ->
                         val name = guesses.getOrNull(i) ?: return@forEachIndexed
                         val category = byName[name.lowercase()] ?: return@forEachIndexed
-                        found.add(ClassProposal(tx.id, tx.description, category.name, category.id))
+                        found.add(
+                            ClassProposal(
+                                txId = tx.id,
+                                description = tx.description,
+                                amountMinor = tx.amountMinor,
+                                currency = tx.currency,
+                                categoryName = category.name,
+                                categoryId = category.id,
+                            )
+                        )
                     }
                 }
                 _proposals.value = found
@@ -116,6 +135,23 @@ class ClassifierViewModel(
 
     fun discard() {
         _proposals.value = emptyList()
+    }
+
+    /** Corrige la categoría propuesta sin aplicar todavía. */
+    fun recategorize(txId: Long, categoryId: Long) {
+        val category = categories.value.firstOrNull { it.id == categoryId } ?: return
+        _proposals.value = _proposals.value.map { proposal ->
+            if (proposal.txId == txId) {
+                proposal.copy(categoryId = category.id, categoryName = category.name)
+            } else {
+                proposal
+            }
+        }
+    }
+
+    /** Quita una propuesta: ese movimiento se queda sin categoría. */
+    fun remove(txId: Long) {
+        _proposals.value = _proposals.value.filterNot { it.txId == txId }
     }
 
     private companion object {

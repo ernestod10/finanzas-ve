@@ -48,7 +48,10 @@ class CasheaParser() : InstitutionParser {
 
         for (template in templates) {
             val match = template.regex.find(text) ?: continue
-            val amountMinor = AmountNormalizer.parseMinor(match.groups["amount"]!!.value, "USD")
+            // La moneda sale del propio aviso: "Bs. 100,00" son bolívares, y
+            // "$25" o sin símbolo son dólares (Cashea opera en USD).
+            val currency = currencyOf(match.value)
+            val amountMinor = AmountNormalizer.parseMinor(match.groups["amount"]!!.value, currency)
                 ?: continue
             val merchant = ParserSupport.groupOrNull(match, "merchant")?.let { ParserSupport.cleanMerchant(it) }
                 ?: "Cashea"
@@ -58,7 +61,7 @@ class CasheaParser() : InstitutionParser {
                 institution = institution,
                 occurredAt = occurredAt,
                 amountMinor = signed,
-                currency = "USD",
+                currency = currency,
                 merchant = merchant,
                 description = "Cashea · $merchant",
                 category = template.category,
@@ -67,5 +70,13 @@ class CasheaParser() : InstitutionParser {
             )
         }
         return null
+    }
+
+    private fun currencyOf(fragment: String): String {
+        val lower = fragment.lowercase()
+        return when {
+            Regex("bsd?\\.?\\s*\\d").containsMatchIn(lower) || lower.contains("bs.") -> "VES"
+            else -> "USD"
+        }
     }
 }

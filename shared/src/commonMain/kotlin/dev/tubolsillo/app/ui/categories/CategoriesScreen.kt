@@ -2,6 +2,7 @@ package dev.tubolsillo.app.ui.categories
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -39,6 +41,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import dev.tubolsillo.app.core.db.entity.CategoryEntity
 import dev.tubolsillo.app.ui.components.ACCOUNT_PALETTE
+import dev.tubolsillo.app.ui.components.CategoryIcons
 import dev.tubolsillo.app.ui.components.IOSScreen
 import dev.tubolsillo.app.ui.components.parseAccountColor
 import org.koin.compose.viewmodel.koinViewModel
@@ -81,16 +84,27 @@ fun CategoriesScreen(
                                     .padding(horizontal = 16.dp, vertical = 10.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                Box(
-                                    modifier = Modifier.size(18.dp),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    Surface(
-                                        shape = CircleShape,
-                                        color = parseAccountColor(category.colorHex)
-                                            ?: MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(14.dp),
-                                    ) {}
+                                val iconVector = CategoryIcons.vector(category.iconKey)
+                                val tint = parseAccountColor(category.colorHex)
+                                    ?: MaterialTheme.colorScheme.primary
+                                if (iconVector != null) {
+                                    Icon(
+                                        imageVector = iconVector,
+                                        contentDescription = CategoryIcons.label(category.iconKey),
+                                        tint = tint,
+                                        modifier = Modifier.size(22.dp),
+                                    )
+                                } else {
+                                    Box(
+                                        modifier = Modifier.size(18.dp),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Surface(
+                                            shape = CircleShape,
+                                            color = tint,
+                                            modifier = Modifier.size(14.dp),
+                                        ) {}
+                                    }
                                 }
                                 Spacer(Modifier.width(12.dp))
                                 Text(
@@ -129,9 +143,10 @@ fun CategoriesScreen(
             title = "Nueva categoría",
             initialName = "",
             initialColor = ACCOUNT_PALETTE[0],
+            initialIcon = null,
             onDismiss = { creating = false },
-            onSave = { name, color ->
-                viewModel.add(name, color)
+            onSave = { name, color, icon ->
+                viewModel.add(name, color, icon)
                 creating = false
             },
         )
@@ -141,9 +156,10 @@ fun CategoriesScreen(
             title = "Editar categoría",
             initialName = category.name,
             initialColor = category.colorHex ?: ACCOUNT_PALETTE[0],
+            initialIcon = category.iconKey,
             onDismiss = { editing = null },
-            onSave = { name, color ->
-                viewModel.update(category.id, name, color)
+            onSave = { name, color, icon ->
+                viewModel.update(category.id, name, color, icon)
                 editing = null
             },
         )
@@ -155,11 +171,13 @@ private fun CategoryDialog(
     title: String,
     initialName: String,
     initialColor: String,
+    initialIcon: String?,
     onDismiss: () -> Unit,
-    onSave: (name: String, colorHex: String?) -> Unit,
+    onSave: (name: String, colorHex: String?, iconKey: String?) -> Unit,
 ) {
     var name by remember { mutableStateOf(initialName) }
     var colorHex by remember { mutableStateOf(initialColor) }
+    var iconKey by remember { mutableStateOf(initialIcon) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -185,16 +203,71 @@ private fun CategoryDialog(
                         ) {}
                     }
                 }
+                Text(
+                    text = "Icono",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                // "Sin icono" primero: la categoría vuelve al punto de color.
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    IconChoice(
+                        icon = null,
+                        label = "Sin icono",
+                        selected = iconKey == null,
+                        tint = parseAccountColor(colorHex) ?: MaterialTheme.colorScheme.primary,
+                        onClick = { iconKey = null },
+                    )
+                    CategoryIcons.options.forEach { option ->
+                        IconChoice(
+                            icon = option.vector,
+                            label = option.label,
+                            selected = iconKey == option.key,
+                            tint = parseAccountColor(colorHex) ?: MaterialTheme.colorScheme.primary,
+                            onClick = { iconKey = option.key },
+                        )
+                    }
+                }
             }
         },
         confirmButton = {
             TextButton(
                 enabled = name.isNotBlank(),
-                onClick = { onSave(name.trim(), colorHex) },
+                onClick = { onSave(name.trim(), colorHex, iconKey) },
             ) { Text("Guardar") }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Cancelar") }
         },
     )
+}
+
+/** Un icono del selector: cuadrado con borde cuando está elegido. */
+@Composable
+private fun IconChoice(
+    icon: androidx.compose.ui.graphics.vector.ImageVector?,
+    label: String,
+    selected: Boolean,
+    tint: Color,
+    onClick: () -> Unit,
+) {
+    Surface(
+        onClick = onClick,
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp),
+        color = if (selected) tint.copy(alpha = 0.18f) else Color.Transparent,
+        border = if (selected) BorderStroke(1.5.dp, tint) else null,
+        modifier = Modifier.size(40.dp),
+    ) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            if (icon != null) {
+                Icon(icon, contentDescription = label, tint = tint, modifier = Modifier.size(22.dp))
+            } else {
+                Surface(shape = CircleShape, color = tint.copy(alpha = 0.4f), modifier = Modifier.size(14.dp)) {}
+            }
+        }
+    }
 }

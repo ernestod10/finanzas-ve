@@ -20,16 +20,23 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.tubolsillo.app.domain.model.AccountBalanceView
 import dev.tubolsillo.app.resources.Res
+import dev.tubolsillo.app.resources.logo_activo
 import dev.tubolsillo.app.resources.logo_banesco
 import dev.tubolsillo.app.resources.logo_banco_plaza
 import dev.tubolsillo.app.resources.logo_bancaribe
+import dev.tubolsillo.app.resources.logo_bancrecer
 import dev.tubolsillo.app.resources.logo_banplus
 import dev.tubolsillo.app.resources.logo_bdv
 import dev.tubolsillo.app.resources.logo_binance
 import dev.tubolsillo.app.resources.logo_bnc
 import dev.tubolsillo.app.resources.logo_bod
 import dev.tubolsillo.app.resources.logo_cashea
+import dev.tubolsillo.app.resources.logo_cestaticket
+import dev.tubolsillo.app.resources.logo_del_sur
+import dev.tubolsillo.app.resources.logo_exterior
 import dev.tubolsillo.app.resources.logo_mercantil
+import dev.tubolsillo.app.resources.logo_provincial
+import dev.tubolsillo.app.resources.logo_sofitasa
 import dev.tubolsillo.app.resources.logo_todoticket
 import dev.tubolsillo.app.resources.logo_ubii
 import dev.tubolsillo.app.resources.logo_wally
@@ -57,6 +64,15 @@ fun institutionLogo(institutionKey: String): DrawableResource? = when (instituti
     "TODOTICKET" -> Res.drawable.logo_todoticket
     "BOD" -> Res.drawable.logo_bod
     "BDV" -> Res.drawable.logo_bdv
+    "PROVINCIAL" -> Res.drawable.logo_provincial
+    "EXTERIOR" -> Res.drawable.logo_exterior
+    "SOFITASA" -> Res.drawable.logo_sofitasa
+    "ACTIVO" -> Res.drawable.logo_activo
+    "CESTATICKET" -> Res.drawable.logo_cestaticket
+    "DEL_SUR" -> Res.drawable.logo_del_sur
+    "BANCRECER" -> Res.drawable.logo_bancrecer
+    // Banfanb, Banco Caroní y Mi Banco no publican un logo descargable (sus
+    // sitios no responden); caen al monograma con su color de marca.
     else -> null
 }
 

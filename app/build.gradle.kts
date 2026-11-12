@@ -2,6 +2,9 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.android.application)
+    // KSP (Room y App Functions) todavía no convive con el Kotlin integrado
+    // de AGP 9, por eso gradle.properties apaga builtInKotlin y este plugin
+    // sigue siendo el que compila.
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
@@ -31,7 +34,7 @@ val envKeystore = System.getenv("TUBOLSILLO_KEYSTORE")
 
 android {
     namespace = "dev.tubolsillo.app"
-    compileSdk = 36
+    compileSdk = 37
 
     signingConfigs {
         if (!envKeystore.isNullOrBlank()) {

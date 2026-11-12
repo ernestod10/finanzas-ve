@@ -130,7 +130,13 @@ object AssistantIntentParser {
             ?.replace(',', '.')
             ?.toDoubleOrNull()
 
-        if (lower.contains("divisa") || lower.contains("bcv") || lower.contains("binance")) {
+        // Se compara cuando se habla de tasas o de cómo pagar. "bolívares"
+        // solo no alcanza: "gasté 500 bolívares" es una consulta de gastos.
+        val rateTalk = lower.contains("divisa") || lower.contains("bcv") ||
+            lower.contains("binance") || lower.contains("efectivo") ||
+            lower.contains("dólar") || lower.contains("dolar") || lower.contains("usd")
+
+        if (rateTalk) {
             val numbers = Regex("\\d+(?:[.,]\\d+)?").findAll(text)
                 .mapNotNull { m ->
                     m.value.replace(".", "").replace(',', '.').toDoubleOrNull()
@@ -140,20 +146,35 @@ object AssistantIntentParser {
             if (numbers.isNotEmpty()) {
                 val discount = Regex("(\\d{1,2})\\s*%").find(text)?.groupValues?.get(1)?.toIntOrNull()
                 val discountValue = discount?.toDouble()?.takeIf { it > 0 }
-                val explicitUsd = Regex("(\\d+(?:[.,]\\d+)?)\\s*(?:en\\s+)?divisas", RegexOption.IGNORE_CASE)
-                    .find(text)?.groupValues?.get(1)
+                val explicitUsd = Regex(
+                    "(\\d+(?:[.,]\\d+)?)\\s*(?:en\\s+)?(?:efectivo|divisas)",
+                    RegexOption.IGNORE_CASE,
+                ).find(text)?.groupValues?.get(1)
                     ?.replace(".", "")?.replace(',', '.')?.toDoubleOrNull()
-                // "580 a tasa BCV" se dice en Venezuela para un precio en DÓLARES
-                // que se paga en bolívares al cambio oficial.
-                val explicitBcvUsd = Regex("(\\d+(?:[.,]\\d+)?)\\s*(?:usd|d[oó]lares|\\$)?\\s*(?:a|en|por)\\s*(?:la\\s+)?(?:tasa\\s+)?bcv", RegexOption.IGNORE_CASE)
-                    .find(text)?.groupValues?.get(1)
+                // "200 dólares en bolívares": son dólares que se pagan en
+                // bolívares, no bolívares sueltos. Se distingue del "200 en
+                // bolívares" (monto en Bs) porque lleva la palabra dólares/USD.
+                val explicitBcvUsd = Regex(
+                    "(\\d+(?:[.,]\\d+)?)\\s*(?:usd|d[oó]lares|\\$)\\s*(?:en|a|por|al)\\s+(?:la\\s+tasa\\s+)?(?:bcv|bol[ií]vares|bs\\.?)",
+                    RegexOption.IGNORE_CASE,
+                ).find(text)?.groupValues?.get(1)
                     ?.replace(".", "")?.replace(',', '.')?.toDoubleOrNull()
+                    // "580 a tasa BCV" se dice en Venezuela para un precio en
+                    // DÓLARES que se paga en bolívares al cambio oficial.
+                    ?: Regex(
+                        "(\\d+(?:[.,]\\d+)?)\\s*(?:usd|d[oó]lares|\\$)?\\s*(?:a|en|por)\\s*(?:la\\s+)?(?:tasa\\s+)?bcv",
+                        RegexOption.IGNORE_CASE,
+                    ).find(text)?.groupValues?.get(1)
+                        ?.replace(".", "")?.replace(',', '.')?.toDoubleOrNull()
                 val explicitBs = Regex("(\\d+(?:[.,]\\d+)?)\\s*(?:bs|bol[ií]vares)", RegexOption.IGNORE_CASE)
                     .find(text)?.groupValues?.get(1)
                     ?.replace(".", "")?.replace(',', '.')?.toDoubleOrNull()
                 val withoutDiscount = numbers.filter { it != discountValue }
+                // El número que ya se leyó como precio a BCV no puede ser,
+                // además, el precio en efectivo.
+                val cash = withoutDiscount.filter { it != explicitBcvUsd }
                 return AssistantIntent.Compare(
-                    usdPrice = explicitUsd ?: withoutDiscount.firstOrNull() ?: numbers.firstOrNull(),
+                    usdPrice = explicitUsd ?: cash.firstOrNull() ?: withoutDiscount.firstOrNull(),
                     bcvUsdPrice = explicitBcvUsd,
                     bsPrice = explicitBs,
                     discountPct = discountValue,

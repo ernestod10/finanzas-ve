@@ -76,6 +76,7 @@ import kotlin.math.abs
 fun NewRecordScreen(
     initialIncome: Boolean,
     onDone: () -> Unit,
+    initialScan: Boolean = false,
     viewModel: DashboardViewModel = koinViewModel(),
 ) {
     val dashboard by viewModel.dashboard.collectAsState()
@@ -156,6 +157,11 @@ fun NewRecordScreen(
             parsed.occurredAt?.let { occurredAt = it }
             viewModel.analyzeReceipt(text)
         }
+    }
+
+    // Desde el menú del "+", la opción Factura entra directo al escáner.
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        if (initialScan) scanReceipt()
     }
 
     val canSave = account != null && amountMinor != null && description.isNotBlank()

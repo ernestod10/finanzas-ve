@@ -28,17 +28,8 @@ kotlin {
         }
     }
 
-    // iOS (se compilan SOLO en macOS; en Linux se auto-deshabilitan).
-    listOf(
-        iosArm64(),
-        iosSimulatorArm64(),
-        iosX64(),
-    ).forEach { iosTarget ->
-        iosTarget.binaries.framework {
-            baseName = "Shared"
-            isStatic = true
-        }
-    }
+    // Solo Android: no hay targets iOS ni framework "Shared". El código de
+    // commonMain sigue compartido para no mezclar la UI con el host.
 
     sourceSets {
         commonMain.dependencies {
@@ -68,9 +59,6 @@ kotlin {
             implementation(libs.koin.compose)
             implementation(libs.koin.compose.viewmodel)
             implementation(libs.koin.compose.viewmodel.navigation)
-        }
-        iosMain.dependencies {
-            implementation(libs.ktor.client.darwin)
         }
         androidMain.dependencies {
             implementation(libs.kotlinx.coroutines.android)
@@ -114,7 +102,7 @@ room {
 
 android {
     namespace = "dev.tubolsillo.app.shared"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         minSdk = 26
