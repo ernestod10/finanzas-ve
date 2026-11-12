@@ -93,9 +93,43 @@ fun BudgetScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+                // Estado del mes: cuánto queda (o cuánto se pasó) y el ritmo
+                // diario que queda disponible.
+                val limit = monthData.totalLimitUsd
+                val level = monthData.totalLevel
+                val daysLeft = dev.tubolsillo.app.core.time.MonthBuckets.daysLeftIn(monthData.month)
+                if (limit != null && limit > 0) {
+                    val remaining = limit - monthData.totalSpentUsd
+                    val text = when {
+                        remaining < 0 -> "Excedido por " + MoneyFormatter.formatUsd(-remaining)
+                        daysLeft != null && daysLeft > 0 ->
+                            "Te quedan " + MoneyFormatter.formatUsd(remaining) +
+                                " · ≈ " + MoneyFormatter.formatUsd(remaining / daysLeft) +
+                                (if (daysLeft == 1) " para hoy" else " por día · $daysLeft días")
+                        else -> "Te quedan " + MoneyFormatter.formatUsd(remaining)
+                    }
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = text,
+                        style = MaterialTheme.typography.bodyMedium.copy(fontFeatureSettings = TNUM),
+                        color = when (level) {
+                            dev.tubolsillo.app.domain.model.BudgetLevel.OVER -> MaterialTheme.colorScheme.error
+                            dev.tubolsillo.app.domain.model.BudgetLevel.WARN -> MaterialTheme.colorScheme.tertiary
+                            dev.tubolsillo.app.domain.model.BudgetLevel.OK -> MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                    )
+                }
                 monthData.totalProgress?.let { progress ->
                     Spacer(Modifier.height(10.dp))
-                    ThinBar(progress = progress, over = monthData.totalSpentUsd > (monthData.totalLimitUsd ?: Double.MAX_VALUE))
+                    ThinBar(
+                        progress = progress,
+                        over = monthData.totalSpentUsd > (monthData.totalLimitUsd ?: Double.MAX_VALUE),
+                        warning = monthData.totalLevel == dev.tubolsillo.app.domain.model.BudgetLevel.WARN,
+                        marker = dev.tubolsillo.app.core.time.MonthBuckets.daysLeftIn(monthData.month)?.let { left ->
+                            val total = dev.tubolsillo.app.core.time.MonthBuckets.lastDayOf(monthData.month)
+                            ((total - left + 1f).coerceIn(0f, total.toFloat())) / total.toFloat()
+                        },
+                    )
                 }
             }
         }

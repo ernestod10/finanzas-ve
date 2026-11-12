@@ -35,6 +35,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -166,6 +169,9 @@ fun HomeScreen(
     val ratesSnapshot by viewModel.ratesSnapshot.collectAsState()
     val month by viewModel.month.collectAsState()
     val budget by budgetViewModel.monthData.collectAsState()
+    val settings: dev.tubolsillo.app.domain.repo.SettingsRepository = org.koin.compose.koinInject()
+    val hideBalance by settings.hideBalance.collectAsState()
+    val scope = rememberCoroutineScope()
 
     var tab by rememberSaveable { mutableIntStateOf(0) }
     var showAddAccount by remember { mutableStateOf(false) }
@@ -216,6 +222,8 @@ fun HomeScreen(
                 BalanceCard(
                     assetsUsd = dashboard?.totals?.assetsUsd ?: 0.0,
                     vesPerDollar = vesPerDollar,
+                    hidden = hideBalance,
+                    onToggleHidden = { scope.launch { settings.setHideBalance(!hideBalance) } },
                 )
             }
             item(key = "new-record") { NewRecordCard(onNewRecord = onNewRecord) }
@@ -427,16 +435,32 @@ private fun RateTile(label: String, value: String, modifier: Modifier = Modifier
 
 /** El total en cuentas, con su equivalencia en bolívares. */
 @Composable
-private fun BalanceCard(assetsUsd: Double, vesPerDollar: Double) {
+private fun BalanceCard(
+    assetsUsd: Double,
+    vesPerDollar: Double,
+    hidden: Boolean,
+    onToggleHidden: () -> Unit,
+) {
     TubolsilloCard {
-        Text(
-            text = "Tu saldo en cuentas",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = "Tu saldo en cuentas",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f),
+            )
+            IconButton(onClick = onToggleHidden, modifier = Modifier.size(28.dp)) {
+                Icon(
+                    imageVector = if (hidden) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                    contentDescription = if (hidden) "Mostrar saldo" else "Ocultar saldo",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(16.dp),
+                )
+            }
+        }
         Spacer(Modifier.height(4.dp))
         Text(
-            text = MoneyFormatter.formatUsd(assetsUsd),
+            text = if (hidden) "••••••" else MoneyFormatter.formatUsd(assetsUsd),
             style = MaterialTheme.typography.displaySmall.copy(
                 fontWeight = FontWeight.Bold,
                 fontFeatureSettings = TNUM,

@@ -79,6 +79,15 @@ object MonthBuckets {
     }
 
     /** Último día del mes "yyyy-MM" (28..31). */
+    /**
+     * Días que quedan del mes (incluido hoy) si [epochMs] cae en ese mes; null
+     * si el mes visible no es el actual. Aritmética de calendario, no de ms.
+     */
+    fun daysLeftIn(month: String, epochMs: Long = nowMillis(), zone: TimeZone = defaultZone): Int? {
+        if (!month.equals(monthKey(epochMs, zone), ignoreCase = true)) return null
+        return (lastDayOf(month) - dayOfMonthOf(epochMs, zone) + 1).coerceAtLeast(1)
+    }
+
     fun lastDayOf(month: String): Int {
         val (year, monthNumber) = yearMonth(month)
         val start = LocalDate(year, monthNumber, 1)

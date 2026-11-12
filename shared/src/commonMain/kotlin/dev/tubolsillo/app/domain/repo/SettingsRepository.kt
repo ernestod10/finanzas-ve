@@ -60,6 +60,7 @@ class SettingsRepository() {
         val BCV_USD_BS = doublePreferencesKey("rates_bcv_usd_bs")
         val BCV_EUR_BS = doublePreferencesKey("rates_bcv_eur_bs")
         val P2P_USDT_VES = doublePreferencesKey("rates_p2p_usdt_ves")
+        val HIDE_BALANCE = booleanPreferencesKey("hide_balance")
         val RATES_HISTORY = stringPreferencesKey("rates_history") // {"2026-11-03": {"VES":0.00112,"USD":1.0}}
         val RATES_FETCHED_AT = longPreferencesKey("rates_fetched_at")
     }
@@ -147,6 +148,15 @@ class SettingsRepository() {
     val autoSyncPortals: StateFlow<Boolean> =
         dataStore.data.map { it[Keys.AUTO_SYNC_PORTALS] ?: true }
             .stateIn(scope, SharingStarted.Eagerly, true)
+
+    /** Oculta las cifras de saldo en Inicio (modo privacidad, persistente). */
+    val hideBalance: StateFlow<Boolean> =
+        dataStore.data.map { it[Keys.HIDE_BALANCE] ?: false }
+            .stateIn(scope, SharingStarted.Eagerly, false)
+
+    suspend fun setHideBalance(hidden: Boolean) {
+        dataStore.edit { it[Keys.HIDE_BALANCE] = hidden }
+    }
 
     suspend fun autoSyncPortalsOnOpen(): Boolean =
         dataStore.data.first()[Keys.AUTO_SYNC_PORTALS] ?: true
