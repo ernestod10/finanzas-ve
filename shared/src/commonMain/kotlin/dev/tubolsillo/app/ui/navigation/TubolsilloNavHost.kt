@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.Wallet
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import dev.tubolsillo.app.ui.components.QuickActionItem
@@ -58,6 +59,7 @@ import dev.tubolsillo.app.ui.plan.PlanScreen
 import dev.tubolsillo.app.ui.portal.PortalScreen
 import dev.tubolsillo.app.ui.record.InvoiceScreen
 import dev.tubolsillo.app.ui.record.NewRecordScreen
+import dev.tubolsillo.app.domain.repo.UpdateState
 import dev.tubolsillo.app.ui.review.EntryDraft
 import dev.tubolsillo.app.ui.review.EntryDraftHolder
 import dev.tubolsillo.app.ui.review.ReviewScreen
@@ -68,6 +70,8 @@ import dev.tubolsillo.app.ui.settings.AiModelScreen
 import dev.tubolsillo.app.ui.settings.BinanceSettingsScreen
 import dev.tubolsillo.app.ui.settings.RatesScreen
 import dev.tubolsillo.app.ui.settings.SettingsScreen
+import dev.tubolsillo.app.ui.settings.UpdatePrompt
+import dev.tubolsillo.app.ui.settings.UpdateViewModel
 import dev.tubolsillo.app.ui.stats.StatsScreen
 import dev.tubolsillo.app.ui.transactions.TransactionsScreen
 import kotlinx.coroutines.launch
@@ -166,6 +170,16 @@ fun TubolsilloNavHost() {
     var showQuickActions by remember { mutableStateOf(false) }
     var addAccountKind by remember { mutableStateOf<AccountKind?>(null) }
     val dashboardViewModel: DashboardViewModel = koinViewModel()
+
+    // Aviso de actualización al abrir: se consulta GitHub una vez y, si hay
+    // versión nueva, se pregunta con su changelog. "Ahora no" calla esta
+    // sesión; "No avisar de esta versión" se guarda.
+    val updateViewModel: UpdateViewModel = koinViewModel()
+    val updateState by updateViewModel.state.collectAsState()
+    val appSettings: dev.tubolsillo.app.domain.repo.SettingsRepository = koinInject()
+    val skippedUpdate by appSettings.skippedUpdateVersion.collectAsState()
+    var updateDismissed by remember { mutableStateOf(false) }
+    androidx.compose.runtime.LaunchedEffect(Unit) { updateViewModel.check() }
 
     // El estado del pager se iza aquí para que la barra y el contenido miren lo
     // mismo: la barra lo lee para resaltar y él lo mueve al tocar un destino.
@@ -384,6 +398,23 @@ fun TubolsilloNavHost() {
                     addAccountKind = null
                 },
             )
+        }
+
+        (updateState as? UpdateState.Available)?.let { available ->
+            val pending = !updateDismissed && available.info.versionName != skippedUpdate
+            if (pending) {
+                UpdatePrompt(
+                    info = available.info,
+                    onUpdate = { updateViewModel.download(available.info) },
+                    onLater = { updateDismissed = true },
+                    onSkipVersion = {
+                        updateDismissed = true
+                        scope.launch {
+                            appSettings.setSkippedUpdateVersion(available.info.versionName)
+                        }
+                    },
+                )
+            }
         }
     }
 }
