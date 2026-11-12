@@ -196,7 +196,7 @@ class PortalWebActivity : ComponentActivity() {
                                 onClick = {
                                     // BanescOnline redirige a www.banesco.com si detecta navigation.type === 'reload'.
                                     if (institution == Institution.BANESCO || urlText.contains("banesconline.com")) {
-                                        webView?.loadUrl(institution.portalStartUrl ?: urlText)
+                                        institution.portalStartUrl?.let { start -> webView?.loadUrl(start) }
                                     } else {
                                         webView?.reload()
                                     }
@@ -505,6 +505,7 @@ class PortalWebActivity : ComponentActivity() {
         val raw = evaluate(PortalJs.buildProbeScript(recipe)) ?: return "unknown"
         return when {
             raw.contains("\"error_page\"") -> "error_page"
+            raw.contains("\"expired\"") -> "expired"
             raw.contains("\"login\"") -> "login"
             raw.contains("\"ready\"") -> "ready"
             else -> "unknown"
@@ -534,6 +535,14 @@ class PortalWebActivity : ComponentActivity() {
 
         while (System.currentTimeMillis() < if (revealedForNavigation) interactiveDeadline else initialDeadline) {
             when (probe(recipe)) {
+                "expired" -> {
+                    // El banco cerró la sesión: volvemos al login y el auto-login
+                    // retoma con las credenciales guardadas.
+                    onLog("La sesión del banco expiró; volviendo a entrar…")
+                    institution.portalStartUrl?.let { start -> webView?.loadUrl(start) }
+                    kotlinx.coroutines.delay(2_000)
+                }
+
                 "error_page" -> {
                     if (!reloadedFromError && institution.portalStartUrl != null) {
                         reloadedFromError = true

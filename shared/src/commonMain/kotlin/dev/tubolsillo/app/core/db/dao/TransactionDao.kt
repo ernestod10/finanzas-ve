@@ -54,12 +54,24 @@ interface TransactionDao {
     suspend fun findByDedupKey(key: String): TransactionEntity?
 
     /** Candidatas a la otra pata de una transferencia: signo opuesto, sin par, en ventana de tiempo. */
+    /**
+     * Candidatas a la otra pata de una transferencia: signo opuesto, sin par, en
+     * ventana de tiempo y **en otra cuenta**. Una compra y un cobro del mismo
+     * monto en la misma cuenta no son un traspaso.
+     */
     @Query(
         "SELECT * FROM transactions WHERE id != :excludeId AND transferPairId IS NULL " +
+            "AND accountId != :excludeAccountId " +
             "AND category != 'TRANSFER' AND occurredAt BETWEEN :from AND :to " +
             "AND amountMinor * :sign < 0 ORDER BY occurredAt DESC"
     )
-    suspend fun findMatchCandidates(excludeId: Long, from: Long, to: Long, sign: Long): List<TransactionEntity>
+    suspend fun findMatchCandidates(
+        excludeId: Long,
+        excludeAccountId: Long,
+        from: Long,
+        to: Long,
+        sign: Long,
+    ): List<TransactionEntity>
 
     @Insert
     suspend fun insert(transaction: TransactionEntity): Long

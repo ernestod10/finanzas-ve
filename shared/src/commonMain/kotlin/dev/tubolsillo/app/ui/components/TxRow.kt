@@ -33,6 +33,7 @@ import dev.tubolsillo.app.core.db.dao.TransactionWithTags
 import dev.tubolsillo.app.core.money.MoneyFormatter
 import dev.tubolsillo.app.domain.model.SourceType
 import dev.tubolsillo.app.ui.theme.TNUM
+import dev.tubolsillo.app.ui.theme.TubolsilloColors
 
 /**
  * Fila de movimiento al estilo de una lista agrupada de iOS: icono en
@@ -122,7 +123,7 @@ fun TxRow(
                         fontWeight = FontWeight.SemiBold,
                     ),
                     color = if (negative) MaterialTheme.colorScheme.onSurface
-                    else MaterialTheme.colorScheme.primary,
+                    else TubolsilloColors.positive,
                 )
                 if (tx.transaction.currency != "USD" && frozenUsd != null && frozenUsd != 0L) {
                     Text(

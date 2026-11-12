@@ -27,6 +27,7 @@ class PortalExtractor(
         val raw = evaluate(PortalJs.buildProbeScript(recipe)) ?: return "unknown"
         return when {
             raw.contains("\"error_page\"") -> "error_page"
+            raw.contains("\"expired\"") -> "expired"
             raw.contains("\"login\"") -> "login"
             raw.contains("\"ready\"") -> "ready"
             else -> "unknown"

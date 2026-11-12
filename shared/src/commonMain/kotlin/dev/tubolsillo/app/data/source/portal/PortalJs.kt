@@ -133,6 +133,12 @@ object PortalJs {
               if (doc.querySelector('#container-error, #errorpage')) {
                 return JSON.stringify({ state: 'error_page', url: location.href });
               }
+              // Sesión del banco cerrada (BNC: "Sesión finalizada" + "Volver a ingresar").
+              var bodyText = ((doc.body && doc.body.innerText) || '');
+              if (/sesi[oó]n\s+(finalizada|expirada|terminada|cerrada)|volver\s+a\s+ingresar|reingresar|iniciar\s+sesi[oó]n\s+nuevamente|su\s+sesi[oó]n\s+ha\s+(expirado|finalizado)/i.test(bodyText)
+                  && !doc.querySelector('input[type=password]')) {
+                return JSON.stringify({ state: 'expired', url: location.href });
+              }
             }
             var hasLogin = !!(${recipe.loginFormMarkerJs});
             var loginStep = null;
@@ -298,6 +304,21 @@ object PortalJs {
                 allBtns[b].disabled = false;
                 allBtns[b].removeAttribute('disabled');
                 if (allBtns[b].classList) allBtns[b].classList.add('activado-btn');
+              }
+
+              // 0.a Sesión finalizada: pulsar "Volver a ingresar" / "Reingresar"
+              var reloginBtns = doc0.querySelectorAll('button, a, input[type=button], input[type=submit], [onclick]');
+              for (var rl = 0; rl < reloginBtns.length; rl++) {
+                var rb = reloginBtns[rl];
+                if (!visible(rb) || rb.getAttribute('data-tb-nav')) continue;
+                var rlTxt = (txt(rb) || rb.value || '').toLowerCase();
+                if (/volver\s+a\s+ingresar|reingresar|ingresar\s+nuevamente|iniciar\s+sesi[oó]n|volver\s+al\s+login/.test(rlTxt)) {
+                  rb.setAttribute('data-tb-nav', '1');
+                  rb.disabled = false;
+                  rb.removeAttribute('disabled');
+                  rb.click();
+                  return JSON.stringify({ status: 'navigated', step: 'relogin', target: rlTxt.slice(0, 40) });
+                }
               }
 
               // 0. Cerrar modales informativos post-login de BanescOnline (SweetAlert "Más Tarde" / "Continuar")

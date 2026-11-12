@@ -100,6 +100,14 @@ class HeadlessPortalRunner(private val context: Context) {
 
         while (true) {
             when (extractor.probe(recipe)) {
+                "expired" -> {
+                    // El banco cerró la sesión (BNC: "Sesión finalizada"): se
+                    // vuelve al login para que el auto-login retome solo.
+                    log(institution, "Sesión expirada; volviendo a entrar")
+                    webView.loadUrl(startUrl)
+                    loginAttempts = 0
+                    delay(2_500)
+                }
                 "error_page" -> {
                     if (reloadedFromError) return PortalFetchResult.NeedsRelink
                     reloadedFromError = true

@@ -30,6 +30,7 @@ class TransferMatcher(
         val to = newTx.occurredAt + WINDOW_MS
         val candidates = transactionDao.findMatchCandidates(
             excludeId = newTx.id,
+            excludeAccountId = newTx.accountId,
             from = from,
             to = to,
             sign = sign,

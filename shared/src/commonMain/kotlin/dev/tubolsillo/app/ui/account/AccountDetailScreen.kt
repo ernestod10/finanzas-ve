@@ -491,6 +491,7 @@ fun TagTransactionDialog(
     onUpdateDetails: ((description: String, amountMinor: Long) -> Unit)? = null,
     onDelete: (() -> Unit)? = null,
 ) {
+    var confirmDelete by remember { mutableStateOf(false) }
     var newTag by remember { mutableStateOf("") }
     var learn by remember { mutableStateOf(true) }
     var editingDetails by remember { mutableStateOf(false) }
@@ -623,11 +624,20 @@ fun TagTransactionDialog(
                 }
                 if (onDelete != null) {
                     TextButton(
-                        onClick = onDelete,
+                        onClick = { confirmDelete = true },
                         modifier = Modifier.align(Alignment.Start),
                     ) {
                         Text("Eliminar movimiento", color = MaterialTheme.colorScheme.error)
                     }
+                }
+                if (confirmDelete) {
+                    dev.tubolsillo.app.ui.components.ConfirmDeleteDialog(
+                        title = "¿Eliminar movimiento?",
+                        message = "Se borrará \"" + tx.transaction.description.take(40) +
+                            "\" y su monto dejará de contar en los totales.",
+                        onConfirm = { onDelete?.invoke() },
+                        onDismiss = { confirmDelete = false },
+                    )
                 }
             }
         },

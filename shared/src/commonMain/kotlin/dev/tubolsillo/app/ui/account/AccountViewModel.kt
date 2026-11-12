@@ -48,12 +48,14 @@ class AccountViewModel(
             // Cashea muestra "saldo disponible": la deuda = límite - disponible.
             val esCashea = AccountKind.fromKey(account.kind) == AccountKind.BNPL &&
                 Institution.fromKey(account.institution) == Institution.CASHEA
-            val storedMinor = if (esCashea && account.creditLimitMinor != null) {
-                -((account.creditLimitMinor!! - kotlin.math.abs(minor)).coerceAtLeast(0L))
-            } else if (esCashea) {
-                -kotlin.math.abs(minor)
-            } else {
-                minor
+            val isDebt = AccountKind.fromKey(account.kind).isDebt
+            val storedMinor = when {
+                esCashea && account.creditLimitMinor != null ->
+                    -((account.creditLimitMinor!! - kotlin.math.abs(minor)).coerceAtLeast(0L))
+                // Toda cuenta de deuda guarda la deuda en negativo: así una compra
+                // resta y un pago suma con el mismo signo que reporta el banco.
+                isDebt -> -kotlin.math.abs(minor)
+                else -> minor
             }
             accountRepository.recordBalance(
                 accountId = account.id,

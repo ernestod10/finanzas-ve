@@ -3,6 +3,7 @@ package dev.tubolsillo.app.ui.credits
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -356,8 +357,8 @@ private fun CreditRow(item: CreditItem, onOpen: (Long) -> Unit, onSetLimit: (Cre
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp)
-            .then(Modifier),
+            .clickable(role = androidx.compose.ui.semantics.Role.Button) { onOpen(item.accountId) }
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Surface(shape = CircleShape, color = accent.copy(alpha = 0.16f), modifier = Modifier.size(38.dp)) {

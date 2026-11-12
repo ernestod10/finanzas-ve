@@ -71,6 +71,7 @@ fun PlanItemDialog(
     ) -> Unit,
     onDelete: (() -> Unit)? = null,
 ) {
+    var confirmDelete by remember { mutableStateOf(false) }
     val today = remember { MonthBuckets.startOfDay(nowMillis()) }
 
     var kind by remember { mutableStateOf(PlanKind.fromKey(existing?.kind)) }
@@ -222,7 +223,7 @@ fun PlanItemDialog(
         dismissButton = {
             Row {
                 if (onDelete != null) {
-                    TextButton(onClick = onDelete) {
+                    TextButton(onClick = { confirmDelete = true }) {
                         Text("Eliminar", color = MaterialTheme.colorScheme.error)
                     }
                 }
@@ -230,6 +231,15 @@ fun PlanItemDialog(
             }
         },
     )
+    if (confirmDelete) {
+        dev.tubolsillo.app.ui.components.ConfirmDeleteDialog(
+            title = "¿Eliminar esta línea del plan?",
+            message = "Dejará de contar como gasto estimado en los meses siguientes.",
+            onConfirm = onDelete ?: {},
+            onDismiss = { confirmDelete = false },
+        )
+    }
+
 
     if (showPicker) {
         val pickerState = rememberDatePickerState(

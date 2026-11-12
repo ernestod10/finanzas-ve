@@ -18,7 +18,15 @@ class TotalsCalculator() {
         var assets = 0.0
         var debt = 0.0
         for (account in accounts) {
-            val minor = account.lastBalanceMinor ?: continue
+            val isDebt = AccountKind.fromKey(account.kind).isDebt
+            // Una TDC cuyo banco solo publica el disponible (BNC) no tiene saldo:
+            // su deuda es límite - disponible. Sin esto, el patrimonio la ignora.
+            val derivedDebt = if (isDebt && account.lastBalanceMinor == null &&
+                account.creditLimitMinor != null && account.creditAvailableMinor != null
+            ) {
+                -(account.creditLimitMinor - account.creditAvailableMinor).coerceAtLeast(0L)
+            } else null
+            val minor = account.lastBalanceMinor ?: derivedDebt ?: continue
             val usd = usdEquivalent(minor, account.currency, rates)
             if (AccountKind.fromKey(account.kind).isDebt) {
                 debt += kotlin.math.abs(usd)

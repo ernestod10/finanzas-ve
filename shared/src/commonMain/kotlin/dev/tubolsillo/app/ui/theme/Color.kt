@@ -52,8 +52,10 @@ val TileFillDark = Color(0xFF1C2421)
 val CardBorderDark = Color(0x12FFFFFF)           // blanco al 7%
 
 // ---------- Señales de resultado ----------
-val PositiveLight = Color(0xFF0E7A54)
-val PositiveDark = Color(0xFF5FD6A6)
+// Distintos del acento a propósito: "positivo" no debe leerse como "marca".
+// #187A37 ≈ 5.4:1 sobre blanco · #3DDC84 ≈ 9.9:1 sobre #141917.
+val PositiveLight = Color(0xFF187A37)
+val PositiveDark = Color(0xFF3DDC84)
 val NegativeLight = Color(0xFFC0392B)
 val NegativeDark = Color(0xFFFF8A7A)
 
