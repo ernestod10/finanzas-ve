@@ -2,6 +2,7 @@ package dev.tubolsillo.app.ui.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -56,7 +57,9 @@ fun IOSScreen(
     val density = LocalDensity.current
     val collapseHeightPx = with(density) { LargeTitleBlockHeight.toPx() }
 
-    Box(modifier = modifier.fillMaxSize()) {
+    // Fondo opaco: sin esto, durante la transición de entrada se ven los textos
+    // de las dos pantallas encimados.
+    Box(modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize(),

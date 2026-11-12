@@ -13,6 +13,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -51,7 +53,12 @@ fun DonutChart(
         modifier = modifier.size(diameter),
         contentAlignment = Alignment.Center,
     ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
+        // Resumen para lectores de pantalla: cada porción con su porcentaje.
+        val total = slices.sumOf { it.value }.takeIf { it > 0 } ?: 1.0
+        val description = slices.joinToString("; ") {
+            it.label + " " + ((it.value / total) * 100).toInt() + " por ciento"
+        }
+        Canvas(modifier = Modifier.fillMaxSize().semantics { contentDescription = description }) {
             val stroke = strokeWidth.toPx()
             val inset = stroke / 2f
             val arcSize = Size(size.width - stroke, size.height - stroke)

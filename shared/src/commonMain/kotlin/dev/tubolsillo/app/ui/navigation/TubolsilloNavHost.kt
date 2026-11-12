@@ -6,6 +6,8 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
@@ -184,10 +186,17 @@ fun TubolsilloNavHost() {
             popExitTransition = { PopExitTransition },
         ) {
             composable(Routes.TABS) {
-                TabPager(
-                    pagerState = pagerState,
-                    navController = navController,
-                )
+                androidx.compose.foundation.layout.Box(
+                    modifier = androidx.compose.ui.Modifier
+                        .fillMaxSize()
+                        .background(androidx.compose.material3.MaterialTheme.colorScheme.background),
+                ) {
+                    TabPager(
+                        pagerState = pagerState,
+                        navController = navController,
+                    )
+                    dev.tubolsillo.app.ui.assistant.AssistantOverlay()
+                }
             }
             composable(Routes.CATEGORIES) {
                 CategoriesScreen(onBack = { navController.popBackStack() })

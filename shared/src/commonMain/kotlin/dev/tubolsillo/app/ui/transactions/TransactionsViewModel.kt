@@ -23,6 +23,8 @@ import kotlinx.coroutines.launch
 data class DayTransactionsGroup(
     val dayLabel: String,
     val transactions: List<TransactionWithTags>,
+    /** Neto del día en USD (ingresos − gastos); null si no hay tasa. */
+    val netUsd: Double? = null,
 )
 
 class TransactionsViewModel(
@@ -31,6 +33,8 @@ class TransactionsViewModel(
     categoryRepository: dev.tubolsillo.app.domain.repo.CategoryRepository,
     private val tagRepository: dev.tubolsillo.app.domain.repo.TagRepository,
     private val ruleEngine: dev.tubolsillo.app.domain.usecase.RuleEngine,
+    private val rateProvider: dev.tubolsillo.app.domain.usecase.RateProvider,
+    private val totalsCalculator: dev.tubolsillo.app.domain.usecase.TotalsCalculator,
     private val analyzer: CaptureAnalyzer,
 ) : ViewModel() {
 
@@ -136,8 +140,21 @@ class TransactionsViewModel(
                 if (list.isEmpty()) emptyList()
                 else {
                     val today = currentEpochDays()
+                    val rates = rateProvider.ratesState.value
                     list.groupBy { dayLabel(it.transaction.occurredAt, today) }
-                        .map { (day, txs) -> DayTransactionsGroup(day, txs) }
+                        .map { (day, txs) ->
+                            DayTransactionsGroup(
+                                dayLabel = day,
+                                transactions = txs,
+                                netUsd = txs.sumOf {
+                                    totalsCalculator.usdEquivalent(
+                                        it.transaction.amountMinor,
+                                        it.transaction.currency,
+                                        rates,
+                                    )
+                                },
+                            )
+                        }
                 }
             }
             .flowOn(Dispatchers.Default)

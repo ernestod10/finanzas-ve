@@ -17,6 +17,8 @@ import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CircularProgressIndicator
+import dev.tubolsillo.app.core.money.MoneyFormatter
+import dev.tubolsillo.app.ui.theme.TubolsilloColors
 import androidx.compose.material3.TextButton
 import androidx.compose.ui.Alignment
 import androidx.compose.material3.Icon
@@ -177,7 +179,21 @@ fun TransactionsScreen(
         groupedByDay.forEach { group ->
             val day = group.dayLabel
             val txs = group.transactions
-            item(key = "h-$day", contentType = "header") { GroupHeader(day) }
+            item(key = "h-$day", contentType = "header") {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    GroupHeader(day, modifier = Modifier.weight(1f))
+                    group.netUsd?.let { net ->
+                        Text(
+                            text = (if (net >= 0) "+" else "−") +
+                                MoneyFormatter.formatUsd(kotlin.math.abs(net)),
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontFeatureSettings = dev.tubolsillo.app.ui.theme.TNUM,
+                            ),
+                            color = if (net >= 0) TubolsilloColors.positive else TubolsilloColors.negative,
+                        )
+                    }
+                }
+            }
             itemsIndexed(
                 items = txs,
                 key = { _, tx -> tx.transaction.id },

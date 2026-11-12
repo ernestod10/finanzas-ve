@@ -103,8 +103,15 @@ fun AmountDisplay(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+        // "109243" (lo que se escribe) → "109.243" (lo que se lee).
+        val shown = text.ifBlank { "0" } + if (text.endsWith(",")) "00" else ""
+        val grouped = shown.substringBefore(',').let { whole ->
+            val digits = whole.filter { it.isDigit() }
+            if (digits.length <= 3) whole else digits.reversed().chunked(3)
+                .joinToString(".").reversed()
+        } + shown.substringAfter(',', "").let { if (it.isEmpty()) "" else ",$it" }
         Text(
-            text = text.ifBlank { "0" } + if (text.endsWith(",")) "00" else "",
+            text = grouped,
             style = MaterialTheme.typography.displayLarge.copy(
                 fontWeight = FontWeight.Bold,
                 fontFeatureSettings = TNUM,

@@ -230,6 +230,25 @@ class DashboardViewModel(
         occurredAt: Long = dev.tubolsillo.app.core.time.nowMillis(),
     ) {
         viewModelScope.launch {
+            saveManualTransaction(
+                accountId = accountId, amountMinor = amountMinor, currencyCode = currencyCode,
+                description = description, category = category, userCategoryId = userCategoryId,
+                casheaInstallmentMinor = casheaInstallmentMinor, occurredAt = occurredAt,
+            )
+        }
+    }
+
+    /** Igual que [addManualTransaction] pero suspendido: el formulario espera el resultado. */
+    suspend fun saveManualTransaction(
+        accountId: Long,
+        amountMinor: Long,
+        currencyCode: String,
+        description: String,
+        category: TransactionCategory,
+        userCategoryId: Long? = null,
+        casheaInstallmentMinor: Long? = null,
+        occurredAt: Long = dev.tubolsillo.app.core.time.nowMillis(),
+    ) {
             val now = occurredAt
             val txId = transactionRepository.insertManual(
                 accountId = accountId,
@@ -267,7 +286,6 @@ class DashboardViewModel(
                     )
                 }
             }
-        }
     }
 
     fun togglePlanLinePaid(line: dev.tubolsillo.app.domain.model.PlanLineView) {

@@ -16,6 +16,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -40,11 +42,16 @@ fun TrendChart(
 ) {
     if (values.size < 2) return
 
+    // La gráfica es decorativa sin esto: se resume la serie para TalkBack.
+    val description = "Serie de " + values.size + " puntos, de " +
+        values.first().toString().take(8) + " a " + values.last().toString().take(8)
+
     Column(modifier = modifier.fillMaxWidth()) {
         Canvas(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(chartHeight),
+                .height(chartHeight)
+                .semantics { contentDescription = description },
         ) {
             val min = values.min()
             val max = values.max()

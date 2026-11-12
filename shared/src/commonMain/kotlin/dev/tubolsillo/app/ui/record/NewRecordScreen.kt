@@ -39,6 +39,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -100,6 +102,15 @@ fun NewRecordScreen(
     var describeText by rememberSaveable { mutableStateOf("") }
 
     var scanError by remember { mutableStateOf<String?>(null) }
+
+    // Instantánea inicial para saber si hay cambios sin guardar.
+    val initialAmount = remember { amountText }
+    val initialDescription = remember { description }
+    val dirty = amountText != initialAmount || description != initialDescription
+    var confirmDiscard by remember { mutableStateOf(false) }
+    var saving by remember { mutableStateOf(false) }
+    var saveError by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
 
     val interpreted by viewModel.interpreted.collectAsState()
     val interpreting by viewModel.interpreting.collectAsState()
@@ -165,7 +176,7 @@ fun NewRecordScreen(
                 .padding(vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            TextButton(onClick = onDone) { Text("Cancelar") }
+            TextButton(onClick = { if (dirty) confirmDiscard = true else onDone() }) { Text("Cancelar") }
             Text(
                 text = "Nuevo registro",
                 style = MaterialTheme.typography.titleMedium,
@@ -174,24 +185,31 @@ fun NewRecordScreen(
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             )
             TextButton(
-                enabled = canSave,
+                enabled = canSave && !saving,
                 onClick = {
                     val acc = account ?: return@TextButton
                     val minor = amountMinor ?: return@TextButton
                     val signed = if (isExpense) -abs(minor) else abs(minor)
-                    viewModel.addManualTransaction(
-                        accountId = acc.id,
-                        amountMinor = signed,
-                        currencyCode = acc.currency,
-                        description = description.trim(),
-                        category = TransactionCategory.MERCHANT,
-                        userCategoryId = categoryId,
-                        casheaInstallmentMinor = if (isExpense && isCashea && casheaEnabled) abs(minor) else null,
-                        occurredAt = occurredAt,
-                    )
-                    onDone()
+                    saving = true
+                    saveError = null
+                    scope.launch {
+                        runCatching {
+                            viewModel.saveManualTransaction(
+                                accountId = acc.id,
+                                amountMinor = signed,
+                                currencyCode = acc.currency,
+                                description = description.trim(),
+                                category = TransactionCategory.MERCHANT,
+                                userCategoryId = categoryId,
+                                casheaInstallmentMinor = if (isExpense && isCashea && casheaEnabled) abs(minor) else null,
+                                occurredAt = occurredAt,
+                            )
+                        }.onSuccess { onDone() }
+                            .onFailure { saveError = "No se pudo guardar. Inténtalo otra vez." }
+                        saving = false
+                    }
                 },
-            ) { Text("Guardar", fontWeight = FontWeight.SemiBold) }
+            ) { Text(if (saving) "Guardando…" else "Guardar", fontWeight = FontWeight.SemiBold) }
         }
 
         Spacer(Modifier.height(8.dp))
@@ -235,6 +253,13 @@ fun NewRecordScreen(
             )
         }
 
+        saveError?.let { message ->
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
         Spacer(Modifier.height(8.dp))
         TypeSegment(isExpense = isExpense, onChange = { isExpense = it })
 
@@ -295,6 +320,25 @@ fun NewRecordScreen(
             value = amountText,
             onValueChange = { amountText = it },
             decimals = Currency.of(currency).decimals,
+        )
+    }
+
+    if (confirmDiscard) {
+        AlertDialog(
+            onDismissRequest = { confirmDiscard = false },
+            title = { Text("¿Descartar cambios?") },
+            text = { Text("Lo que escribiste no se ha guardado.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        confirmDiscard = false
+                        onDone()
+                    },
+                ) { Text("Descartar", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmDiscard = false }) { Text("Seguir editando") }
+            },
         )
     }
 

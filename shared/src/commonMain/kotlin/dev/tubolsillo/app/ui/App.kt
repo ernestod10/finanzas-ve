@@ -51,12 +51,8 @@ fun App() {
         darkTheme = darkTheme,
         accent = AppAccent.fromKey(accentKey),
     ) {
-        // La burbuja del asistente flota sobre toda la app.
-        androidx.compose.foundation.layout.Box(
-            modifier = androidx.compose.ui.Modifier.fillMaxSize(),
-        ) {
-            TubolsilloNavHost()
-            dev.tubolsillo.app.ui.assistant.AssistantOverlay()
-        }
+        // El asistente flota sobre las pestañas, no sobre las pantallas que se
+        // empujan (alta de registro, revisión, ajustes): ahí estorba al teclado.
+        TubolsilloNavHost()
     }
 }

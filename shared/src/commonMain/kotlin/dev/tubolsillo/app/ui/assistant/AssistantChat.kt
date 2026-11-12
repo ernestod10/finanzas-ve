@@ -106,7 +106,7 @@ fun AssistantOverlay(viewModel: AssistantViewModel = koinViewModel()) {
             contentColor = MaterialTheme.colorScheme.onPrimary,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(end = 16.dp, bottom = 104.dp),
+                .padding(end = 16.dp, bottom = 16.dp),
         ) {
             Icon(Icons.Filled.AutoAwesome, contentDescription = "Asistente")
         }
