@@ -64,10 +64,16 @@ fun SavingsScreen(
     ) {
         if (goals.isEmpty()) {
             item(key = "empty") {
-                GroupFooter(
-                    "Aún no tienes objetivos. Crea uno con un monto y, si quieres, una fecha: " +
-                        "la app te dirá cuánto apartar cada mes."
-                )
+                Column {
+                    GroupFooter(
+                        "Aún no tienes objetivos. Crea uno con un monto y, si quieres, una fecha: " +
+                            "la app te dirá cuánto apartar cada mes."
+                    )
+                    androidx.compose.material3.Button(
+                        onClick = { adding = true },
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                    ) { Text("Crear mi primer objetivo") }
+                }
             }
         } else {
             item(key = "list-h") { GroupHeader("Tus metas") }

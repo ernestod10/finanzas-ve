@@ -10,6 +10,7 @@ import androidx.room.Relation
 import androidx.room.Transaction
 import dev.tubolsillo.app.core.db.entity.TagEntity
 import dev.tubolsillo.app.core.db.entity.TransactionEntity
+import dev.tubolsillo.app.core.db.entity.TransactionSplitEntity
 import dev.tubolsillo.app.core.db.entity.TransactionTagCrossRef
 import kotlinx.coroutines.flow.Flow
 
@@ -26,6 +27,9 @@ data class TransactionWithTags(
         )
     )
     val tags: List<TagEntity>,
+    /** Reparto del gasto en varias categorías (vacío = una sola). */
+    @Relation(parentColumn = "id", entityColumn = "txId")
+    val splits: List<TransactionSplitEntity> = emptyList(),
 )
 
 @Dao

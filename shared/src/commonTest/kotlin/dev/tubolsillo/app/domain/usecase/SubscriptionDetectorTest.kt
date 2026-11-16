@@ -108,4 +108,19 @@ class SubscriptionDetectorTest {
         val found = SubscriptionDetector.detect(txs, now).single()
         assertEquals("Netflix.com", found.merchant)
     }
+
+    @Test
+    fun `una subida de precio no borra la suscripcion`() {
+        val now = day(2026, 11, 20)
+        val txs = listOf(
+            tx(1, "NETFLIX.COM", -1_500, day(2026, 7, 15)),
+            tx(2, "NETFLIX.COM", -1_500, day(2026, 8, 15)),
+            tx(3, "NETFLIX.COM", -1_500, day(2026, 9, 15)),
+            tx(4, "NETFLIX.COM", -1_800, day(2026, 10, 15)),
+        )
+        val found = SubscriptionDetector.detect(txs, now).single()
+        assertEquals(1_800L, found.amountMinor)
+        assertEquals(1_500L, found.previousAmountMinor)
+        assertTrue(found.priceIncreased)
+    }
 }

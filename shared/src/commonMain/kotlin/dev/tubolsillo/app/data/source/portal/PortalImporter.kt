@@ -56,7 +56,11 @@ class PortalImporter(
             currency = mapped.rows.firstOrNull()?.currency ?: mapped.balanceCurrency ?: recipe.currency,
         )
         val account = accountId?.let { accountRepository.getById(it) }
-            ?: accountRepository.findForCapture(recipe.institution, probe)
+            ?: accountRepository.findForCapture(
+                recipe.institution,
+                probe,
+                maskHint = mapped.accountBalances.firstOrNull { it.mask.isNotBlank() }?.mask,
+            )
 
         if (mapped.rows.isEmpty() && mapped.balanceMinor == null && mapped.accountBalances.isEmpty()) {
             return@withContext PortalImportResult(skipped = mapped.skipped, accountId = account.id)

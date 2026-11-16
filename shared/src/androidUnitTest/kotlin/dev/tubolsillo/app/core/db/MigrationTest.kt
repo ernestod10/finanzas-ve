@@ -142,4 +142,34 @@ class MigrationTest {
             conn.columns("savings_contributions"),
         )
     }
+
+    @Test
+    fun `v8 a v9 crea el reparto de categorias`() {
+        val conn = connection()
+        TubolsilloDatabase.MIGRATION_8_9.migrate(conn)
+        assertEquals(
+            listOf("id", "txId", "categoryId", "amountMinor"),
+            conn.columns("transaction_splits"),
+        )
+        // El índice por txId es el que consulta Room al abrir el detalle.
+        conn.prepare("PRAGMA index_list(`transaction_splits`)").use { st ->
+            var found = false
+            while (st.step()) {
+                if (st.getText(1) == "index_transaction_splits_txId") found = true
+            }
+            assertTrue(found)
+        }
+    }
+
+
+    @Test
+    fun `v9 a v10 crea las suscripciones manuales`() {
+        val conn = connection()
+        TubolsilloDatabase.MIGRATION_9_10.migrate(conn)
+        assertEquals(
+            listOf("id", "name", "amountMinor", "currency", "dayOfMonth", "isActive", "createdAt"),
+            conn.columns("manual_subscriptions"),
+        )
+    }
+
 }

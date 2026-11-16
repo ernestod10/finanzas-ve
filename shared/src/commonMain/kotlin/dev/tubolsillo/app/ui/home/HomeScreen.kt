@@ -32,7 +32,9 @@ import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -183,6 +185,20 @@ fun HomeScreen(
     val vesPerDollar = rates["VES"]?.let { if (it > 0) 1.0 / it else 1.0 } ?: 1.0
     val accounts = dashboard?.accountViews ?: emptyList()
 
+    // "Cuánto te queda": saldo líquido menos lo comprometido del mes.
+    val safeToSpend = dev.tubolsillo.app.domain.model.SafeToSpendCalculator.compute(
+        liquidUsd = dashboard?.totals?.assetsUsd ?: 0.0,
+        plan = plan,
+        accounts = dashboard?.accounts.orEmpty(),
+        vesPerDollar = vesPerDollar,
+        nowMs = dev.tubolsillo.app.core.time.nowMillis(),
+    )
+
+    // El widget lee este número sin abrir la app; se actualiza cuando cambia.
+    androidx.compose.runtime.LaunchedEffect(safeToSpend?.freeUsd) {
+        scope.launch { settings.setSafeToSpendUsd(safeToSpend?.freeUsd ?: 0.0) }
+    }
+
     // Arrastrar hacia abajo consulta los portales vinculados sin esperar a que
     // pasen los 10 minutos del sync automático.
     val autoSync: dev.tubolsillo.app.data.source.portal.PortalAutoSync = org.koin.compose.koinInject()
@@ -231,18 +247,12 @@ fun HomeScreen(
 
         if (tab == 0) {
             item(key = "greeting") { GreetingCard() }
-            item(key = "rates") {
-                RatesCard(
-                    snapshot = ratesSnapshot,
-                    vesPerDollar = vesPerDollar,
-                    onOpenRates = onOpenRates,
-                )
-            }
             item(key = "balance") {
                 BalanceCard(
                     assetsUsd = dashboard?.totals?.assetsUsd ?: 0.0,
                     vesPerDollar = vesPerDollar,
                     hidden = hideBalance,
+                    safe = safeToSpend,
                     onToggleHidden = { scope.launch { settings.setHideBalance(!hideBalance) } },
                 )
             }
@@ -254,6 +264,15 @@ fun HomeScreen(
                     onAccountClick = onAccountClick,
                     onAddAccount = { showAddAccount = true },
                     onAccountLongClick = { accountActions = it },
+                )
+            }
+            // Las tasas son una utilidad: van después de lo que el usuario
+            // mira todos los días (saldo, alta rápida y cuentas).
+            item(key = "rates") {
+                RatesCard(
+                    snapshot = ratesSnapshot,
+                    vesPerDollar = vesPerDollar,
+                    onOpenRates = onOpenRates,
                 )
             }
             item(key = "credits") { HomeCreditsCard(onOpenCredits = onOpenCredits) }
@@ -421,14 +440,17 @@ private fun GreetingCard() {
             )
 
             Column(modifier = Modifier.padding(16.dp)) {
+                // Sin eslogan: el saludo es la línea principal de la tarjeta.
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
                         text = greetingForNow(),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = ink.copy(alpha = 0.85f),
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                        color = ink,
+                        modifier = Modifier.weight(1f),
                     )
                     Text(
                         text = dayMonthLabel(nowMillis()),
@@ -436,12 +458,6 @@ private fun GreetingCard() {
                         color = ink.copy(alpha = 0.85f),
                     )
                 }
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = "Tu dinero, claro y en orden.",
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                    color = ink,
-                )
             }
         }
     }
@@ -529,6 +545,7 @@ private fun BalanceCard(
     assetsUsd: Double,
     vesPerDollar: Double,
     hidden: Boolean,
+    safe: dev.tubolsillo.app.domain.model.SafeToSpend?,
     onToggleHidden: () -> Unit,
 ) {
     TubolsilloCard {
@@ -563,6 +580,40 @@ private fun BalanceCard(
             style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = TNUM),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        // El "te queda" vive en la misma tarjeta: dos cifras grandes compitiendo
+        // era el principal ruido de Inicio.
+        if (safe != null) {
+            Spacer(Modifier.height(10.dp))
+            HorizontalDivider(
+                thickness = 0.5.dp,
+                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f),
+            )
+            Spacer(Modifier.height(10.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Te queda para gastar",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        text = if (hidden) "••••••" else MoneyFormatter.formatUsd(safe.freeUsd),
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontFeatureSettings = TNUM,
+                        ),
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                    Text(
+                        text = if (hidden) "Comprometido este mes"
+                        else MoneyFormatter.formatUsd(safe.perDayUsd) + " por día · " +
+                            safe.daysLeft + " días",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -877,3 +928,5 @@ private fun CreditsTabContent(
         TextButton(onClick = onOpenFull) { Text("Ver créditos y cuotas") }
     }
 }
+
+

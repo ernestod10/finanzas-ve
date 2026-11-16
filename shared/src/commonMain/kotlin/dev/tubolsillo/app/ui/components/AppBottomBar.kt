@@ -4,9 +4,13 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,6 +38,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.onGloballyPositioned
+import dev.tubolsillo.app.ui.tour.LocalTourAnchors
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -84,10 +92,15 @@ fun AppBottomBar(
             .fillMaxWidth()
             .padding(top = 18.dp),
     ) {
+        val tour = LocalTourAnchors.current
         Surface(
             color = TubolsilloColors.card,
             shadowElevation = 10.dp,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .onGloballyPositioned { coords ->
+                    tour?.bar = coords.boundsInWindow()
+                },
         ) {
             Column {
                 HorizontalDivider(
@@ -123,7 +136,10 @@ fun AppBottomBar(
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .offset(y = (-18).dp)
-                .size(56.dp),
+                .size(56.dp)
+                .onGloballyPositioned { coords ->
+                    tour?.fab = coords.boundsInWindow()
+                },
             shape = RoundedCornerShape(18.dp),
             color = MaterialTheme.colorScheme.primary,
             shadowElevation = 8.dp,
@@ -142,18 +158,28 @@ fun AppBottomBar(
             // Un renglón por encima del FAB: cada acción es un círculo con su
             // etiqueta debajo. Se dibuja fuera del Box de la barra (no lo
             // recorta) y entra con un deslizamiento corto desde el botón.
-            AnimatedVisibility(
-                visible = quickActionsOpen,
+            // Envoltorio de alto cero: el panel no debe aportar tamaño al
+            // layout de la barra (si no, el slot del Scaffold crece y queda
+            // una franja negra debajo de las pestañas).
+            Box(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
-                    .offset(y = (-104).dp),
-                enter = fadeIn(tween(110)) + slideInVertically(
-                    animationSpec = tween(160),
-                    initialOffsetY = { it / 2 },
+                    .reserveNothing(),
+            ) {
+            AnimatedVisibility(
+                visible = quickActionsOpen,
+                modifier = Modifier.align(Alignment.TopCenter),
+                // Aparece creciendo desde el botón: un desplazamiento vertical
+                // se veía como una barra negra subiendo desde abajo.
+                enter = fadeIn(tween(120)) + scaleIn(
+                    animationSpec = tween(150),
+                    initialScale = 0.9f,
+                    transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 1f),
                 ),
-                exit = fadeOut(tween(80)) + slideOutVertically(
+                exit = fadeOut(tween(80)) + scaleOut(
                     animationSpec = tween(110),
-                    targetOffsetY = { it / 2 },
+                    targetScale = 0.94f,
+                    transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 1f),
                 ),
             ) {
                 // Panel detrás de los círculos: sobre una tarjeta verde de la
@@ -163,17 +189,44 @@ fun AppBottomBar(
                     color = TubolsilloColors.card,
                     shadowElevation = 12.dp,
                 ) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalAlignment = Alignment.Bottom,
+                    // Dos renglones con intención: primero lo que registra
+                    // plata, después lo que crea estructura.
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 9.dp),
                     ) {
-                        quickActions.forEach { action ->
-                            QuickActionBubble(action)
+                        DialRow(
+                            label = "REGISTRAR",
+                            actions = quickActions.filterIndexed { i, _ -> i < 3 },
+                        )
+                        val creates = quickActions.filterIndexed { i, _ -> i >= 3 }
+                        if (creates.isNotEmpty()) {
+                            DialRow(label = "CREAR", actions = creates)
                         }
                     }
                 }
             }
+            }
+        }
+    }
+}
+
+/** Un renglón del dial con su etiqueta de intención. */
+@Composable
+private fun DialRow(label: String, actions: List<QuickActionItem>) {
+    Row(verticalAlignment = Alignment.Bottom) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            softWrap = false,
+            modifier = Modifier
+                .width(84.dp)
+                .padding(bottom = 14.dp),
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            actions.forEach { action -> QuickActionBubble(action) }
         }
     }
 }
@@ -267,5 +320,23 @@ private fun BottomBarTab(
             color = tint,
             maxLines = 1,
         )
+    }
+}
+
+
+/**
+ * Mide el contenido sin reservarle espacio en el layout: el dial se dibuja
+ * encima de la barra pero no la estira (si reservara alto, el slot del
+ * Scaffold crecía y aparecía una franja negra debajo de las pestañas).
+ */
+private fun Modifier.reserveNothing(): Modifier = this.layout { measurable, constraints ->
+    val placeable = measurable.measure(
+        constraints.copy(minHeight = 0, maxHeight = androidx.compose.ui.unit.Constraints.Infinity),
+    )
+    val gap = 26.dp.roundToPx()
+    layout(0, 0) {
+        // El envoltorio mide 0x0 y está centrado: se coloca el panel centrado
+        // en ese punto, no desde su borde izquierdo (si no, se iba a la derecha).
+        placeable.place(-placeable.width / 2, -placeable.height - gap)
     }
 }

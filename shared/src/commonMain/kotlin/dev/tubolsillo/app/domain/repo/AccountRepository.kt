@@ -195,6 +195,8 @@ class AccountRepository(
     suspend fun findForCapture(
         institution: dev.tubolsillo.app.domain.model.Institution,
         parsed: dev.tubolsillo.app.domain.model.ParsedTransaction,
+        /** Últimos dígitos publicados por el banco o el SMS: gana si coincide. */
+        maskHint: String? = null,
     ): AccountEntity {
         val esDebit = parsed.raw.contains("debit", ignoreCase = true) ||
             parsed.raw.contains("débito", ignoreCase = true) || parsed.raw.contains("debito", ignoreCase = true)
@@ -220,6 +222,15 @@ class AccountRepository(
                     else -> account.kind !in debtKinds
                 }
             }
+        // Si el banco publica los últimos dígitos, esa es la cuenta correcta
+        // aunque haya varias de la misma institución.
+        val hintDigits = maskHint?.filter { it.isDigit() }?.takeLast(4).orEmpty()
+        if (hintDigits.length == 4) {
+            active.firstOrNull { account ->
+                account.accountNumberMask?.filter { it.isDigit() }?.takeLast(4) == hintDigits
+            }?.let { return it }
+        }
+
         val match = active.firstOrNull { it.currency == parsed.currency && it.kind == preferredKind.key }
             ?: active.firstOrNull { it.currency == parsed.currency }
             ?: active.firstOrNull { it.kind == preferredKind.key }

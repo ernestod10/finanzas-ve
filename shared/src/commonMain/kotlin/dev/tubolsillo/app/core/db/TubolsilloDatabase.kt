@@ -31,6 +31,10 @@ import dev.tubolsillo.app.core.db.dao.SavingsGoalDao
 import dev.tubolsillo.app.core.db.entity.TagEntity
 import dev.tubolsillo.app.core.db.entity.TransactionEntity
 import dev.tubolsillo.app.core.db.entity.TransactionTagCrossRef
+import dev.tubolsillo.app.core.db.entity.TransactionSplitEntity
+import dev.tubolsillo.app.core.db.entity.SubscriptionEntity
+import dev.tubolsillo.app.core.db.dao.SubscriptionDao
+import dev.tubolsillo.app.core.db.dao.SplitDao
 import dev.tubolsillo.app.core.db.entity.TransferPairEntity
 
 /** Base de datos local de TuBolsillo. Los esquemas exportados quedan en app/schemas/. */
@@ -46,6 +50,8 @@ import dev.tubolsillo.app.core.db.entity.TransferPairEntity
         BudgetEntity::class,
         TagEntity::class,
         TransactionTagCrossRef::class,
+        TransactionSplitEntity::class,
+        SubscriptionEntity::class,
         CategoryRuleEntity::class,
         CategoryEntity::class,
         PlanItemEntity::class,
@@ -53,7 +59,7 @@ import dev.tubolsillo.app.core.db.entity.TransferPairEntity
         SavingsGoalEntity::class,
         SavingsContributionEntity::class,
     ],
-    version = 8,
+    version = 10,
     exportSchema = true,
 )
 abstract class TubolsilloDatabase : RoomDatabase() {
@@ -182,6 +188,43 @@ abstract class TubolsilloDatabase : RoomDatabase() {
             }
         }
 
+        /** v9→v10: suscripciones cargadas a mano. */
+        val MIGRATION_9_10 = object : androidx.room.migration.Migration(9, 10) {
+            override fun migrate(connection: androidx.sqlite.SQLiteConnection) {
+                connection.prepare(
+                    "CREATE TABLE IF NOT EXISTS `manual_subscriptions` (" +
+                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`name` TEXT NOT NULL, " +
+                        "`amountMinor` INTEGER NOT NULL, " +
+                        "`currency` TEXT NOT NULL, " +
+                        "`dayOfMonth` INTEGER NOT NULL, " +
+                        "`isActive` INTEGER NOT NULL, " +
+                        "`createdAt` INTEGER NOT NULL)"
+                ).use { it.step() }
+                connection.prepare(
+                    "CREATE INDEX IF NOT EXISTS `index_manual_subscriptions_dayOfMonth` " +
+                        "ON `manual_subscriptions` (`dayOfMonth`)"
+                ).use { it.step() }
+            }
+        }
+
+        /** v8→v9: reparto de un gasto en varias categorías. */
+        val MIGRATION_8_9 = object : androidx.room.migration.Migration(8, 9) {
+            override fun migrate(connection: androidx.sqlite.SQLiteConnection) {
+                connection.prepare(
+                    "CREATE TABLE IF NOT EXISTS `transaction_splits` (" +
+                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`txId` INTEGER NOT NULL, " +
+                        "`categoryId` INTEGER, " +
+                        "`amountMinor` INTEGER NOT NULL)"
+                ).use { it.step() }
+                connection.prepare(
+                    "CREATE INDEX IF NOT EXISTS `index_transaction_splits_txId` " +
+                        "ON `transaction_splits` (`txId`)"
+                ).use { it.step() }
+            }
+        }
+
         /**
          * v6→v7: `dedupKey` pasa a ser ÚNICO (la ingesta ya no puede insertar la
          * misma operación dos veces) e icono por categoría.
@@ -232,4 +275,6 @@ abstract class TubolsilloDatabase : RoomDatabase() {
     abstract fun planItemDao(): PlanItemDao
     abstract fun planItemStateDao(): PlanItemStateDao
     abstract fun savingsGoalDao(): SavingsGoalDao
+    abstract fun splitDao(): SplitDao
+    abstract fun subscriptionDao(): SubscriptionDao
 }

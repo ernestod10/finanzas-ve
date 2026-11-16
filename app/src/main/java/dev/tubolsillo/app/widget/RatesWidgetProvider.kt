@@ -127,6 +127,30 @@ class RatesWidgetProvider : AppWidgetProvider() {
         }
         views.setTextColor(R.id.widget_input, ink)
         views.setTextColor(R.id.widget_title, muted)
+        // Tocar el encabezado abre el alta de gasto (una acción por widget:
+        // las teclas ya usan sus propios toques).
+        views.setOnClickPendingIntent(
+            R.id.widget_title,
+            PendingIntent.getActivity(
+                context,
+                7,
+                Intent(context, dev.tubolsillo.app.MainActivity::class.java)
+                    .putExtra(dev.tubolsillo.app.MainActivity.EXTRA_NEW_EXPENSE, true)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP),
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            ),
+        )
+        // "Te queda" en el encabezado: el número que el usuario abre a mirar.
+        val safe = settings?.safeToSpendUsd?.value ?: 0.0
+        views.setTextViewText(
+            R.id.widget_title,
+            if (safe > 0.0) {
+                "TE QUEDA " + MoneyFormatter.formatUsd(safe) + " · Bs. " +
+                    bs(if (bcv > 0) safe * bcv else 0.0)
+            } else {
+                "CAMBIO · USD → Bs."
+            },
+        )
         views.setTextColor(R.id.widget_bcv, ink)
         views.setTextColor(R.id.widget_p2p, accent)
         views.setTextColor(R.id.widget_refresh, accent)

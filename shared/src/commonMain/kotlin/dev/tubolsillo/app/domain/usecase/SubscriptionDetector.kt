@@ -22,6 +22,10 @@ data class SubscriptionSuggestion(
     val nextAt: Long,
     /** Día del mes en que suele caer (para el plan mensual). */
     val dayOfMonth: Int,
+    /** Precio que venía cobrando antes del último cambio, si lo hubo. */
+    val previousAmountMinor: Long? = null,
+    /** true si el último cobro es mayor que el histórico (subida de precio). */
+    val priceIncreased: Boolean = false,
 )
 
 /**
@@ -33,6 +37,8 @@ object SubscriptionDetector {
 
     private const val MIN_OCCURRENCES = 3
     private const val AMOUNT_TOLERANCE = 0.08
+    /** Cambio de precio admitido entre el histórico y el último cobro. */
+    private const val STEP_TOLERANCE = 0.45
     private const val DAY_MS = 86_400_000L
     private const val MONTH_DAYS = 30
 
@@ -73,8 +79,17 @@ object SubscriptionDetector {
         val amounts = items.map { abs(it.amountMinor) }
         val average = amounts.average()
         if (average <= 0) return null
-        // Todos los montos tienen que parecerse: si varía mucho no es fijo.
-        if (amounts.any { abs(it - average) / average > AMOUNT_TOLERANCE }) return null
+
+        // El histórico (todo menos el último cobro) tiene que ser estable; el
+        // último puede ser distinto si hubo subida o bajada de precio. Antes
+        // una subida del 10 % hacía desaparecer la suscripción.
+        val historical = amounts.dropLast(1)
+        val previousAverage = if (historical.size >= 2) historical.average() else average
+        val lastAmount = amounts.last()
+        if (historical.size >= 2 &&
+            historical.any { abs(it - previousAverage) / previousAverage > AMOUNT_TOLERANCE }
+        ) return null
+        if (abs(lastAmount - previousAverage) / previousAverage > STEP_TOLERANCE) return null
 
         val gaps = items.zipWithNext { a, b -> (b.occurredAt - a.occurredAt) / DAY_MS }.toList()
         if (gaps.isEmpty()) return null
@@ -86,15 +101,19 @@ object SubscriptionDetector {
         val last = items.last()
         val lastDate = kotlin.time.Instant.fromEpochMilliseconds(last.occurredAt)
             .toLocalDateTime(kotlinx.datetime.TimeZone.currentSystemDefault()).date
+        val changed = historical.size >= 2 &&
+            kotlin.math.abs(lastAmount - previousAverage) / previousAverage > 0.05
         return SubscriptionSuggestion(
             merchant = displayName(items.first().description),
-            amountMinor = average.toLong(),
+            amountMinor = lastAmount,
             currency = currency,
             periodDays = averageGap.toInt(),
             occurrences = items.size,
             lastAt = last.occurredAt,
             nextAt = last.occurredAt + (averageGap * DAY_MS).toLong(),
             dayOfMonth = lastDate.dayOfMonth,
+            previousAmountMinor = if (changed) previousAverage.toLong() else null,
+            priceIncreased = changed && lastAmount > previousAverage,
         )
     }
 

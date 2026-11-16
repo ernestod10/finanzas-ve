@@ -490,8 +490,10 @@ fun TagTransactionDialog(
     onCategory: (Long?) -> Unit,
     onUpdateDetails: ((description: String, amountMinor: Long) -> Unit)? = null,
     onDelete: (() -> Unit)? = null,
+    onSplits: ((List<Pair<Long?, Long>>) -> Unit)? = null,
 ) {
     var confirmDelete by remember { mutableStateOf(false) }
+    var showSplitEditor by remember { mutableStateOf(false) }
     var newTag by remember { mutableStateOf("") }
     var learn by remember { mutableStateOf(true) }
     var editingDetails by remember { mutableStateOf(false) }
@@ -589,6 +591,18 @@ fun TagTransactionDialog(
                                     }
                                 }
                             },
+                        )
+                    }
+                }
+                if (onSplits != null && tx.transaction.amountMinor < 0) {
+                    // Reparto del gasto: solo tiene sentido en gastos.
+                    TextButton(
+                        onClick = { showSplitEditor = true },
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp),
+                    ) {
+                        Text(
+                            if (tx.splits.isEmpty()) "Dividir en categorías"
+                            else "Repartido en " + tx.splits.size + " categorías"
                         )
                     }
                 }

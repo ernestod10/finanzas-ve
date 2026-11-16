@@ -1,5 +1,6 @@
 package dev.tubolsillo.app.ui.plan
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -86,6 +87,56 @@ fun PlanScreen(
 
         item(key = "hero") { PlanHero(plan) }
 
+        // Próximos 30 días: lo pendiente ordenado por fecha, con un toque para
+        // marcarlo pagado. Es la vista que la gente usa a diario en otras apps.
+        val upcoming = plan.expenses
+            .filter { it.status == PlanStatus.PENDING }
+            .sortedBy { it.occursAt }
+        if (upcoming.isNotEmpty()) {
+            item(key = "up-h") { GroupHeader("Próximos 30 días") }
+            item(key = "up") {
+                GroupedGroup {
+                    upcoming.take(8).forEachIndexed { index, line ->
+                        if (index > 0) {
+                            androidx.compose.material3.HorizontalDivider(
+                                modifier = Modifier.padding(start = 16.dp),
+                                thickness = 0.5.dp,
+                                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                            )
+                        }
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { selected = line }
+                                .padding(start = 16.dp, end = 8.dp, top = 10.dp, bottom = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(line.label, style = MaterialTheme.typography.bodyLarge, maxLines = 1)
+                                Text(
+                                    text = dev.tubolsillo.app.ui.components.dayLabel(line.occursAt) +
+                                        if (line.isOverdue) " · vencida" else "",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (line.isOverdue) MaterialTheme.colorScheme.error
+                                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            Text(
+                                text = dev.tubolsillo.app.core.money.MoneyFormatter
+                                    .formatMinor(line.amountMinor, line.currencyCode),
+                                style = MaterialTheme.typography.bodyLarge.copy(
+                                    fontWeight = FontWeight.SemiBold,
+                                ),
+                            )
+                            TextButton(onClick = { viewModel.setStatus(line.itemId, PlanStatus.PAID) }) {
+                                Text("Pagado")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         // Cobros que se repiten todos los meses: con un toque pasan a ser
         // gasto fijo del plan (así el "estimado" del mes deja de ser un número
         // inventado).
@@ -112,11 +163,24 @@ fun PlanScreen(
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(suggestion.merchant, style = MaterialTheme.typography.bodyLarge)
                                 Text(
-                                    text = suggestion.occurrences.toString() + " cobros cada " +
-                                        suggestion.periodDays + " días · día " + suggestion.dayOfMonth,
+                                    text = "Próximo " +
+                                        dev.tubolsillo.app.ui.components.dayLabel(suggestion.nextAt) +
+                                        " · cada " + suggestion.periodDays + " días",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
+                                if (suggestion.priceIncreased) {
+                                    Text(
+                                        text = "Subió de " + dev.tubolsillo.app.core.money.MoneyFormatter
+                                            .formatMinor(
+                                                suggestion.previousAmountMinor ?: 0L,
+                                                suggestion.currency,
+                                            ) + " a " + dev.tubolsillo.app.core.money.MoneyFormatter
+                                            .formatMinor(suggestion.amountMinor, suggestion.currency),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.error,
+                                    )
+                                }
                             }
                             Text(
                                 text = dev.tubolsillo.app.core.money.MoneyFormatter

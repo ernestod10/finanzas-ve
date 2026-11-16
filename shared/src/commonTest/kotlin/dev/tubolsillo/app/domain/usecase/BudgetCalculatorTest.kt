@@ -4,6 +4,7 @@ import dev.tubolsillo.app.core.db.dao.TransactionWithTags
 import dev.tubolsillo.app.core.db.entity.BudgetEntity
 import dev.tubolsillo.app.core.db.entity.CategoryEntity
 import dev.tubolsillo.app.core.db.entity.TransactionEntity
+import dev.tubolsillo.app.core.db.entity.TransactionSplitEntity
 import dev.tubolsillo.app.domain.model.TransactionCategory
 import dev.tubolsillo.app.domain.model.UNTAGGED_BUCKET
 import kotlin.test.Test
@@ -110,4 +111,39 @@ class BudgetCalculatorTest {
         assertEquals(true, comida.isOverBudget)
         assertEquals(-10.0, comida.remainingUsd!!, 0.001)
     }
+
+    @Test
+    fun `un gasto repartido suma en cada categoria`() {
+        val split = tx(id = 99, amountMinor = -100_00, categoryId = 1).copy(
+            splits = listOf(
+                TransactionSplitEntity(txId = 99, categoryId = 1, amountMinor = 60_00),
+                TransactionSplitEntity(txId = 99, categoryId = 2, amountMinor = 40_00),
+            ),
+        )
+        val data = calculator.monthData(
+            month = "2026-11",
+            transactions = listOf(split),
+            budgets = emptyList(),
+            rates = rates,
+            categoryById = categories,
+        )
+        val comida = data.rows.first { it.tagName == "Comida" }
+        val transporte = data.rows.first { it.tagName == "Transporte" }
+        assertEquals(60.0, comida.spentUsd, 0.01)
+        assertEquals(40.0, transporte.spentUsd, 0.01)
+    }
+
+    @Test
+    fun `sin reparto todo el gasto va a la categoria principal`() {
+        val plain = tx(id = 100, amountMinor = -80_00, categoryId = 1)
+        val data = calculator.monthData(
+            month = "2026-11",
+            transactions = listOf(plain),
+            budgets = emptyList(),
+            rates = rates,
+            categoryById = categories,
+        )
+        assertEquals(80.0, data.rows.first { it.tagName == "Comida" }.spentUsd, 0.01)
+    }
+
 }

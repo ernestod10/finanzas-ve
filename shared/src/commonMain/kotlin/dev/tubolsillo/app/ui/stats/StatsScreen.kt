@@ -81,6 +81,8 @@ fun StatsScreen(viewModel: DashboardViewModel = koinViewModel()) {
     val summary by viewModel.summary.collectAsState()
     val summaryBusy by viewModel.summaryBusy.collectAsState()
     val analyzerAvailability by viewModel.analyzerAvailability.collectAsState()
+    val dashboard by viewModel.dashboard.collectAsState()
+    val plan by viewModel.planSummary.collectAsState()
 
     Column(
         modifier = Modifier
@@ -114,6 +116,11 @@ fun StatsScreen(viewModel: DashboardViewModel = koinViewModel()) {
             availability = analyzerAvailability,
             monthKey = month,
             onGenerate = viewModel::generateSummary,
+        )
+        Spacer(Modifier.height(12.dp))
+        ForecastCard(
+            liquidUsd = dashboard?.totals?.assetsUsd ?: 0.0,
+            monthlyNetUsd = plan?.let { it.estimatedIncomeUsd - it.estimatedExpenseUsd } ?: 0.0,
         )
         Spacer(Modifier.height(12.dp))
         TrendCard(stats)
@@ -405,3 +412,60 @@ private fun changePct(current: Double, previous: Double): Double? =
 
 private fun shareLabel(spend: CategorySpend, total: Double): String =
     (spend.amountUsd / total * 100).roundToInt().toString() + " % del gasto"
+
+
+/**
+ * Proyección simple a 1, 3 y 6 meses: saldo actual + el margen mensual del
+ * plan del mes. No adivina gastos nuevos; dice explícitamente de dónde sale.
+ */
+@Composable
+private fun ForecastCard(liquidUsd: Double, monthlyNetUsd: Double) {
+    val points = listOf(1, 3, 6)
+    Surface(
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+        color = TubolsilloColors.card,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "Próximos meses",
+                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+            )
+            Text(
+                text = if (monthlyNetUsd == 0.0) {
+                    "Agrega ingresos y gastos al plan del mes para ver la proyección."
+                } else {
+                    "Saldo actual + " + MoneyFormatter.formatUsd(monthlyNetUsd) +
+                        " por mes, según tu plan."
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(10.dp))
+            points.forEach { months ->
+                val projected = liquidUsd + monthlyNetUsd * months
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 3.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = "En " + months + (if (months == 1) " mes" else " meses"),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Text(
+                        text = MoneyFormatter.formatUsd(projected),
+                        style = MaterialTheme.typography.bodyLarge.copy(
+                            fontWeight = FontWeight.SemiBold,
+                            fontFeatureSettings = TNUM,
+                        ),
+                        color = if (projected >= 0) TubolsilloColors.positive else TubolsilloColors.negative,
+                    )
+                }
+            }
+        }
+    }
+}

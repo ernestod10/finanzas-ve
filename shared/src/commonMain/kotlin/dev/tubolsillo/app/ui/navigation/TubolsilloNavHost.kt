@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.NorthEast
 import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.filled.SouthWest
+import androidx.compose.material.icons.filled.Subscriptions
 import androidx.compose.material.icons.filled.Wallet
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -112,6 +113,7 @@ object Routes {
     const val RECORD = "record/{income}?scan={scan}"
     const val REVIEW = "review"
     const val INVOICE = "invoice"
+    const val SUBSCRIPTIONS = "subscriptions"
 
     fun account(accountId: Long) = "account/$accountId"
 
@@ -164,7 +166,7 @@ private data class TopLevelDestination(
 )
 
 @Composable
-fun TubolsilloNavHost() {
+fun TubolsilloNavHost(startNewRecord: Boolean = false) {
     val navController = rememberNavController()
     val scope = rememberCoroutineScope()
     var showQuickActions by remember { mutableStateOf(false) }
@@ -180,6 +182,11 @@ fun TubolsilloNavHost() {
     val skippedUpdate by appSettings.skippedUpdateVersion.collectAsState()
     var updateDismissed by remember { mutableStateOf(false) }
     androidx.compose.runtime.LaunchedEffect(Unit) { updateViewModel.check() }
+
+    // Alta rápida desde el widget: abre el formulario de gasto directamente.
+    androidx.compose.runtime.LaunchedEffect(startNewRecord) {
+        if (startNewRecord) navController.navigate(Routes.record(false))
+    }
 
     // El estado del pager se iza aquí para que la barra y el contenido miren lo
     // mismo: la barra lo lee para resaltar y él lo mueve al tocar un destino.
@@ -240,6 +247,10 @@ fun TubolsilloNavHost() {
                         showQuickActions = false
                         navController.navigate(Routes.SAVINGS)
                     },
+                    QuickActionItem("Suscrip.", Icons.Filled.Subscriptions) {
+                        showQuickActions = false
+                        navController.navigate(Routes.SUBSCRIPTIONS)
+                    },
                 ),
             )
         },
@@ -279,6 +290,11 @@ fun TubolsilloNavHost() {
                         draftHolder.put(draft)
                         navController.navigate(Routes.record(draft.income))
                     },
+                )
+            }
+            composable(Routes.SUBSCRIPTIONS) {
+                dev.tubolsillo.app.ui.subscriptions.SubscriptionsScreen(
+                    onBack = { navController.popBackStack() },
                 )
             }
             composable(Routes.INVOICE) {
@@ -373,7 +389,10 @@ fun TubolsilloNavHost() {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.32f))
+                    // Sin velo: el panel del dial ya es opaco y el oscurecido
+                    // a pantalla completa se veía como una barra negra sobre
+                    // el contenido, sobre todo encima del teclado del alta.
+                    .background(Color.Transparent)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
@@ -459,6 +478,7 @@ private fun TabPager(
                 onCreditsClick = { navController.navigate(Routes.CREDITS) },
                 onClassifierClick = { navController.navigate(Routes.CLASSIFIER) },
                 onSavingsClick = { navController.navigate(Routes.SAVINGS) },
+                onSubscriptionsClick = { navController.navigate(Routes.SUBSCRIPTIONS) },
                 onRatesClick = { navController.navigate(Routes.RATES) },
                 onBinanceClick = { navController.navigate(Routes.BINANCE) },
                 onEventsClick = { navController.navigate(Routes.EVENTS) },
