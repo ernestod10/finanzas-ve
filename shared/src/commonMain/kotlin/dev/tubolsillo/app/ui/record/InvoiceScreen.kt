@@ -207,6 +207,41 @@ fun InvoiceScreen(
                                     singleLine = true,
                                     modifier = Modifier.fillMaxWidth(),
                                 )
+                                // Otros totales posibles (etiqueta, cuenta, monto
+                                // mayor): un toque evita teclearlos.
+                                val alternatives = receipt.candidatesMinor.filter { minor ->
+                                    val chosen = AmountNormalizer.parseMinor(totalText, currencyCode)
+                                    chosen == null || kotlin.math.abs(minor - chosen) > 2
+                                }.take(2)
+                                if (alternatives.isNotEmpty()) {
+                                    Text(
+                                        text = "También podría ser",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(top = 6.dp),
+                                    )
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                        modifier = Modifier.padding(top = 4.dp),
+                                    ) {
+                                        alternatives.forEach { minor ->
+                                            val whole = minor / 100
+                                            val cents = (minor % 100).toString().padStart(2, '0')
+                                            Surface(
+                                                onClick = { totalText = "$whole,$cents" },
+                                                shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp),
+                                                color = TubolsilloColors.tileFill,
+                                            ) {
+                                                Text(
+                                                    text = MoneyFormatter.formatMinor(minor, currencyCode),
+                                                    style = MaterialTheme.typography.labelLarge,
+                                                    color = MaterialTheme.colorScheme.onSurface,
+                                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
                             }
                             GroupSeparator()
                         }
@@ -215,7 +250,11 @@ fun InvoiceScreen(
                         }
                     }
                 }
-                if (!receipt.totalExplained && receipt.totalMinor != null) {
+                if (receipt.reconciled) {
+                    item(key = "read-ok") {
+                        GroupFooter("El total cuadra con subtotal + IVA − descuento.")
+                    }
+                } else if (!receipt.totalExplained && receipt.totalMinor != null) {
                     item(key = "read-note") {
                         GroupFooter(
                             "El total salió del monto más alto del ticket, no de una línea " +

@@ -27,12 +27,14 @@ import org.koin.core.context.GlobalContext
 class MainActivity : FragmentActivity() {
 
     private var locked by mutableStateOf(false)
+    private var startNewRecord by mutableStateOf(false)
     private var lockEnabled = false
     private val settings: SettingsRepository by lazy { GlobalContext.get().get() }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        startNewRecord = intent?.getBooleanExtra(EXTRA_NEW_EXPENSE, false) == true
         lifecycleScope.launch {
             // Estado inicial: si el bloqueo está activo, arrancar tapado.
             lockEnabled = settings.appLockEnabled.first()
@@ -44,7 +46,7 @@ class MainActivity : FragmentActivity() {
         }
         setContent {
             Box {
-                App()
+                App(startNewRecord = startNewRecord)
                 if (locked) {
                     LockScreen(onUnlock = { promptUnlock() })
                 }
@@ -52,10 +54,19 @@ class MainActivity : FragmentActivity() {
         }
     }
 
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        if (intent.getBooleanExtra(EXTRA_NEW_EXPENSE, false)) startNewRecord = true
+    }
+
     override fun onStop() {
         super.onStop()
         // Al salir de la app (no al abrir un diálogo) se vuelve a bloquear.
         if (lockEnabled) locked = true
+    }
+
+    companion object {
+        const val EXTRA_NEW_EXPENSE = "extra_new_expense"
     }
 
     private fun promptUnlock() {

@@ -18,7 +18,7 @@ import org.koin.compose.koinInject
 
 /** Raíz de la UI compartida: tema (con preferencia del usuario) + navegación. */
 @Composable
-fun App() {
+fun App(startNewRecord: Boolean = false) {
     val settings: SettingsRepository = koinInject()
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     val darkMode by settings.darkMode.collectAsState(initial = "SYSTEM")
@@ -80,7 +80,25 @@ fun App() {
                 // El asistente flota sobre las pestañas, no sobre las pantallas
                 // que se empujan (alta de registro, revisión, ajustes): ahí
                 // estorba al teclado.
-                TubolsilloNavHost()
+                val tourAnchors = androidx.compose.runtime.remember {
+                    dev.tubolsillo.app.ui.tour.TourAnchors()
+                }
+                val tourDone by settings.tourDone.collectAsState(initial = true)
+                androidx.compose.foundation.layout.Box(modifier = Modifier.fillMaxSize()) {
+                    androidx.compose.runtime.CompositionLocalProvider(
+                        dev.tubolsillo.app.ui.tour.LocalTourAnchors provides tourAnchors,
+                    ) {
+                        TubolsilloNavHost(startNewRecord = startNewRecord)
+                    }
+                    if (!tourDone) {
+                        dev.tubolsillo.app.ui.tour.TourOverlay(
+                            anchors = tourAnchors,
+                            onDone = {
+                                scope.launch { settings.setTourDone(true) }
+                            },
+                        )
+                    }
+                }
             }
         }
     }

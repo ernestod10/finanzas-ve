@@ -68,6 +68,61 @@ fun CreditsScreen(
     IOSScreen(title = "Créditos", onBack = onBack) {
         item(key = "resumen") { CreditsSummary(overview) }
 
+        val payoff = dev.tubolsillo.app.domain.model.PayoffPlanner.plan(overview.items)
+        if (payoff.isNotEmpty()) {
+            item(key = "payoff-h") { GroupHeader("Orden para salir de deudas") }
+            item(key = "payoff") {
+                GroupedGroup {
+                    payoff.take(5).forEachIndexed { index, step ->
+                        if (index > 0) {
+                            androidx.compose.material3.HorizontalDivider(
+                                modifier = Modifier.padding(start = 16.dp),
+                                thickness = 0.5.dp,
+                                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                            )
+                        }
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Surface(
+                                shape = CircleShape,
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
+                                modifier = Modifier.size(26.dp),
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text(
+                                        text = step.rank.toString(),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary,
+                                    )
+                                }
+                            }
+                            Spacer(Modifier.size(10.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(step.item.name, style = MaterialTheme.typography.bodyLarge, maxLines = 1)
+                                Text(
+                                    text = MoneyFormatter.formatMinor(step.item.debtMinor, step.item.currency) +
+                                        (step.months?.let { " · ~" + it + " meses con el mínimo" } ?: ""),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            item(key = "payoff-f") {
+                GroupFooter(
+                    "De la deuda más pequeña a la más grande dentro de cada moneda (bola " +
+                        "de nieve). Los meses son una estimación usando el pago mínimo."
+                )
+            }
+        }
+
         if (overview.isEmpty) {
             item(key = "vacio") {
                 GroupFooter(

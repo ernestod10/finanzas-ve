@@ -70,6 +70,10 @@ class SettingsRepository() {
         val SKIPPED_UPDATE = stringPreferencesKey("skipped_update_version")
         // Bloqueo de la app con huella o PIN del sistema.
         val APP_LOCK = booleanPreferencesKey("app_lock")
+        // Tour con zonas iluminadas sobre Inicio; se muestra una vez.
+        val TOUR_DONE = booleanPreferencesKey("tour_done")
+        // Último "te queda para gastar" calculado en Inicio, para el widget.
+        val SAFE_TO_SPEND = doublePreferencesKey("safe_to_spend_usd")
         val RATES_HISTORY = stringPreferencesKey("rates_history") // {"2026-11-03": {"VES":0.00112,"USD":1.0}}
         val RATES_FETCHED_AT = longPreferencesKey("rates_fetched_at")
     }
@@ -182,6 +186,22 @@ class SettingsRepository() {
         dataStore.edit {
             it[if (expense) Keys.LAST_ACCOUNT_EXPENSE else Keys.LAST_ACCOUNT_INCOME] = accountId
         }
+    }
+
+    val tourDone: StateFlow<Boolean> =
+        dataStore.data.map { it[Keys.TOUR_DONE] ?: false }
+            .stateIn(scope, SharingStarted.Eagerly, false)
+
+    suspend fun setTourDone(done: Boolean) {
+        dataStore.edit { it[Keys.TOUR_DONE] = done }
+    }
+
+    val safeToSpendUsd: StateFlow<Double> =
+        dataStore.data.map { it[Keys.SAFE_TO_SPEND] ?: 0.0 }
+            .stateIn(scope, SharingStarted.Eagerly, 0.0)
+
+    suspend fun setSafeToSpendUsd(value: Double) {
+        dataStore.edit { it[Keys.SAFE_TO_SPEND] = value }
     }
 
     val appLockEnabled: StateFlow<Boolean> =

@@ -230,6 +230,10 @@ fun TransactionsScreen(
                 viewModel.setTransactionCategory(tx.transaction.id, categoryId)
                 editingTx = null
             },
+            onSplits = { parts ->
+                viewModel.setSplits(tx.transaction.id, parts)
+                editingTx = null
+            },
             onUpdateDetails = { newDesc, newMinor ->
                 viewModel.updateTransactionDetails(
                     tx.transaction.id,

@@ -1,6 +1,7 @@
 package dev.tubolsillo.app.domain.usecase
 
 import dev.tubolsillo.app.core.db.entity.CategoryEntity
+import dev.tubolsillo.app.core.db.entity.TransactionSplitEntity
 import dev.tubolsillo.app.core.db.entity.TransactionEntity
 import dev.tubolsillo.app.core.money.Money
 import dev.tubolsillo.app.domain.model.TransactionCategory
@@ -25,6 +26,7 @@ object ExpenseBreakdown {
         categories: List<CategoryEntity>,
         rates: Map<String, Double>,
         totalsCalculator: TotalsCalculator,
+        splitsByTx: Map<Long, List<TransactionSplitEntity>> = emptyMap(),
     ): List<CategorySpend> {
         val byName = mutableMapOf<String, Double>()
         val colorByName = categories.associate { it.name to it.colorHex }
@@ -35,8 +37,17 @@ object ExpenseBreakdown {
             if (TransactionCategory.fromKey(tx.category) == TransactionCategory.TRANSFER) continue
             val usd = tx.usdEquivalentMinor?.let { it / Money.pow10(2) }
                 ?: totalsCalculator.usdEquivalent(tx.amountMinor, tx.currency, rates)
-            val name = tx.categoryId?.let { nameById[it] } ?: UNTAGGED_BUCKET
-            byName[name] = (byName[name] ?: 0.0) + kotlin.math.abs(usd)
+            val parts = splitsByTx[tx.id].orEmpty().filter { it.amountMinor > 0 }
+            if (parts.isNotEmpty()) {
+                val total = parts.sumOf { it.amountMinor }.toDouble().coerceAtLeast(1.0)
+                parts.forEach { part ->
+                    val name = part.categoryId?.let { nameById[it] } ?: UNTAGGED_BUCKET
+                    byName[name] = (byName[name] ?: 0.0) + kotlin.math.abs(usd) * (part.amountMinor / total)
+                }
+            } else {
+                val name = tx.categoryId?.let { nameById[it] } ?: UNTAGGED_BUCKET
+                byName[name] = (byName[name] ?: 0.0) + kotlin.math.abs(usd)
+            }
         }
 
         return byName

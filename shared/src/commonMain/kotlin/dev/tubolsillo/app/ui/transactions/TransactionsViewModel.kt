@@ -28,6 +28,7 @@ data class DayTransactionsGroup(
 )
 
 class TransactionsViewModel(
+    private val splitsRepository: dev.tubolsillo.app.domain.repo.SplitsRepository,
     private val transactionRepository: TransactionRepository,
     accountRepository: AccountRepository,
     categoryRepository: dev.tubolsillo.app.domain.repo.CategoryRepository,
@@ -214,6 +215,11 @@ class TransactionsViewModel(
             if (!inDesc && !inTags) return false
         }
         return true
+    }
+
+    /** Reparte el gasto en categorías. Se aplica al instante en presupuestos. */
+    fun setSplits(txId: Long, parts: List<Pair<Long?, Long>>) {
+        viewModelScope.launch { splitsRepository.setSplits(txId, parts) }
     }
 
     fun updateSearchQuery(query: String) {

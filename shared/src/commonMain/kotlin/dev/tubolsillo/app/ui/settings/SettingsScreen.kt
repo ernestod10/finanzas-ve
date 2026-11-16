@@ -21,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Savings
+import androidx.compose.material.icons.filled.Subscriptions
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.CurrencyExchange
 import androidx.compose.material.icons.filled.Link
@@ -80,6 +81,7 @@ fun SettingsScreen(
     onCreditsClick: () -> Unit = {},
     onClassifierClick: () -> Unit = {},
     onSavingsClick: () -> Unit = {},
+    onSubscriptionsClick: () -> Unit = {},
     exportViewModel: ExportViewModel = koinViewModel(),
     updateViewModel: UpdateViewModel = koinViewModel(),
 ) {
@@ -109,6 +111,125 @@ fun SettingsScreen(
     val accentAction: (AppAccent) -> Unit = { accent -> scope.launch { settings.setAccentColor(accent.key) } }
 
     IOSScreen(title = "Menú") {
+        item(key = "dinero-h") { GroupHeader("Tu dinero") }
+        item(key = "dinero") {
+            GroupedGroup {
+                LinkRow(Icons.Filled.CreditCard, Color(0xFFB3413B), "Deudas",
+                    "Tarjetas, Cashea y cuotas con su fecha de pago", onCreditsClick)
+                Separator()
+                LinkRow(Icons.Filled.Savings, Color(0xFF1F7A3D), "Ahorro",
+                    "Metas con monto y cuánto apartar por mes", onSavingsClick)
+                Separator()
+                LinkRow(Icons.Filled.Subscriptions, Color(0xFF2E6E9E), "Suscripciones",
+                    "Lo que pagás cada mes, cuánto y qué día", onSubscriptionsClick)
+                Separator()
+                LinkRow(Icons.Filled.AutoAwesome, Color(0xFF7A3FA0), "Clasificar movimientos",
+                    "Sugiere categoría para los movimientos sin ella", onClassifierClick)
+            }
+        }
+
+
+
+        exportStatus?.let { status ->
+            item(key = "export-status") {
+                GroupFooter(status)
+            }
+        }
+
+        item(key = "captura-h") { GroupHeader("Captura y conexiones") }
+        item(key = "captura") {
+            GroupedGroup {
+                LinkRow(
+                    Icons.Filled.RateReview,
+                    Color(0xFF7A3FA0),
+                    "Revisión de capturas",
+                    "Lo que el parser no pudo leer",
+                    onReviewClick,
+                )
+            }
+        }
+
+        item(key = "datos-h") { GroupHeader("Conexiones") }
+        item(key = "datos") {
+            GroupedGroup {
+                LinkRow(Icons.Filled.CurrencyExchange, Color(0xFF2A7C13), "Tasa de cambio",
+                    "Bolívares por dólar para el total en USD", onRatesClick)
+                Separator()
+                LinkRow(Icons.Filled.Link, Color(0xFF1E6FA3), "Portales de banco",
+                    "Leer movimientos con la sesión vinculada", onPortalClick)
+                Separator()
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { scope.launch { settings.setAutoSyncPortals(!autoSyncPortals) } }
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Consultar bancos al abrir", style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            "Saldos y movimientos de los portales con clave guardada",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    androidx.compose.material3.Switch(
+                        checked = autoSyncPortals,
+                        onCheckedChange = { checked -> scope.launch { settings.setAutoSyncPortals(checked) } },
+                    )
+                }
+                Separator()
+                LinkRow(Icons.Filled.NotificationsActive, Color(0xFF7A3FA0), "Capturas",
+                    "Registro crudo de capturas y push, con replay", onEventsClick)
+                Separator()
+                LinkRow(Icons.Filled.CurrencyExchange, Color(0xFFB08A3E), "Binance",
+                    "Saldos, depósitos, retiros, P2P y Binance Pay", onBinanceClick)
+            }
+        }
+
+        item(key = "privacidad-h") { GroupHeader("Privacidad") }
+        item(key = "privacidad") {
+            GroupedGroup {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { scope.launch { settings.setAppLock(!appLock) } }
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Bloqueo con huella o PIN", style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            "Al volver a la app pide la huella o el PIN del teléfono",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    androidx.compose.material3.Switch(
+                        checked = appLock,
+                        onCheckedChange = { checked -> scope.launch { settings.setAppLock(checked) } },
+                    )
+                }
+            }
+        }
+
+        item(key = "respaldo-h") { GroupHeader("Respaldo") }
+        item(key = "respaldo") {
+            GroupedGroup {
+                LinkRow(Icons.Filled.SaveAlt, Color(0xFF3E7C74), "Exportar respaldo",
+                    "Toda tu data a un JSON, incluye capturas crudas") {
+                    showExportPassword = true
+                }
+                Separator()
+                LinkRow(Icons.Filled.Restore, Color(0xFF2E5E43), "Restaurar respaldo",
+                    "Importar un JSON o un respaldo cifrado") {
+                    importPicker()
+                }
+            }
+        }
+
         item(key = "apariencia-h") { GroupHeader("Apariencia") }
         item(key = "apariencia") {
             GroupedGroup {
@@ -205,125 +326,6 @@ fun SettingsScreen(
                             )
                         }
                     }
-                }
-            }
-        }
-
-        item(key = "captura-h") { GroupHeader("Captura automática") }
-        item(key = "captura") {
-            GroupedGroup {
-                LinkRow(
-                    Icons.Filled.RateReview,
-                    Color(0xFF7A3FA0),
-                    "Revisión de capturas",
-                    "Lo que el parser no pudo leer",
-                    onReviewClick,
-                )
-            }
-        }
-
-        item(key = "datos-h") { GroupHeader("Datos y conexiones") }
-        item(key = "datos") {
-            GroupedGroup {
-                LinkRow(Icons.Filled.CurrencyExchange, Color(0xFF2A7C13), "Tasa de cambio",
-                    "Bolívares por dólar para el total en USD", onRatesClick)
-                Separator()
-                LinkRow(Icons.Filled.Link, Color(0xFF1E6FA3), "Portales de banco",
-                    "Leer movimientos con la sesión vinculada", onPortalClick)
-                Separator()
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { scope.launch { settings.setAutoSyncPortals(!autoSyncPortals) } }
-                        .padding(horizontal = 16.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("Consultar bancos al abrir", style = MaterialTheme.typography.bodyLarge)
-                        Text(
-                            "Saldos y movimientos de los portales con clave guardada",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    androidx.compose.material3.Switch(
-                        checked = autoSyncPortals,
-                        onCheckedChange = { checked -> scope.launch { settings.setAutoSyncPortals(checked) } },
-                    )
-                }
-                Separator()
-                LinkRow(Icons.Filled.NotificationsActive, Color(0xFF7A3FA0), "Capturas",
-                    "Registro crudo de capturas y push, con replay", onEventsClick)
-            }
-        }
-
-        item(key = "respaldo-h") { GroupHeader("Respaldo") }
-        item(key = "respaldo") {
-            GroupedGroup {
-                LinkRow(Icons.Filled.SaveAlt, Color(0xFF3E7C74), "Exportar respaldo",
-                    "Toda tu data a un JSON, incluye capturas crudas") {
-                    showExportPassword = true
-                }
-                Separator()
-                LinkRow(Icons.Filled.Restore, Color(0xFF2E5E43), "Restaurar respaldo",
-                    "Importar un JSON o un respaldo cifrado") {
-                    importPicker()
-                }
-            }
-        }
-
-        item(key = "creditos-h") { GroupHeader("Créditos") }
-        item(key = "creditos") {
-            GroupedGroup {
-                LinkRow(Icons.Filled.Savings, Color(0xFF1F7A3D), "Objetivos de ahorro",
-                    "Metas con monto y cuánto apartar por mes", onSavingsClick)
-                Separator()
-                LinkRow(Icons.Filled.AutoAwesome, Color(0xFF2E6E9E), "Clasificar historial",
-                    "Sugiere categoría para los movimientos sin ella", onClassifierClick)
-                Separator()
-                LinkRow(Icons.Filled.CreditCard, Color(0xFFB3413B), "Créditos y deudas",
-                    "Tarjetas, Cashea y cuotas con su fecha de pago", onCreditsClick)
-            }
-        }
-
-        item(key = "binance-h") { GroupHeader("Exchange") }
-        item(key = "binance") {
-            GroupedGroup {
-                LinkRow(null, null, "Binance",
-                    "Saldos, depósitos, retiros, P2P y Binance Pay", onBinanceClick)
-            }
-        }
-
-        exportStatus?.let { status ->
-            item(key = "export-status") {
-                GroupFooter(status)
-            }
-        }
-
-        item(key = "privacidad-h") { GroupHeader("Privacidad") }
-        item(key = "privacidad") {
-            GroupedGroup {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { scope.launch { settings.setAppLock(!appLock) } }
-                        .padding(horizontal = 16.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("Bloqueo con huella o PIN", style = MaterialTheme.typography.bodyLarge)
-                        Text(
-                            "Al volver a la app pide la huella o el PIN del teléfono",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    androidx.compose.material3.Switch(
-                        checked = appLock,
-                        onCheckedChange = { checked -> scope.launch { settings.setAppLock(checked) } },
-                    )
                 }
             }
         }

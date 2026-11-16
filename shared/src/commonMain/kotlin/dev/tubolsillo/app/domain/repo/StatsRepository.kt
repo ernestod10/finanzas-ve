@@ -40,6 +40,7 @@ data class StatsData(
 class StatsRepository(
     private val accountDao: AccountDao,
     private val transactionDao: TransactionDao,
+    private val splitDao: dev.tubolsillo.app.core.db.dao.SplitDao,
     private val balanceSnapshotDao: BalanceSnapshotDao,
     private val categoryRepository: CategoryRepository,
     private val rateProvider: RateProvider,
@@ -68,13 +69,22 @@ class StatsRepository(
             rateProvider.observeRates(),
         ) { accounts, transactions, rates -> Triple(accounts, transactions, rates) }
 
-        return combine(
+        val core = combine(
             monthSide,
             transactionDao.observeBetween(previousStart, previousEnd),
             balanceSnapshotDao.observeSince(snapshotFrom),
             categoryRepository.observeAll(),
             settingsRepository.ratesHistory,
         ) { (accounts, transactions, rates), previousTransactions, snapshots, categories, ratesHistory ->
+            CoreStats(accounts, transactions, rates, previousTransactions, snapshots, categories, ratesHistory)
+        }
+
+        return combine(core, splitDao.observeAll()) { c, splits ->
+            val (accounts, transactions, rates) = Triple(c.accounts, c.transactions, c.rates)
+            val previousTransactions = c.previousTransactions
+            val snapshots = c.snapshots
+            val categories = c.categories
+            val ratesHistory = c.ratesHistory
             StatsData(
                 month = month,
                 metrics = metricsCalculator.compute(transactions, rates),
@@ -92,10 +102,21 @@ class StatsRepository(
                     categories = categories,
                     rates = rates,
                     totalsCalculator = totalsCalculator,
+                    splitsByTx = splits.groupBy { it.txId },
                 ),
             )
         }
     }
+
+    private data class CoreStats(
+        val accounts: List<dev.tubolsillo.app.core.db.entity.AccountEntity>,
+        val transactions: List<dev.tubolsillo.app.core.db.entity.TransactionEntity>,
+        val rates: Map<String, Double>,
+        val previousTransactions: List<dev.tubolsillo.app.core.db.entity.TransactionEntity>,
+        val snapshots: List<dev.tubolsillo.app.core.db.entity.BalanceSnapshotEntity>,
+        val categories: List<dev.tubolsillo.app.core.db.entity.CategoryEntity>,
+        val ratesHistory: Map<String, Map<String, Double>>,
+    )
 
     /**
      * Tasa del día: la guardada para esa fecha, o la más reciente anterior; si

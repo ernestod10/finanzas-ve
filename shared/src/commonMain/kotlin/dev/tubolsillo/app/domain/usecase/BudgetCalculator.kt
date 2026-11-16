@@ -37,8 +37,20 @@ class BudgetCalculator(
             val usd = tx.usdEquivalentMinor?.let { it / dev.tubolsillo.app.core.money.Money.pow10(2) }
                 ?: totalsCalculator.usdEquivalent(tx.amountMinor, tx.currency, rates)
             val spentUsd = -usd
-            val catName = tx.categoryId?.let { categoryById[it]?.name } ?: UNTAGGED_BUCKET
-            spentByCat[catName] = (spentByCat[catName] ?: 0.0) + spentUsd
+            val parts = txWithTags.splits.filter { it.amountMinor > 0 }
+            if (parts.isNotEmpty()) {
+                // Gasto repartido: cada parte va a su categoría, en proporción
+                // al monto real (si el OCR o el usuario dejaron centavos de
+                // diferencia, la suma sigue siendo el gasto completo).
+                val totalParts = parts.sumOf { it.amountMinor }.toDouble().coerceAtLeast(1.0)
+                parts.forEach { part ->
+                    val name = part.categoryId?.let { categoryById[it]?.name } ?: UNTAGGED_BUCKET
+                    spentByCat[name] = (spentByCat[name] ?: 0.0) + spentUsd * (part.amountMinor / totalParts)
+                }
+            } else {
+                val catName = tx.categoryId?.let { categoryById[it]?.name } ?: UNTAGGED_BUCKET
+                spentByCat[catName] = (spentByCat[catName] ?: 0.0) + spentUsd
+            }
         }
 
         val limitByCat = budgets.associate { budget ->
