@@ -16,8 +16,12 @@ plugins {
 // un build local y el de CI de la MISMA versión compartan código: si CI usara
 // otro número, reinstalar en local exigiría bajar de versión.
 val appVersionName = ((findProperty("appVersionName") as String?) ?: "0.1.1").removePrefix("v")
+// Desfase de versionCode: se publicó por error una 8.3.0 (80 300) que hay que
+// poder reemplazar por la 0.8.3 sin desinstalar ni perder datos. Sumar 100 000
+// mantiene la serie 0.x por encima y deja margen hasta la 9.9.9.
+val VERSION_CODE_OFFSET = 100_000
 val appVersionCode = (findProperty("appVersionCode") as String?)?.toIntOrNull()
-    ?: versionCodeOf(appVersionName)
+    ?: (versionCodeOf(appVersionName) + VERSION_CODE_OFFSET)
 
 fun versionCodeOf(name: String): Int {
     val parts = name.split('.', '-', '+').map { part -> part.takeWhile(Char::isDigit).toIntOrNull() ?: 0 }
